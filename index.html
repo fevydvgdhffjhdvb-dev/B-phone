@@ -890,32 +890,47 @@ const history = char.messages.slice(-limit);
         }
 
         function saveCurrentCharSettings() {
-            const char = getActiveChar();
-            if(!char) return;
-            
-            char.name = document.getElementById('set-char-name').value;
-            char.systemPrompt = document.getElementById('set-char-prompt').value;
-            char.userName = document.getElementById('set-user-name').value;
-            char.userPersona = document.getElementById('set-user-desc').value;
-            
-            document.getElementById('chat-title-name').innerText = char.name;
-            saveData();
-        }
+        const char = getActiveChar();
+        if(!char) return;
+        
+        char.name = document.getElementById('set-char-name').value;
+        char.systemPrompt = document.getElementById('set-char-prompt').value;
+        char.userName = document.getElementById('set-user-name').value;
+        char.userPersona = document.getElementById('set-user-desc').value;
+        
+        document.getElementById('chat-title-name').innerText = char.name;
+        saveData();
 
-        async function uploadCharAvatar(e) {
-            const b64 = await fileToBase64(e.target.files[0]);
-            getActiveChar().avatar = b64;
-            document.getElementById('set-char-avatar').src = b64;
-            saveData(); renderChat(activeContactId);
-        }
+        // 👇👇👇 这里的更新非常重要 👇👇👇
+        updateContactList();        // 刷新外面的列表
+        renderChat(activeContactId); // 刷新里面的气泡
+    }
 
-        async function uploadUserAvatar(e) {
-            const b64 = await fileToBase64(e.target.files[0]);
-            getActiveChar().userAvatar = b64;
-            document.getElementById('set-user-avatar').src = b64;
-            saveData(); renderChat(activeContactId);
-        }
+    async function uploadCharAvatar(e) {
+        const f = e.target.files[0]; 
+        if(!f) return;
+        const b64 = await fileToBase64(f);
+        getActiveChar().avatar = b64;
+        document.getElementById('set-char-avatar').src = b64;
+        saveData(); 
+        
+        // 👇👇👇 这里的更新非常重要 👇👇👇
+        renderChat(activeContactId);
+        updateContactList();
+    }
 
+    async function uploadUserAvatar(e) {
+        const f = e.target.files[0]; 
+        if(!f) return;
+        const b64 = await fileToBase64(f);
+        getActiveChar().userAvatar = b64;
+        document.getElementById('set-user-avatar').src = b64;
+        saveData(); 
+        
+        // 👇👇👇 这里的更新非常重要 👇👇👇
+        renderChat(activeContactId);
+        updateContactList();
+    }
         async function uploadChatBg(e) {
             const b64 = await fileToBase64(e.target.files[0]);
             getActiveChar().bgImage = b64;
@@ -1238,6 +1253,7 @@ const history = char.messages.slice(-limit);
     </script>
 </body>
 </html>
+
 
 
 
