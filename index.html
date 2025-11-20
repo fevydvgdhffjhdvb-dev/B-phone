@@ -259,7 +259,7 @@
                 </div>
                 <!-- 5. 日记本 -->
                 <div class="app-icon-container" onclick="navigateTo('page-diary')">
-                    <div class="app-icon" style="background: linear-gradient(to bottom, #d4a373, #a98467);">📖</div>
+                    <div class="app-icon" id="app-icon-diary" style="background: linear-gradient(to bottom, #d4a373, #a98467);">📖</div>
                     <div class="app-name">日记本</div>
                 </div>
             </div>
@@ -417,6 +417,10 @@
                     <div class="ios-item">
                         <span class="ios-label">美化图标</span>
                         <input type="text" id="iconInput-theme" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+                    </div>
+                    <div class="ios-item">
+                        <span class="ios-label">日记图标</span>
+                        <input type="text" id="iconInput-diary" class="ios-input" placeholder="http://..." onchange="saveTheme()">
                     </div>
                 </div>
 
@@ -1091,6 +1095,7 @@ const history = char.messages.slice(-limit);
         document.getElementById('iconInput-mem').value = themeConfig.icons.mem || "";
         document.getElementById('iconInput-set').value = themeConfig.icons.set || "";
         document.getElementById('iconInput-theme').value = themeConfig.icons.theme || "";
+        document.getElementById('iconInput-diary').value = themeConfig.icons.diary || "";
         // 2. 恢复CSS和字体输入框
         document.getElementById('customCssInput').value = themeConfig.customCss || "";
         const fontInput = document.getElementById('fontInput');
@@ -1108,6 +1113,7 @@ const history = char.messages.slice(-limit);
         themeConfig.icons.mem = document.getElementById('iconInput-mem').value;
         themeConfig.icons.set = document.getElementById('iconInput-set').value;
         themeConfig.icons.theme = document.getElementById('iconInput-theme').value;
+        themeConfig.icons.diary = document.getElementById('iconInput-diary').value;
         themeConfig.customCss = document.getElementById('customCssInput').value;
         
         const fontInput = document.getElementById('fontInput');
@@ -1127,6 +1133,7 @@ const history = char.messages.slice(-limit);
         updateAppIcon('app-icon-mem', themeConfig.icons.mem);
         updateAppIcon('app-icon-set', themeConfig.icons.set);
         updateAppIcon('app-icon-theme', themeConfig.icons.theme);
+        updateAppIcon('app-icon-diary', themeConfig.icons.diary);
 
         // B. 应用壁纸 (新逻辑)
         const homePage = document.getElementById('page-home');
@@ -1377,6 +1384,7 @@ const history = char.messages.slice(-limit);
     </script>
 </body>
 </html>
+
 
 
 
