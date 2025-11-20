@@ -1174,20 +1174,59 @@ const history = char.messages.slice(-limit);
         }
         
         // 导出/导入
+        // --- 数据备份与恢复 (全量版) ---
         function exportData() {
-            const blob = new Blob([JSON.stringify({globalConfig, contacts})], {type:'application/json'});
-            const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ai_phone_backup.json'; a.click();
+            // 把 设置、联系人(含记忆)、美化数据 打包在一起
+            const backupPayload = {
+                globalConfig: globalConfig,
+                contacts: contacts,
+                themeConfig: themeConfig 
+            };
+            
+            const blob = new Blob([JSON.stringify(backupPayload)], {type:'application/json'});
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(blob); 
+            a.download = 'ai_phone_full_backup.json'; // 改个名字，叫全量备份
+            a.click();
         }
+
         function importData(e) {
-            const f = e.target.files[0]; if(!f)return;
+            const f = e.target.files[0]; 
+            if(!f) return;
+            
             const r = new FileReader();
             r.onload = ev => {
                 try {
                     const d = JSON.parse(ev.target.result);
-                    globalConfig = d.globalConfig; contacts = d.contacts;
-                    saveData(); location.reload();
-                } catch(e){alert("文件无效");}
-            }; r.readAsText(f);
+                    
+                    // 1. 恢复全局设置
+                    if(d.globalConfig) {
+                        globalConfig = d.globalConfig;
+                        localStorage.setItem('ai_phone_config', JSON.stringify(globalConfig));
+                    }
+
+                    // 2. 恢复联系人 (包含聊天记录、记忆库)
+                    if(d.contacts) {
+                        contacts = d.contacts;
+                        localStorage.setItem('ai_phone_contacts', JSON.stringify(contacts));
+                    }
+
+                    // 3. 恢复美化设置 (图标、CSS、字体)
+                    if(d.themeConfig) {
+                        themeConfig = d.themeConfig;
+                        localStorage.setItem('ai_phone_theme', JSON.stringify(themeConfig));
+                    }
+
+                    alert("🎉 数据恢复成功！页面将重新加载以应用更改。");
+                    location.reload(); // 刷新页面，让所有设置生效
+                    
+                } catch(e) {
+                    alert("❌ 恢复失败：文件格式错误或内容已损坏。\n" + e.message);
+                }
+            }; 
+            r.readAsText(f);
+            // 清空 input 防止同名文件无法再次触发
+            e.target.value = ''; 
         }
         async function testConn() {
             try { 
@@ -1199,6 +1238,7 @@ const history = char.messages.slice(-limit);
     </script>
 </body>
 </html>
+
 
 
 
