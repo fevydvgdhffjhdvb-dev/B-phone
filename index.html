@@ -582,17 +582,29 @@
             const m = localStorage.getItem('v8_msg'); if(m) messages = JSON.parse(m);
             const mem = localStorage.getItem('v8_mem'); if(mem) memories = JSON.parse(mem);
         }
-        function handleAvatarUpload(e, type) {
-            const file = e.target.files[0];
-            if(!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const r = ev.target.result;
-                if(type==='ai') { settings.aiAvatar=r; document.getElementById('aiAvatarPreview').src=r; }
-                else { settings.userAvatar=r; document.getElementById('userAvatarPreview').src=r; }
-                saveSettings();
-            }; reader.readAsDataURL(file);
+        // ==========================================
+    // ★ 修改后：头像上传自动压缩 ★
+    // ==========================================
+    async function handleAvatarUpload(e, type) {
+        const file = e.target.files[0];
+        if(!file) return;
+        
+        try {
+            // 头像只需要 150px 就够了
+            const r = await compressImage(file, 150, 0.7);
+            
+            if(type==='ai') { 
+                settings.aiAvatar = r; 
+                document.getElementById('aiAvatarPreview').src = r; 
+            } else { 
+                settings.userAvatar = r; 
+                document.getElementById('userAvatarPreview').src = r; 
+            }
+            saveSettings();
+        } catch (err) {
+            alert("头像处理失败");
         }
+    }
         function renderMemories() {
             const l = document.getElementById('memoryList'); l.innerHTML='';
             memories.forEach((m,i)=> l.innerHTML+=`<div class="memory-item"><span>${m}</span><span class="mem-del" onclick="memories.splice(${i},1);saveData();renderMemories()">×</span></div>`);
@@ -651,6 +663,39 @@
                  alert("✅ OK");
             }catch(e){alert("❌ "+e.message);}
         }
+        // ==========================================
+    // ★ 新增功能：图片压缩工具 (高清版) ★
+    // ==========================================
+    function compressImage(file, maxWidth, quality) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    let width = img.width;
+                    let height = img.height;
+                    // 如果图片太宽，就按比例缩小
+                    if (width > maxWidth) {
+                        height = Math.round(height * (maxWidth / width));
+                        width = maxWidth;
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    // 导出压缩后的图片代码
+                    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    resolve(dataUrl);
+                };
+                img.onerror = reject;
+            };
+            reader.onerror = reject;
+        });
+    }
     </script>
 </body>
 </html>
+
