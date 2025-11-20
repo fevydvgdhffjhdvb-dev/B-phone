@@ -8,13 +8,13 @@
     <!-- 关键修改 2: iOS 全屏模式专用标签 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="AI Phone">
+    <meta name="apple-mobile-web-app-title" content="Bjphone">
     
     <!-- 安卓/通用 全屏标签 -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#f8f9fa">
 
-    <title>AI 小手机 V8.1</title>
+    <title>=ᗜωᗜ=</title>
     
     <!-- 建议：你自己找一个图标图片的链接放在这里，添加到桌面时就会显示这个图标 -->
     <link rel="apple-touch-icon" href="https://i.postimg.cc/Vvq4PMVp/IMG-9639.jpg">
@@ -196,18 +196,16 @@
         <div class="header">
             <span class="header-title">AI Phone V8.1</span>
             <div class="header-icons">
-                <button class="btn-icon" onclick="openSummaryModal()" title="自动总结">🪄</button>
-                <button class="btn-icon" onclick="togglePanel('memoryPanel')" title="记忆库">🧠</button>
-                <button class="btn-icon" onclick="togglePanel('settingsPanel')" title="设置">⚙️</button>
+                <button class="btn-icon" onclick="openSummaryModal()" title="自动总结">^ω^</button>
+                <button class="btn-icon" onclick="togglePanel('memoryPanel')" title="记忆库">໒  ྀིɞ̴̶̷ . ɞ̴̶̷𓍼ིྀა♡</button>
+                <button class="btn-icon" onclick="togglePanel('settingsPanel')" title="设置">૮₍ᵔ⤙ᵔ₎ა</button>
             </div>
         </div>
 
         <!-- 聊天内容 -->
         <div class="chat-box" id="chatBox">
             <div class="system-notice">
-                ✨ 使用指南 (全屏版)：<br>
-                现在添加到主屏幕<br>
-                就像原生 App 一样使用了！
+                欢迎回家 (՞⸝⸝o̴̶̷̥᷅  ̫ o̴̶̷̥᷅⸝⸝՞)
             </div>
         </div>
 
@@ -223,7 +221,7 @@
             </div>
 
             <div class="input-toolbar">
-                <button class="btn-attach" onclick="document.getElementById('chatFileInput').click()" title="上传图片">📎</button>
+                <button class="btn-attach" onclick="document.getElementById('chatFileInput').click()" title="上传图片">⌯>ᴗo⌯ .ᐟ.ᐟ</button>
                 <input type="file" id="chatFileInput" accept="image/*" style="display:none" onchange="handleChatImageSelect(event)">
                 
                 <!-- 输入框 -->
@@ -231,11 +229,11 @@
                 
                 <!-- 按钮组 -->
                 <button class="btn-circle btn-send-user" id="btnSendUser" onclick="sendUserMsg()" title="发送上屏 (不触发AI)">
-                    ⬆
+                    つ♡⊂
                 </button>
                 
                 <button class="btn-circle btn-trigger-ai" id="btnTriggerAI" onclick="triggerAI()" title="让 AI 回复">
-                    🤖
+                    づ♡ど
                 </button>
             </div>
         </div>
@@ -300,11 +298,11 @@
 
             <div style="border-top:1px solid #eee; padding-top:15px;">
                 <div class="form-group">
-                    <label class="form-label">🌡️ 温度: <span id="tempVal" style="color:#007AFF">0.7</span></label>
+                    <label class="form-label">温度: <span id="tempVal" style="color:#007AFF">0.7</span></label>
                     <input type="range" id="tempRange" min="0" max="2" step="0.1" value="0.7" style="width:100%" oninput="document.getElementById('tempVal').innerText=this.value; saveSettings()">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">🧠 记忆轮数: <span id="contextVal" style="color:#007AFF">10</span></label>
+                    <label class="form-label">记忆轮数: <span id="contextVal" style="color:#007AFF">10</span></label>
                     <input type="range" id="contextRange" min="2" max="50" step="2" value="10" style="width:100%" oninput="document.getElementById('contextVal').innerText=this.value; saveSettings()">
                 </div>
                 <div class="form-group">
@@ -319,17 +317,17 @@
             </div>
 
             <div class="btn-group" style="margin-top:20px;">
-                <button class="btn btn-secondary" onclick="exportData()">📤 备份</button>
-                <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 恢复</button>
+                <button class="btn btn-secondary" onclick="exportData()">备份</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">恢复</button>
                 <input type="file" id="importFile" style="display:none" onchange="importData(event)">
             </div>
-            <button class="btn btn-danger" onclick="clearChat()" style="margin-top:10px;">🗑️ 清空对话</button>
+            <button class="btn btn-danger" onclick="clearChat()" style="margin-top:10px;">清空对话</button>
         </div>
 
         <!-- 记忆库面板 -->
         <div class="panel-overlay" id="memoryPanel">
             <div class="panel-header">
-                <h2 class="panel-title">🧠 记忆库</h2>
+                <h2 class="panel-title">记忆库</h2>
                 <button class="btn-close" onclick="togglePanel('memoryPanel')">×</button>
             </div>
             <div style="margin-bottom: 15px;">
@@ -342,7 +340,7 @@
         <!-- 总结弹窗 -->
         <div class="modal-overlay" id="summaryModalOverlay">
             <div class="modal-box">
-                <h3>🪄 智能总结</h3>
+                <h3>智能总结</h3>
                 <div class="form-group">
                     <label class="form-label">From Msg #</label>
                     <input type="number" id="sumStart" class="form-input" value="1">
@@ -731,7 +729,7 @@
                  const u = normalizeBaseUrl(document.getElementById('apiUrl').value);
                  const k = document.getElementById('apiKey').value;
                  await fetch(u+'/models',{headers:{Authorization:"Bearer "+k}});
-                 alert("✅ OK");
+                 alert("连接顺畅(ˊo̴̶̷̤  ̫ o̴̶̷̤ˋ)");
             }catch(e){alert("❌ "+e.message);}
         }
 
@@ -790,3 +788,4 @@
     </script>
 </body>
 </html>
+
