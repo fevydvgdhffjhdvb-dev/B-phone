@@ -803,7 +803,7 @@
 
             if (role === 'user' && !isTemp) {
                 // 也就是手机上的“长按”，电脑上的“右键”
-                eventAttr = `oncontextmenu="handleUserEdit(event, ${index}); return false;"`;
+                eventAttr = `ondblclick="handleUserEdit(event, ${index}); return false;"`;
             } else if (role === 'assistant' && !isTemp) {
                 extraHtml = `
                     <div class="msg-meta-row">
@@ -1570,6 +1570,7 @@ const history = char.messages.slice(-limit);
     </script>
 </body>
 </html>
+
 
 
 
