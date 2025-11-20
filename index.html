@@ -62,16 +62,35 @@
             color: white;
             justify-content: flex-start;
         }
-        .home-clock-widget { margin-top: 120px; text-align: center; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        /* 修改 .home-clock-widget (原第65行) */
+        .home-clock-widget { 
+            margin-top: 60px;  /* 从120改到60，让时钟往上提 */
+            text-align: center; 
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3); 
+            margin-bottom: 20px; /* 增加底部间距 */
+        }
+        
+        /* 原来的 .clock-time 和 .clock-date (第66-67行) 不用动，保留即可 */
         .clock-time { font-size: 72px; font-weight: 200; letter-spacing: -2px; line-height: 1; }
         .clock-date { font-size: 18px; margin-top: 5px; font-weight: 500; }
 
+        /* 修改 .app-grid (原第69-75行) */
         .app-grid {
-            margin-top: auto; margin-bottom: 40px;
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px 10px;
+            margin-top: 0;       /* 去掉 auto，让它不再沉底，改为靠上 */
+            margin-bottom: auto; /* 底部留空 */
+            
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 30px 15px;      /* 调整图标间距，行距大一点 */
             padding: 20px;
-            background: rgba(255,255,255,0.2); backdrop-filter: blur(20px);
-            border-radius: 30px; margin-left: 15px; margin-right: 15px;
+            
+            /* 关键：去掉背景色、磨砂和边框 */
+            background: none;    
+            backdrop-filter: none;
+            border-radius: 0;
+            
+            margin-left: 10px; 
+            margin-right: 10px;
         }
         .app-icon-container { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; transition: 0.2s; }
         .app-icon-container:active { transform: scale(0.9); }
@@ -1031,4 +1050,5 @@ const history = char.messages.slice(-limit);
     </script>
 </body>
 </html>
+
 
