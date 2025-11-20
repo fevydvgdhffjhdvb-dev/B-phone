@@ -371,6 +371,14 @@
             </div>
             <div class="content-scroll">
                 
+                <!-- 桌面壁纸设置 -->
+                <div class="ios-group-title" style="margin-top:0;">桌面壁纸 (输入图片 URL)</div>
+                <div class="ios-list">
+                    <div class="ios-item">
+                        <span class="ios-label">壁纸 URL</span>
+                        <input type="text" id="wallpaperInput" class="ios-input" placeholder="https://..." onchange="saveTheme()">
+                    </div>
+                </div>
                 <div class="ios-group-title">APP 图标替换 (输入图片URL)</div>
                 <div class="ios-list">
                     <div class="ios-item">
@@ -1005,26 +1013,31 @@ const history = char.messages.slice(-limit);
             globalConfig.historyLimit = parseInt(document.getElementById('historyLimit').value) || 20;
             saveData();
         }
-        // --- 美化/主题系统 (升级版: 含字体) ---
+        // --- 美化/主题系统 (终极版: 图标+字体+壁纸) ---
     let themeConfig = {
         icons: { msg: "", mem: "", set: "", theme: "" },
         customCss: "",
-        customFont: "" // <--- 新增: 存储字体链接
+        customFont: "",
+        homeWallpaper: "" // <--- 新增: 存储壁纸链接
     };
 
     function loadTheme() {
         const t = localStorage.getItem('ai_phone_theme');
         if(t) themeConfig = JSON.parse(t);
 
+        // 1. 恢复图标输入框
         document.getElementById('iconInput-msg').value = themeConfig.icons.msg || "";
         document.getElementById('iconInput-mem').value = themeConfig.icons.mem || "";
         document.getElementById('iconInput-set').value = themeConfig.icons.set || "";
         document.getElementById('iconInput-theme').value = themeConfig.icons.theme || "";
+        // 2. 恢复CSS和字体输入框
         document.getElementById('customCssInput').value = themeConfig.customCss || "";
-        
-        // 恢复字体输入框
         const fontInput = document.getElementById('fontInput');
         if(fontInput) fontInput.value = themeConfig.customFont || "";
+        
+        // 3. 恢复壁纸输入框 (新)
+        const wpInput = document.getElementById('wallpaperInput');
+        if(wpInput) wpInput.value = themeConfig.homeWallpaper || "";
 
         applyThemeUI();
     }
@@ -1036,20 +1049,35 @@ const history = char.messages.slice(-limit);
         themeConfig.icons.theme = document.getElementById('iconInput-theme').value;
         themeConfig.customCss = document.getElementById('customCssInput').value;
         
-        // 保存字体链接
         const fontInput = document.getElementById('fontInput');
         if(fontInput) themeConfig.customFont = fontInput.value;
+        
+        // 保存壁纸链接 (新)
+        const wpInput = document.getElementById('wallpaperInput');
+        if(wpInput) themeConfig.homeWallpaper = wpInput.value;
 
         localStorage.setItem('ai_phone_theme', JSON.stringify(themeConfig));
         applyThemeUI();
     }
 
     function applyThemeUI() {
+        // A. 应用图标
         updateAppIcon('app-icon-msg', themeConfig.icons.msg);
         updateAppIcon('app-icon-mem', themeConfig.icons.mem);
         updateAppIcon('app-icon-set', themeConfig.icons.set);
         updateAppIcon('app-icon-theme', themeConfig.icons.theme);
 
+        // B. 应用壁纸 (新逻辑)
+        const homePage = document.getElementById('page-home');
+        if (themeConfig.homeWallpaper && themeConfig.homeWallpaper.trim() !== "") {
+            // 如果有设置壁纸，就用设置的
+            homePage.style.backgroundImage = `url(${themeConfig.homeWallpaper})`;
+        } else {
+            // 如果没设置，就恢复默认的 Unsplash 壁纸
+            homePage.style.backgroundImage = "url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop')";
+        }
+
+        // C. 应用字体和CSS
         let styleTag = document.getElementById('user-custom-style');
         if (!styleTag) {
             styleTag = document.createElement('style');
@@ -1057,25 +1085,14 @@ const history = char.messages.slice(-limit);
             document.head.appendChild(styleTag);
         }
 
-        // --- 构建样式 ---
         let finalCss = themeConfig.customCss || "";
-
-        // 如果有字体，注入 @font-face 规则
         if (themeConfig.customFont && themeConfig.customFont.trim() !== "") {
             const fontRule = `
-                @font-face { 
-                    font-family: 'UserCustomFont'; 
-                    src: url('${themeConfig.customFont}'); 
-                    font-display: swap; 
-                }
-                /* 强制覆盖所有元素的字体 */
-                body, button, input, textarea, select, .clock-time, .app-title, .chat-contact-name { 
-                    font-family: 'UserCustomFont', -apple-system, sans-serif !important; 
-                }
+                @font-face { font-family: 'UserCustomFont'; src: url('${themeConfig.customFont}'); font-display: swap; }
+                body, button, input, textarea, select, .clock-time, .app-title, .chat-contact-name { font-family: 'UserCustomFont', -apple-system, sans-serif !important; }
             `;
             finalCss = fontRule + "\n" + finalCss;
         }
-
         styleTag.innerHTML = finalCss;
     }
 
@@ -1253,6 +1270,7 @@ const history = char.messages.slice(-limit);
     </script>
 </body>
 </html>
+
 
 
 
