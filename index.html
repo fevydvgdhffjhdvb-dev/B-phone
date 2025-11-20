@@ -136,11 +136,27 @@
         .list-time { font-size: 12px; color: #c7c7cc; white-space: nowrap; }
 
         /* --- 3. 聊天界面 --- */
-        #page-chat { background-color: #f2f2f7; background-size: cover; background-position: center; }
+        /* 修复后的背景：去掉顶部内边距，让壁纸撑满 */
+        #page-chat { 
+            background-color: #f2f2f7; 
+            background-size: cover; 
+            background-position: center; 
+            padding-top: 95px; /* 给顶部留出空间 */
+        }
+
+        /* 修复后的顶部栏：强制固定在最上方，填补状态栏缝隙 */
         .chat-header-bar {
-            height: 50px; display: flex; align-items: center; justify-content: space-between;
-            padding: 0 10px; background: rgba(248,249,250,0.95); backdrop-filter: blur(10px);
-            border-bottom: 1px solid #dbdbdb; margin-top: 44px; flex-shrink: 0; z-index: 50;
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: auto; min-height: 90px;
+            padding-top: max(44px, env(safe-area-inset-top));
+            padding-bottom: 10px;
+            padding-left: 15px; padding-right: 15px;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(20px);
+            display: flex; align-items: flex-end; justify-content: space-between;
+            border-bottom: 1px solid #dbdbdb;
+            z-index: 50;
         }
         .chat-back-btn { color: #007AFF; font-size: 16px; border: none; background: none; display: flex; align-items: center; cursor: pointer; }
         .chat-contact-name { font-weight: 600; font-size: 16px; flex: 1; text-align: center; margin: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
@@ -158,10 +174,10 @@
         .msg-row.right .msg-index { right: 45px; }
 
         .input-area { background: #f9f9f9; padding: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom)); border-top: 1px solid #ccc; display: flex; flex-direction: column; gap: 10px; }
-        .input-toolbar { display: flex; align-items: center; gap: 10px; }
-        #userInput { flex: 1; padding: 9px 15px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; outline: none; }
+        .input-toolbar { display: flex; align-items: center; gap: 8px; width: 100%; }
+        #userInput { flex: 1; min-width: 0; padding: 10px 15px; border-radius: 20px; border: 1px solid #ddd; font-size: 16px; outline: none; }
         #userInput:focus { border-color: #007AFF; }
-        .btn-send { font-size: 24px; background: none; border: none; cursor: pointer; color: #007AFF; padding: 0; }
+        .btn-send { font-size: 24px; background: none; border: none; cursor: pointer; color: #007AFF; padding: 0 5px; flex-shrink: 0; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
         .typing-indicator { display: inline-block; width: 4px; height: 4px; background: #999; border-radius: 50%; margin: 0 1px; animation: bounce 1s infinite; }
         .typing-indicator:nth-child(2) { animation-delay: 0.2s; }
         .typing-indicator:nth-child(3) { animation-delay: 0.4s; }
@@ -1270,6 +1286,7 @@ const history = char.messages.slice(-limit);
     </script>
 </body>
 </html>
+
 
 
 
