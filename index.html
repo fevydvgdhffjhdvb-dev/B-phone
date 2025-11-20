@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 小手机 V7.5 (全能终极版)</title>
+    <title>AI 小手机 V8.0 (导演版)</title>
     <style>
         /* --- 基础样式 --- */
         * { box-sizing: border-box; }
@@ -53,28 +53,45 @@
         .msg-row.left .message { background-color: #F2F2F7; color: #000; border-bottom-left-radius: 4px; }
         
         .msg-index { font-size: 9px; opacity: 0.5; position: absolute; top: -15px; color: #999; width: 100%; display: none;}
-        .msg-row:hover .msg-index { display: block; } /* 鼠标悬停显示楼层号 */
+        .msg-row:hover .msg-index { display: block; } 
         
         .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .system-notice { text-align: center; font-size: 12px; color: #aaa; margin: 10px 0; width: 100%; }
 
-        /* --- 底部输入栏 --- */
+        /* --- 底部输入栏 (布局大改) --- */
         .input-area { 
-            padding: 10px 15px; background-color: #f8f9fa; border-top: 1px solid #eee; 
+            padding: 10px 12px; background-color: #f8f9fa; border-top: 1px solid #eee; 
             display: flex; flex-direction: column; gap: 10px;
         }
-        .input-toolbar { display: flex; align-items: center; gap: 8px; width: 100%; }
         
+        /* 图片预览区 */
         #uploadPreview { display: none; padding: 8px; background: #fff; border-radius: 8px; border: 1px dashed #ccc; align-items: center; justify-content: space-between; font-size: 12px; color: #666;}
         #previewImg { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
+
+        /* 输入行布局 */
+        .input-toolbar { display: flex; align-items: center; gap: 8px; width: 100%; }
 
         #userInput { flex: 1; padding: 12px; border-radius: 20px; border: 1px solid #ddd; outline: none; font-size: 14px; transition: border 0.2s;}
         #userInput:focus { border-color: #007AFF; }
         
-        .btn-send { background-color: #007AFF; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 13px; flex-shrink: 0;}
-        .btn-send:disabled { background-color: #ccc; }
-        .btn-attach { background: none; border: none; font-size: 22px; color: #555; cursor: pointer; padding: 0 5px; }
+        /* 按钮样式 */
+        .btn-circle { width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; color: white; transition: transform 0.1s; flex-shrink: 0; }
+        .btn-circle:active { transform: scale(0.95); }
+        .btn-circle:disabled { background-color: #ccc !important; cursor: not-allowed; }
+
+        /* 蓝色发送键 (只发不回) */
+        .btn-send-user { background-color: #007AFF; }
+        /* 紫色AI键 (触发回复) */
+        .btn-trigger-ai { background-color: #5856D6; position: relative; }
+
+        .btn-attach { background: none; border: none; font-size: 24px; color: #555; cursor: pointer; padding: 0 5px; }
+
+        /* 加载动画 */
+        .typing-indicator { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background-color: white; animation: bounce 1s infinite; margin: 0 2px;}
+        .typing-indicator:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 
         /* --- 面板通用样式 --- */
         .panel-overlay {
@@ -101,16 +118,16 @@
         .btn-danger { background-color: #FF3B30; color: white; }
         .btn-fetch { background-color: #5856D6; color: white; } 
 
-        /* 头像上传样式 */
+        /* 头像上传 */
         .avatar-uploader { display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
         .current-avatar { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #eee; object-fit: cover; }
         .upload-btn-label { background: #f0f0f0; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid #ccc; }
-        
-        /* 记忆列表 */
+
+        /* 记忆库 */
         .memory-item { background: #f0f4f8; padding: 10px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: flex-start; font-size: 13px;}
         .mem-del { color: #ff3b30; cursor: pointer; margin-left: 10px; font-weight: bold; }
 
-        /* --- 总结弹窗 (模态框) --- */
+        /* 总结弹窗 */
         .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:200; display:none;}
         .modal-box {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -125,7 +142,7 @@
     <div class="phone-frame">
         <!-- 顶部 -->
         <div class="header">
-            <span class="header-title">AI Phone V7.5</span>
+            <span class="header-title">AI Phone V8.0 导演版</span>
             <div class="header-icons">
                 <button class="btn-icon" onclick="openSummaryModal()" title="自动总结">🪄</button>
                 <button class="btn-icon" onclick="togglePanel('memoryPanel')" title="记忆库">🧠</button>
@@ -135,7 +152,11 @@
 
         <!-- 聊天内容 -->
         <div class="chat-box" id="chatBox">
-            <div class="system-notice">✨ 系统就绪：支持视觉、记忆、流式输出</div>
+            <div class="system-notice">
+                ✨ 使用指南：<br>
+                1. 点击 ⬆️ 只发送内容（不触发AI）<br>
+                2. 发完图片/文字后，点击 🤖 让 AI 回复
+            </div>
         </div>
 
         <!-- 底部输入 -->
@@ -144,7 +165,7 @@
             <div id="uploadPreview">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <img id="previewImg" src="">
-                    <span>已添加图片 (将随消息发送)</span>
+                    <span>已添加图片</span>
                 </div>
                 <span style="cursor:pointer; color:red; font-size:16px;" onclick="clearUpload()">×</span>
             </div>
@@ -153,19 +174,29 @@
                 <button class="btn-attach" onclick="document.getElementById('chatFileInput').click()" title="上传图片">📎</button>
                 <input type="file" id="chatFileInput" accept="image/*" style="display:none" onchange="handleChatImageSelect(event)">
                 
-                <input type="text" id="userInput" placeholder="发送消息..." onkeypress="handleEnter(event)">
-                <button class="btn-send" id="sendBtn" onclick="sendMessage()">发送</button>
+                <!-- 输入框 -->
+                <input type="text" id="userInput" placeholder="输入消息..." onkeypress="handleEnter(event)">
+                
+                <!-- 按钮组 -->
+                <!-- 1. 只发送消息按钮 -->
+                <button class="btn-circle btn-send-user" id="btnSendUser" onclick="sendUserMsg()" title="发送上屏 (不触发AI)">
+                    ⬆
+                </button>
+                
+                <!-- 2. 召唤AI按钮 -->
+                <button class="btn-circle btn-trigger-ai" id="btnTriggerAI" onclick="triggerAI()" title="让 AI 回复">
+                    🤖
+                </button>
             </div>
         </div>
 
-        <!-- ================= 1. 设置面板 ================= -->
+        <!-- ================= 1. 设置面板 (保持 V7.5 功能) ================= -->
         <div class="panel-overlay" id="settingsPanel">
             <div class="panel-header">
                 <h2 class="panel-title">设置中心</h2>
                 <button class="btn-close" onclick="togglePanel('settingsPanel')">×</button>
             </div>
             
-            <!-- API 配置 -->
             <div style="background:#f9f9f9; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid #eee;">
                 <div class="form-group">
                     <label class="form-label">API Base URL</label>
@@ -182,41 +213,35 @@
                 </div>
             </div>
 
-            <!-- 身份设置 -->
             <div class="form-group">
-                <label class="form-label" style="color:#007AFF">🤖 AI 头像与设定</label>
+                <label class="form-label" style="color:#007AFF">🤖 AI 设定</label>
                 <div class="avatar-uploader">
                     <img id="aiAvatarPreview" src="https://api.dicebear.com/7.x/bottts/svg?seed=AI" class="current-avatar">
-                    <label class="upload-btn-label">上传 AI 头像 <input type="file" style="display:none" accept="image/*" onchange="handleAvatarUpload(event, 'ai')"></label>
+                    <label class="upload-btn-label">AI 头像 <input type="file" style="display:none" accept="image/*" onchange="handleAvatarUpload(event, 'ai')"></label>
                 </div>
-                <textarea id="systemPrompt" class="form-textarea" onchange="saveSettings()" placeholder="输入 System Prompt...">你是一个幽默的AI助手。</textarea>
+                <textarea id="systemPrompt" class="form-textarea" onchange="saveSettings()">你是一个幽默的AI助手。</textarea>
             </div>
 
             <div class="form-group">
-                <label class="form-label" style="color:#34C759">👤 用户头像与称呼</label>
+                <label class="form-label" style="color:#34C759">👤 用户设定</label>
                 <div class="avatar-uploader">
                     <img id="userAvatarPreview" src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" class="current-avatar">
-                    <label class="upload-btn-label">上传你的头像 <input type="file" style="display:none" accept="image/*" onchange="handleAvatarUpload(event, 'user')"></label>
+                    <label class="upload-btn-label">你的头像 <input type="file" style="display:none" accept="image/*" onchange="handleAvatarUpload(event, 'user')"></label>
                 </div>
                 <input type="text" id="userName" class="form-input" placeholder="怎么称呼你？" onchange="saveSettings()">
             </div>
 
-            <!-- 参数微调 -->
             <div style="border-top:1px solid #eee; padding-top:15px;">
                 <div class="form-group">
-                    <label class="form-label">🌡️ 温度 (Temperature): <span id="tempVal" style="color:#007AFF">0.7</span></label>
+                    <label class="form-label">🌡️ 温度: <span id="tempVal" style="color:#007AFF">0.7</span></label>
                     <input type="range" id="tempRange" min="0" max="2" step="0.1" value="0.7" style="width:100%" oninput="document.getElementById('tempVal').innerText=this.value; saveSettings()">
-                    <div class="hint-text">0.2 理性严谨 -> 1.0 创意发散</div>
                 </div>
-
                 <div class="form-group">
-                    <label class="form-label">🧠 最大记忆轮数: <span id="contextVal" style="color:#007AFF">10</span></label>
+                    <label class="form-label">🧠 记忆轮数: <span id="contextVal" style="color:#007AFF">10</span></label>
                     <input type="range" id="contextRange" min="2" max="50" step="2" value="10" style="width:100%" oninput="document.getElementById('contextVal').innerText=this.value; saveSettings()">
-                    <div class="hint-text">仅携带最近 X 条消息，节省 Token</div>
                 </div>
-
                 <div class="form-group">
-                    <label class="form-label">模型选择</label>
+                    <label class="form-label">模型</label>
                     <select id="modelSelect" class="form-input" onchange="document.getElementById('customModel').value=this.value; saveSettings();">
                         <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
                         <option value="gpt-4o">gpt-4o (视觉推荐)</option>
@@ -226,26 +251,24 @@
                 </div>
             </div>
 
-            <!-- 备份与重置 -->
             <div class="btn-group" style="margin-top:20px;">
-                <button class="btn btn-secondary" onclick="exportData()">📤 备份数据</button>
-                <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 导入数据</button>
+                <button class="btn btn-secondary" onclick="exportData()">📤 备份</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 恢复</button>
                 <input type="file" id="importFile" style="display:none" onchange="importData(event)">
             </div>
-            <button class="btn btn-danger" onclick="clearChat()" style="margin-top:10px;">🗑️ 清空当前对话</button>
+            <button class="btn btn-danger" onclick="clearChat()" style="margin-top:10px;">🗑️ 清空对话</button>
         </div>
 
         <!-- ================= 2. 记忆库面板 ================= -->
         <div class="panel-overlay" id="memoryPanel">
             <div class="panel-header">
-                <h2 class="panel-title">🧠 长期记忆库</h2>
+                <h2 class="panel-title">🧠 记忆库</h2>
                 <button class="btn-close" onclick="togglePanel('memoryPanel')">×</button>
             </div>
             <div style="margin-bottom: 15px;">
-                <textarea id="newMemoryInput" class="form-input" style="height:60px;" placeholder="手动输入想要 AI 记住的事实..."></textarea>
-                <button class="btn btn-primary" onclick="addMemoryManual()">➕ 添加记忆</button>
+                <textarea id="newMemoryInput" class="form-input" style="height:60px;" placeholder="添加记忆..."></textarea>
+                <button class="btn btn-primary" onclick="addMemoryManual()">➕ 添加</button>
             </div>
-            <div class="form-label">已存记忆 (聊天时自动生效)</div>
             <div id="memoryList"></div>
         </div>
 
@@ -253,21 +276,18 @@
         <div class="modal-overlay" id="summaryModalOverlay">
             <div class="modal-box">
                 <h3>🪄 智能总结</h3>
-                <p style="font-size:12px; color:#666;">AI 将阅读指定范围的消息，并提取重点存入记忆库。</p>
-                
                 <div class="form-group">
-                    <label class="form-label">开始 (From Msg #)</label>
+                    <label class="form-label">From Msg #</label>
                     <input type="number" id="sumStart" class="form-input" value="1">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">结束 (To Msg #)</label>
+                    <label class="form-label">To Msg #</label>
                     <input type="number" id="sumEnd" class="form-input" value="10">
                 </div>
-                <div class="hint-text" id="msgCountHint">当前共有 0 条消息</div>
-                
+                <div class="hint-text" id="msgCountHint"></div>
                 <div class="btn-group">
                     <button class="btn btn-secondary" onclick="closeSummaryModal()">取消</button>
-                    <button class="btn btn-primary" id="btnDoSum" onclick="doSummarize()">开始总结</button>
+                    <button class="btn btn-primary" id="btnDoSum" onclick="doSummarize()">总结</button>
                 </div>
             </div>
         </div>
@@ -275,7 +295,7 @@
     </div>
 
     <script>
-        // --- 核心配置对象 ---
+        // --- 核心变量 ---
         let settings = {
             aiAvatar: "https://api.dicebear.com/7.x/bottts/svg?seed=AI",
             userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=User",
@@ -287,7 +307,6 @@
         let memories = [];
         let currentUploadBase64 = null; 
 
-        // --- 初始化 ---
         window.onload = function() {
             loadSettings();
             loadData();
@@ -295,48 +314,62 @@
             renderMemories();
         };
 
-        // --- 核心功能: 发送消息 ---
-        async function sendMessage() {
+        // ==========================================
+        // ★★★ 核心逻辑分离：发送 vs 触发 ★★★
+        // ==========================================
+
+        // 1. 只发送用户消息 (不上报 API)
+        function sendUserMsg() {
             const input = document.getElementById('userInput');
-            const btn = document.getElementById('sendBtn');
             const text = input.value.trim();
-            
+
+            // 校验：不能为空，除非有图
             if (!text && !currentUploadBase64) return;
+
+            // UI 更新
+            appendMessageUI('user', text, currentUploadBase64);
+            
+            // 数据保存
+            messages.push({ role: 'user', content: text, image: currentUploadBase64 });
+            saveData();
+
+            // 清理输入框 (防止图片残留导致误发)
+            input.value = '';
+            clearUpload();
+
+            // *这里不需要 disable 任何按钮，用户可以继续疯狂发送*
+        }
+
+        // 2. 手动触发 AI 回复 (读取历史记录)
+        async function triggerAI() {
             if (!document.getElementById('apiKey').value) {
                 alert("请先配置 API Key 🔑"); togglePanel('settingsPanel'); return;
             }
+            
+            const btnAI = document.getElementById('btnTriggerAI');
+            const btnSend = document.getElementById('btnSendUser');
+            
+            // 锁定按钮防止重复点击
+            btnAI.disabled = true; 
+            btnAI.innerHTML = '<span class="typing-indicator"></span><span class="typing-indicator"></span>'; // 动画
 
-            // 1. UI显示用户消息
-            const userMsg = { role: 'user', content: text, image: currentUploadBase64 };
-            messages.push(userMsg);
-            appendMessageUI('user', text, currentUploadBase64);
-            saveData();
-
-            // UI重置
-            input.value = '';
-            clearUpload();
-            btn.disabled = true; btn.innerText = "💬";
-
-            // 2. 构造请求 Prompt
+            // 构造 Prompt
             const sysPromptRaw = document.getElementById('systemPrompt').value;
             const userName = document.getElementById('userName').value || "用户";
             const timeStr = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
             
-            let fullSystemPrompt = `${sysPromptRaw}\n[System: Current Time (Asia/Shanghai): ${timeStr}]\n[System: Talking to user: ${userName}]`;
-            
+            let fullSystemPrompt = `${sysPromptRaw}\n[Time: ${timeStr}]\n[User: ${userName}]`;
             if(memories.length > 0) {
-                fullSystemPrompt += `\n\n[长期记忆库]:\n${memories.map(m => '- ' + m).join('\n')}`;
+                fullSystemPrompt += `\n\n[Memories]:\n${memories.map(m => '- ' + m).join('\n')}`;
             }
 
-            // 3. 构造上下文 (截取最近N条)
+            // 构造上下文
             const limit = parseInt(document.getElementById('contextRange').value) || 10;
-            // 过滤出需要发送的消息，并转换格式（Vision格式）
             let apiMessages = [{ role: "system", content: fullSystemPrompt }];
+            const history = messages.slice(-limit);
             
-            const history = messages.slice(-limit); 
             history.forEach(msg => {
                 if(msg.image) {
-                    // 视觉格式
                     apiMessages.push({
                         role: msg.role,
                         content: [
@@ -349,25 +382,21 @@
                 }
             });
 
-            // 4. 发起请求
-            const url = normalizeBaseUrl(document.getElementById('apiUrl').value);
-            const key = document.getElementById('apiKey').value;
-            const model = document.getElementById('customModel').value || "gpt-3.5-turbo";
-            const temp = parseFloat(document.getElementById('tempRange').value);
-
-            // 预先创建 AI 气泡用于流式填充
-            const aiBubble = appendMessageUI('assistant', '', null, true); 
+            // 准备气泡
+            const aiBubble = appendMessageUI('assistant', '', null, true);
             let fullReply = "";
 
             try {
+                const url = normalizeBaseUrl(document.getElementById('apiUrl').value);
+                const key = document.getElementById('apiKey').value;
+                const model = document.getElementById('customModel').value || "gpt-3.5-turbo";
+                const temp = parseFloat(document.getElementById('tempRange').value);
+
                 const res = await fetch(url + '/chat/completions', {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
                     body: JSON.stringify({
-                        model: model,
-                        messages: apiMessages,
-                        temperature: temp,
-                        stream: true
+                        model: model, messages: apiMessages, temperature: temp, stream: true
                     })
                 });
 
@@ -394,7 +423,7 @@
                                 const content = json.choices[0].delta.content || "";
                                 fullReply += content;
                                 aiBubble.innerHTML = cleanText(fullReply).replace(/\n/g, '<br>');
-                                document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
+                                scrollToBottom();
                             } catch(e) {}
                         }
                     }
@@ -404,163 +433,53 @@
                 saveData();
 
             } catch (e) {
-                aiBubble.innerHTML += `<br><span style="color:red;font-size:12px;">🚫 错误: ${e.message}</span>`;
+                aiBubble.innerHTML += `<br><span style="color:red;font-size:12px;">🚫 ${e.message}</span>`;
             }
 
-            btn.disabled = false; btn.innerText = "发送";
+            // 恢复按钮
+            btnAI.disabled = false; 
+            btnAI.innerHTML = '🤖';
         }
 
-        // --- 自动总结功能 ---
-        function openSummaryModal() {
-            document.getElementById('summaryModalOverlay').style.display = 'block';
-            document.getElementById('sumEnd').value = messages.length;
-            document.getElementById('msgCountHint').innerText = `当前历史记录共有 ${messages.length} 条`;
-        }
-        function closeSummaryModal() {
-            document.getElementById('summaryModalOverlay').style.display = 'none';
+        // ==========================================
+        // 通用功能
+        // ==========================================
+
+        function cleanText(text) {
+            return text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/```/g, '').replace(/`/g, '');
         }
 
-        async function doSummarize() {
-            const start = parseInt(document.getElementById('sumStart').value) - 1;
-            const end = parseInt(document.getElementById('sumEnd').value);
-            
-            if (isNaN(start) || start < 0 || end > messages.length || start >= end) {
-                alert("请输入有效的消息范围"); return;
-            }
-
-            const targetMsgs = messages.slice(start, end);
-            // 简化为文本用于总结
-            const chatText = targetMsgs.map(m => `${m.role}: ${m.content}`).join('\n');
-            
-            const btn = document.getElementById('btnDoSum');
-            btn.disabled = true; btn.innerText = "总结中...";
-
-            try {
-                const url = normalizeBaseUrl(document.getElementById('apiUrl').value);
-                const key = document.getElementById('apiKey').value;
-                const model = document.getElementById('customModel').value || "gpt-3.5-turbo";
-
-                const res = await fetch(url + '/chat/completions', {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: [
-                            {role: "system", content: "你是一个专业的记录员。"},
-                            {role: "user", content: `请简要总结以下对话的核心信息，提炼成一条简短的记忆点：\n\n${chatText}`}
-                        ]
-                    })
-                });
-                const data = await res.json();
-                if(data.error) throw new Error(data.error.message);
-                
-                const summary = data.choices[0].message.content;
-                memories.push(summary);
-                saveData();
-                renderMemories();
-                alert("✅ 总结成功并已存入记忆库！");
-                closeSummaryModal();
-
-            } catch(e) {
-                alert("❌ 总结失败: " + e.message);
-            }
-            btn.disabled = false; btn.innerText = "开始总结";
-        }
-
-        // --- 数据备份与导入 ---
-        function exportData() {
-            const data = {
-                settings: settings,
-                memories: memories,
-                messages: messages,
-                apiConfig: { 
-                    // 只导出URL，不导出Key以防泄露，除非用户真的想导出Key...为了安全还是不导Key吧
-                    url: document.getElementById('apiUrl').value,
-                    sys: document.getElementById('systemPrompt').value
-                }
-            };
-            const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `ai_phone_backup_${new Date().toISOString().slice(0,10)}.json`;
-            a.click();
-        }
-
-        function importData(event) {
-            const file = event.target.files[0];
-            if(!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const json = JSON.parse(e.target.result);
-                    if(confirm("导入将覆盖当前聊天记录和设置，确定吗？")) {
-                        if(json.messages) messages = json.messages;
-                        if(json.memories) memories = json.memories;
-                        if(json.settings) settings = json.settings;
-                        // 恢复设置到 UI
-                        if(json.apiConfig) {
-                            document.getElementById('apiUrl').value = json.apiConfig.url;
-                            document.getElementById('systemPrompt').value = json.apiConfig.sys;
-                        }
-                        saveData();
-                        saveSettings(); // 这一步会把 settings 对象写入 LocalStorage
-                        location.reload(); // 刷新生效
-                    }
-                } catch(err) {
-                    alert("❌ 文件格式错误");
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        // --- 辅助 UI 逻辑 ---
         function appendMessageUI(role, text, imgBase64, isStreaming) {
             const box = document.getElementById('chatBox');
             const div = document.createElement('div');
             div.className = `msg-row ${role==='user'?'right':'left'}`;
-            
             const avatarUrl = role==='user' ? settings.userAvatar : settings.aiAvatar;
-            
-            // 楼层号 (index)
             const index = messages.length + (isStreaming ? 1 : 0); 
 
-            let html = `
-                <div style="position:relative">
-                    <img src="${avatarUrl}" class="avatar">
-                </div>
+            div.innerHTML = `
+                <div style="position:relative"><img src="${avatarUrl}" class="avatar"></div>
                 <div class="message">
                     <div class="msg-index">#${index}</div>
                     ${imgBase64 ? `<img src="${imgBase64}" class="chat-img"><br>` : ''}
                     <span class="msg-content">${cleanText(text).replace(/\n/g, '<br>')}</span>
                 </div>
             `;
-            div.innerHTML = html;
             box.appendChild(div);
-            box.scrollTop = box.scrollHeight;
-            
+            scrollToBottom();
             if(isStreaming) return div.querySelector('.msg-content');
         }
 
-        function cleanText(text) {
-            // 简单去除Markdown (粗体、代码块反引号)
-            return text.replace(/\*\*(.*?)\*\*/g, '$1')
-                       .replace(/```/g, '')
-                       .replace(/`/g, '');
+        function scrollToBottom() {
+            const b = document.getElementById('chatBox');
+            b.scrollTop = b.scrollHeight;
         }
 
-        function normalizeBaseUrl(url) {
-            url = url.trim();
-            if (url.endsWith('/')) url = url.slice(0, -1); 
-            if (url.endsWith('/chat/completions')) url = url.replace('/chat/completions', ''); 
-            // 智能补全
-            if (!url.endsWith('/v1') && url.includes('openai')) url += '/v1'; 
-            // 如果用户完全没写v1，给个提示或强行加？这里我们做个安全检查
-            if (!url.endsWith('/v1')) {
-                 // 可以在这里做一个静默补充，或者信任用户。
-                 // 根据要求，我们已经在UI上提示了。这里做一个软性补充。
-                 // url += '/v1'; // 暂时不强制，有的私有部署可能不是v1
+        // 快捷键 Enter 默认触发“只发送”，Shift+Enter 换行
+        // 用户如果习惯 Enter 直接发，这很自然。要触发 AI，手动点一下机器人。
+        function handleEnter(e) { 
+            if(e.key==='Enter') {
+                sendUserMsg();
             }
-            return url;
         }
 
         // 图片处理
@@ -581,127 +500,156 @@
             document.getElementById('uploadPreview').style.display = 'none';
         }
 
+        // 自动总结
+        async function doSummarize() {
+            // ... (保持原有逻辑) ...
+            const start = parseInt(document.getElementById('sumStart').value) - 1;
+            const end = parseInt(document.getElementById('sumEnd').value);
+            if (isNaN(start) || end > messages.length) return;
+
+            const btn = document.getElementById('btnDoSum');
+            btn.innerText = "⏳"; btn.disabled=true;
+            
+            try {
+                const targetText = messages.slice(start, end).map(m=>`${m.role}:${m.content}`).join('\n');
+                const url = normalizeBaseUrl(document.getElementById('apiUrl').value);
+                const key = document.getElementById('apiKey').value;
+                const model = document.getElementById('customModel').value || "gpt-3.5-turbo";
+
+                const res = await fetch(url + '/chat/completions', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            {role:"system", content:"Summarize briefly."},
+                            {role:"user", content: targetText}
+                        ]
+                    })
+                });
+                const d = await res.json();
+                memories.push(d.choices[0].message.content);
+                saveData(); renderMemories(); closeSummaryModal();
+            } catch(e){ alert(e.message); }
+            btn.innerText = "总结"; btn.disabled=false;
+        }
+
+        // 基础配置加载与保存
+        function normalizeBaseUrl(url) {
+            url = url.trim();
+            if (url.endsWith('/')) url = url.slice(0, -1); 
+            if (url.endsWith('/chat/completions')) url = url.replace('/chat/completions', ''); 
+            if (!url.endsWith('/v1') && url.includes('openai')) url += '/v1'; 
+            return url;
+        }
+        function togglePanel(id) {
+            document.querySelectorAll('.panel-overlay').forEach(p => { if(p.id !== id) p.style.display='none'; });
+            const p = document.getElementById(id);
+            p.style.display = p.style.display==='flex' ? 'none' : 'flex';
+            if(p.style.display==='flex') p.classList.add('show');
+            else saveSettings();
+        }
+        function saveSettings() {
+            localStorage.setItem('v8_url', document.getElementById('apiUrl').value);
+            localStorage.setItem('v8_key', document.getElementById('apiKey').value);
+            localStorage.setItem('v8_sys', document.getElementById('systemPrompt').value);
+            localStorage.setItem('v8_mod', document.getElementById('customModel').value);
+            settings.userName = document.getElementById('userName').value;
+            settings.contextLimit = document.getElementById('contextRange').value;
+            settings.temperature = document.getElementById('tempRange').value;
+            localStorage.setItem('v8_settings', JSON.stringify(settings));
+        }
+        function loadSettings() {
+            if(localStorage.getItem('v8_url')) document.getElementById('apiUrl').value = localStorage.getItem('v8_url');
+            if(localStorage.getItem('v8_key')) document.getElementById('apiKey').value = localStorage.getItem('v8_key');
+            if(localStorage.getItem('v8_sys')) document.getElementById('systemPrompt').value = localStorage.getItem('v8_sys');
+            if(localStorage.getItem('v8_mod')) document.getElementById('customModel').value = localStorage.getItem('v8_mod');
+            const s = localStorage.getItem('v8_settings');
+            if(s) {
+                settings = JSON.parse(s);
+                document.getElementById('userName').value = settings.userName || "";
+                document.getElementById('contextRange').value = settings.contextLimit || 10;
+                document.getElementById('tempRange').value = settings.temperature || 0.7;
+                document.getElementById('aiAvatarPreview').src = settings.aiAvatar;
+                document.getElementById('userAvatarPreview').src = settings.userAvatar;
+            }
+        }
+        function saveData() {
+            localStorage.setItem('v8_msg', JSON.stringify(messages));
+            localStorage.setItem('v8_mem', JSON.stringify(memories));
+        }
+        function loadData() {
+            const m = localStorage.getItem('v8_msg'); if(m) messages = JSON.parse(m);
+            const mem = localStorage.getItem('v8_mem'); if(mem) memories = JSON.parse(mem);
+        }
         function handleAvatarUpload(e, type) {
             const file = e.target.files[0];
             if(!file) return;
             const reader = new FileReader();
             reader.onload = (ev) => {
-                const res = ev.target.result;
-                if(type === 'ai') {
-                    settings.aiAvatar = res;
-                    document.getElementById('aiAvatarPreview').src = res;
-                } else {
-                    settings.userAvatar = res;
-                    document.getElementById('userAvatarPreview').src = res;
-                }
+                const r = ev.target.result;
+                if(type==='ai') { settings.aiAvatar=r; document.getElementById('aiAvatarPreview').src=r; }
+                else { settings.userAvatar=r; document.getElementById('userAvatarPreview').src=r; }
                 saveSettings();
-            }
-            reader.readAsDataURL(file);
+            }; reader.readAsDataURL(file);
         }
-
-        // 面板与存储
-        function togglePanel(id) {
-            document.querySelectorAll('.panel-overlay').forEach(p => {
-                if(p.id !== id) p.style.display = 'none';
-            });
-            const p = document.getElementById(id);
-            if(p.style.display === 'flex') {
-                p.style.display = 'none';
-                saveSettings();
-            } else {
-                p.style.display = 'flex';
-                p.classList.add('show');
-            }
-        }
-
-        function saveSettings() {
-            localStorage.setItem('v75_url', document.getElementById('apiUrl').value);
-            localStorage.setItem('v75_key', document.getElementById('apiKey').value);
-            localStorage.setItem('v75_sys', document.getElementById('systemPrompt').value);
-            localStorage.setItem('v75_mod', document.getElementById('customModel').value);
-            
-            settings.userName = document.getElementById('userName').value;
-            settings.contextLimit = document.getElementById('contextRange').value;
-            settings.temperature = document.getElementById('tempRange').value;
-            
-            localStorage.setItem('v75_settings', JSON.stringify(settings));
-        }
-
-        function loadSettings() {
-            if(localStorage.getItem('v75_url')) document.getElementById('apiUrl').value = localStorage.getItem('v75_url');
-            if(localStorage.getItem('v75_key')) document.getElementById('apiKey').value = localStorage.getItem('v75_key');
-            if(localStorage.getItem('v75_sys')) document.getElementById('systemPrompt').value = localStorage.getItem('v75_sys');
-            if(localStorage.getItem('v75_mod')) document.getElementById('customModel').value = localStorage.getItem('v75_mod');
-
-            const saved = localStorage.getItem('v75_settings');
-            if(saved) {
-                settings = JSON.parse(saved);
-                document.getElementById('userName').value = settings.userName || "";
-                document.getElementById('contextRange').value = settings.contextLimit || 10;
-                document.getElementById('contextVal').innerText = settings.contextLimit || 10;
-                document.getElementById('tempRange').value = settings.temperature || 0.7;
-                document.getElementById('tempVal').innerText = settings.temperature || 0.7;
-                document.getElementById('aiAvatarPreview').src = settings.aiAvatar;
-                document.getElementById('userAvatarPreview').src = settings.userAvatar;
-            }
-        }
-
-        function saveData() {
-            localStorage.setItem('v75_msg', JSON.stringify(messages));
-            localStorage.setItem('v75_mem', JSON.stringify(memories));
-        }
-        function loadData() {
-            const m = localStorage.getItem('v75_msg'); if(m) messages = JSON.parse(m);
-            const mem = localStorage.getItem('v75_mem'); if(mem) memories = JSON.parse(mem);
-        }
-
-        // 记忆库管理
         function renderMemories() {
-            const list = document.getElementById('memoryList');
-            list.innerHTML = '';
-            memories.forEach((m, i) => {
-                list.innerHTML += `<div class="memory-item"><span>${m}</span><span class="mem-del" onclick="deleteMemory(${i})">×</span></div>`;
-            });
+            const l = document.getElementById('memoryList'); l.innerHTML='';
+            memories.forEach((m,i)=> l.innerHTML+=`<div class="memory-item"><span>${m}</span><span class="mem-del" onclick="memories.splice(${i},1);saveData();renderMemories()">×</span></div>`);
         }
-        function deleteMemory(i) { memories.splice(i, 1); saveData(); renderMemories(); }
         function addMemoryManual() {
-            const v = document.getElementById('newMemoryInput').value.trim();
-            if(v) { memories.push(v); saveData(); renderMemories(); document.getElementById('newMemoryInput').value=''; }
+            const v = document.getElementById('newMemoryInput').value;
+            if(v){ memories.push(v); saveData(); renderMemories(); document.getElementById('newMemoryInput').value=''; }
         }
-        
+        function openSummaryModal() {
+            document.getElementById('summaryModalOverlay').style.display='block';
+            document.getElementById('sumEnd').value = messages.length;
+            document.getElementById('msgCountHint').innerText = `Total: ${messages.length}`;
+        }
+        function closeSummaryModal() { document.getElementById('summaryModalOverlay').style.display='none'; }
+        function exportData() {
+            const d = {settings, memories, messages, api:{url:document.getElementById('apiUrl').value, sys:document.getElementById('systemPrompt').value}};
+            const b = new Blob([JSON.stringify(d)],{type:'application/json'});
+            const a = document.createElement('a'); a.href=URL.createObjectURL(b); a.download='backup.json'; a.click();
+        }
+        function importData(e) {
+            const f = e.target.files[0]; if(!f)return;
+            const r = new FileReader();
+            r.onload=(ev)=>{
+                try{
+                    const d = JSON.parse(ev.target.result);
+                    if(confirm("覆盖当前数据?")){
+                        messages=d.messages||[]; memories=d.memories||[]; settings=d.settings||settings;
+                        if(d.api){ document.getElementById('apiUrl').value=d.api.url; document.getElementById('systemPrompt').value=d.api.sys; }
+                        saveData(); saveSettings(); location.reload();
+                    }
+                }catch(err){alert("文件错误");}
+            }; r.readAsText(f);
+        }
         function toggleCustomModel() {
-            const sel = document.getElementById('modelSelect');
-            const inp = document.getElementById('customModel');
-            if(inp.style.display === 'none') { inp.style.display = 'block'; sel.style.display='none'; inp.value = sel.value; }
-            else { inp.style.display = 'none'; sel.style.display='block'; }
+            const s = document.getElementById('modelSelect'); const i = document.getElementById('customModel');
+            if(i.style.display==='none'){i.style.display='block'; s.style.display='none'; i.value=s.value;}
+            else{i.style.display='none'; s.style.display='block';}
         }
-
-        function clearChat() { if(confirm("清空对话记录？")) { messages=[]; saveData(); renderMessages(); } }
-        function handleEnter(e) { if(e.key==='Enter') sendMessage(); }
-        
-        async function testConnection() {
-            try {
-                const url = normalizeBaseUrl(document.getElementById('apiUrl').value);
-                const key = document.getElementById('apiKey').value;
-                await fetch(url + '/models', { headers: {Authorization: "Bearer "+key}});
-                alert("✅ 连接成功！");
-            } catch(e) { alert("❌ 连接失败: " + e.message); }
-        }
+        function clearChat() { if(confirm("清空?")) { messages=[]; saveData(); renderMessages(); } }
         async function fetchModels() {
-            const sel = document.getElementById('modelSelect');
-            try {
-                const url = normalizeBaseUrl(document.getElementById('apiUrl').value);
-                const key = document.getElementById('apiKey').value;
-                const res = await fetch(url + '/models', { headers: {Authorization: "Bearer "+key}});
-                const d = await res.json();
-                sel.innerHTML = '';
-                d.data.forEach(m => {
-                    const opt = document.createElement('option');
-                    opt.value = m.id; opt.innerText = m.id;
-                    sel.appendChild(opt);
-                });
-                alert(`已更新 ${d.data.length} 个模型`);
-            } catch(e) { alert("拉取失败，请手动输入"); toggleCustomModel(); }
+             try{
+                 const u = normalizeBaseUrl(document.getElementById('apiUrl').value);
+                 const k = document.getElementById('apiKey').value;
+                 const r = await fetch(u+'/models',{headers:{Authorization:"Bearer "+k}});
+                 const d = await r.json();
+                 const s = document.getElementById('modelSelect'); s.innerHTML='';
+                 d.data.forEach(m=>{ const o=document.createElement('option'); o.value=m.id; o.innerText=m.id; s.appendChild(o); });
+                 alert(`Loaded ${d.data.length} models`);
+             } catch(e){alert(e.message); toggleCustomModel();}
+        }
+        async function testConnection(){
+            try{
+                 const u = normalizeBaseUrl(document.getElementById('apiUrl').value);
+                 const k = document.getElementById('apiKey').value;
+                 await fetch(u+'/models',{headers:{Authorization:"Bearer "+k}});
+                 alert("✅ OK");
+            }catch(e){alert("❌ "+e.message);}
         }
     </script>
 </body>
