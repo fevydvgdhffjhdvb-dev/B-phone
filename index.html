@@ -31,9 +31,16 @@
         .btn-icon:hover { background-color: #e1e1e1; }
 
         /* --- 聊天区域 --- */
-        .chat-box { 
-            flex: 1; padding: 15px; overflow-y: auto; 
-            background-color: #ffffff; display: flex; flex-direction: column; gap: 20px;
+        .chat-box {
+            flex: 1; padding: 15px; overflow-y: auto;
+            /* --- 修改开始：增加壁纸支持 --- */
+            background-color: #ffffff; 
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: cover; /* 让图片自动充满屏幕 */
+            position: relative;
+            /* --- 修改结束 --- */
+            display: flex; flex-direction: column; gap: 20px;
             scroll-behavior: smooth;
         }
         .msg-row { display: flex; align-items: flex-end; gap: 8px; width: 100%; animation: fadeIn 0.3s ease; }
@@ -229,6 +236,19 @@
                     <label class="upload-btn-label">你的头像 <input type="file" style="display:none" accept="image/*" onchange="handleAvatarUpload(event, 'user')"></label>
                 </div>
                 <input type="text" id="userName" class="form-input" placeholder="怎么称呼你？" onchange="saveSettings()">
+            </div>
+            <!-- 新增：壁纸设置 -->
+            <div class="form-group">
+                <label class="form-label" style="color:#FF9500">🎨 聊天壁纸</label>
+                <div class="avatar-uploader">
+                    <!-- 预览图做成 16:9 的长方形 -->
+                    <div id="bgPreview" style="width: 60px; height: 100px; border-radius: 8px; border: 2px solid #eee; background: #f0f0f0; background-size: cover; background-position: center;"></div>
+                    
+                    <div style="display:flex; flex-direction:column; gap:5px;">
+                        <label class="upload-btn-label">更换壁纸 <input type="file" style="display:none" accept="image/*" onchange="handleBgUpload(event)"></label>
+                        <button onclick="resetBg()" style="background:none; border:1px solid #ccc; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer;">恢复默认</button>
+                    </div>
+                </div>
             </div>
 
             <div style="border-top:1px solid #eee; padding-top:15px;">
@@ -607,6 +627,12 @@
         document.getElementById('aiAvatarPreview').src = settings.aiAvatar;
         document.getElementById('userAvatarPreview').src = settings.userAvatar;
     }
+            // 4. 恢复壁纸
+    const bg = localStorage.getItem('v8_bg');
+    if(bg) {
+        document.getElementById('chatBox').style.backgroundImage = `url(${bg})`;
+        document.getElementById('bgPreview').style.backgroundImage = `url(${bg})`;
+    }
 }
 // ==========================================
 // ★ 终极修改：智能存储 (防崩溃版) ★
@@ -757,9 +783,37 @@ function saveData() {
             reader.onerror = reject;
         });
     }
+        // ================= 壁纸功能 =================
+    async function handleBgUpload(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+
+        try {
+            // ★ 关键点：这里设置宽度为 750px，质量 0.6
+            // 这样生成的图片大约在 100KB - 300KB 之间，LocalStorage 能存下
+            const compressedBg = await compressImage(file, 750, 0.6);
+            
+            // 1. 存入 LocalStorage
+            localStorage.setItem('v8_bg', compressedBg);
+            
+            // 2. 应用到界面
+            document.getElementById('chatBox').style.backgroundImage = `url(${compressedBg})`;
+            document.getElementById('bgPreview').style.backgroundImage = `url(${compressedBg})`;
+            
+        } catch (err) {
+            alert("壁纸处理失败，图片可能太大");
+        }
+    }
+
+    function resetBg() {
+        localStorage.removeItem('v8_bg');
+        document.getElementById('chatBox').style.backgroundImage = 'none';
+        document.getElementById('bgPreview').style.backgroundImage = 'none';
+    }
     </script>
 </body>
 </html>
+
 
 
 
