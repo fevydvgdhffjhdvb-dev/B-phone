@@ -321,6 +321,10 @@
                         <span class="ios-label">温度 (Temperature)</span>
                         <input type="number" id="tempVal" class="ios-input" value="0.7" step="0.1" onchange="saveGlobalConfig()">
                     </div>
+                    <div class="ios-item">
+                        <span class="ios-label">记忆轮数 (条数)</span>
+                        <input type="number" id="historyLimit" class="ios-input" value="20" step="1" placeholder="默认20" onchange="saveGlobalConfig()">
+                    </div>
                 </div>
 
                 <div class="ios-group-title">数据管理</div>
@@ -444,11 +448,12 @@
     <script>
         // --- 核心数据结构 ---
         let globalConfig = {
-            apiUrl: "https://api.openai.com/v1",
-            apiKey: "",
-            model: "gpt-3.5-turbo",
-            temp: 0.7
-        };
+    apiUrl: "https://api.openai.com/v1",
+    apiKey: "",
+    model: "gpt-3.5-turbo",
+    temp: 0.7,
+    historyLimit: 20 // 新增这一行，默认记住最近20条消息
+};
 
         // 角色列表。每个对象包含完整独立的数据
         let contacts = []; 
@@ -666,8 +671,9 @@
             let apiMsgs = [{role: "system", content: systemPromptFull}];
             
             // 构建消息历史 (携带图片逻辑)
-            // 取最近 15 条，避免 token 溢出
-            const history = char.messages.slice(-15);
+// 读取设置中的限制，如果没有设置则默认20条
+const limit = globalConfig.historyLimit || 20;
+const history = char.messages.slice(-limit);
             history.forEach(m => {
                 if(m.image) {
                     // GPT-4 Vision 格式, 兼容性视模型而定
@@ -899,6 +905,7 @@
             document.getElementById('apiKey').value = globalConfig.apiKey;
             document.getElementById('modelId').value = globalConfig.model;
             document.getElementById('tempVal').value = globalConfig.temp;
+            document.getElementById('historyLimit').value = globalConfig.historyLimit || 20;
         }
         
         function saveGlobalConfig() {
@@ -906,6 +913,7 @@
             globalConfig.apiKey = document.getElementById('apiKey').value;
             globalConfig.model = document.getElementById('modelId').value;
             globalConfig.temp = document.getElementById('tempVal').value;
+            globalConfig.historyLimit = parseInt(document.getElementById('historyLimit').value) || 20;
             saveData();
         }
 
@@ -1023,3 +1031,4 @@
     </script>
 </body>
 </html>
+
