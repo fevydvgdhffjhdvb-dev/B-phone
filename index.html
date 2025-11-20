@@ -396,6 +396,14 @@
                 <div class="ios-list" style="height: 200px;">
                     <textarea id="customCssInput" style="width:100%; height:100%; border:none; padding:15px; font-family:monospace; font-size:12px; resize:none; outline:none;" placeholder=".btn-back { ... }" onchange="saveTheme()"></textarea>
                 </div>
+                <!-- 字体设置区域 -->
+                <div class="ios-group-title">全局字体 (输入 .ttf/.woff 链接)</div>
+                <div class="ios-list">
+                    <div class="ios-item">
+                        <span class="ios-label">字体 URL</span>
+                        <input type="text" id="fontInput" class="ios-input" placeholder="https://..." onchange="saveTheme()">
+                    </div>
+                </div>
                 <div style="text-align:center; padding:20px;">
                     <button class="ios-btn danger" style="border-radius:10px;" onclick="resetTheme()">重置所有美化</button>
                 </div>
@@ -982,84 +990,100 @@ const history = char.messages.slice(-limit);
             globalConfig.historyLimit = parseInt(document.getElementById('historyLimit').value) || 20;
             saveData();
         }
-        // --- 美化/主题系统 ---
-        let themeConfig = {
-            icons: {
-                msg: "",
-                mem: "",
-                set: "",
-                theme: ""
-            },
-            customCss: ""
-        };
+        // --- 美化/主题系统 (升级版: 含字体) ---
+    let themeConfig = {
+        icons: { msg: "", mem: "", set: "", theme: "" },
+        customCss: "",
+        customFont: "" // <--- 新增: 存储字体链接
+    };
 
-        // 初始化时加载主题
-        // 请把 loadTheme() 加到 window.onload 里去！
-        function loadTheme() {
-            const t = localStorage.getItem('ai_phone_theme');
-            if(t) themeConfig = JSON.parse(t);
+    function loadTheme() {
+        const t = localStorage.getItem('ai_phone_theme');
+        if(t) themeConfig = JSON.parse(t);
 
-            // 1. 恢复输入框的值
-            document.getElementById('iconInput-msg').value = themeConfig.icons.msg || "";
-            document.getElementById('iconInput-mem').value = themeConfig.icons.mem || "";
-            document.getElementById('iconInput-set').value = themeConfig.icons.set || "";
-            document.getElementById('iconInput-theme').value = themeConfig.icons.theme || "";
-            document.getElementById('customCssInput').value = themeConfig.customCss || "";
+        document.getElementById('iconInput-msg').value = themeConfig.icons.msg || "";
+        document.getElementById('iconInput-mem').value = themeConfig.icons.mem || "";
+        document.getElementById('iconInput-set').value = themeConfig.icons.set || "";
+        document.getElementById('iconInput-theme').value = themeConfig.icons.theme || "";
+        document.getElementById('customCssInput').value = themeConfig.customCss || "";
+        
+        // 恢复字体输入框
+        const fontInput = document.getElementById('fontInput');
+        if(fontInput) fontInput.value = themeConfig.customFont || "";
 
-            // 2. 应用样式
-            applyThemeUI();
+        applyThemeUI();
+    }
+
+    function saveTheme() {
+        themeConfig.icons.msg = document.getElementById('iconInput-msg').value;
+        themeConfig.icons.mem = document.getElementById('iconInput-mem').value;
+        themeConfig.icons.set = document.getElementById('iconInput-set').value;
+        themeConfig.icons.theme = document.getElementById('iconInput-theme').value;
+        themeConfig.customCss = document.getElementById('customCssInput').value;
+        
+        // 保存字体链接
+        const fontInput = document.getElementById('fontInput');
+        if(fontInput) themeConfig.customFont = fontInput.value;
+
+        localStorage.setItem('ai_phone_theme', JSON.stringify(themeConfig));
+        applyThemeUI();
+    }
+
+    function applyThemeUI() {
+        updateAppIcon('app-icon-msg', themeConfig.icons.msg);
+        updateAppIcon('app-icon-mem', themeConfig.icons.mem);
+        updateAppIcon('app-icon-set', themeConfig.icons.set);
+        updateAppIcon('app-icon-theme', themeConfig.icons.theme);
+
+        let styleTag = document.getElementById('user-custom-style');
+        if (!styleTag) {
+            styleTag = document.createElement('style');
+            styleTag.id = 'user-custom-style';
+            document.head.appendChild(styleTag);
         }
 
-        function saveTheme() {
-            themeConfig.icons.msg = document.getElementById('iconInput-msg').value;
-            themeConfig.icons.mem = document.getElementById('iconInput-mem').value;
-            themeConfig.icons.set = document.getElementById('iconInput-set').value;
-            themeConfig.icons.theme = document.getElementById('iconInput-theme').value;
-            themeConfig.customCss = document.getElementById('customCssInput').value;
+        // --- 构建样式 ---
+        let finalCss = themeConfig.customCss || "";
 
-            localStorage.setItem('ai_phone_theme', JSON.stringify(themeConfig));
-            applyThemeUI();
+        // 如果有字体，注入 @font-face 规则
+        if (themeConfig.customFont && themeConfig.customFont.trim() !== "") {
+            const fontRule = `
+                @font-face { 
+                    font-family: 'UserCustomFont'; 
+                    src: url('${themeConfig.customFont}'); 
+                    font-display: swap; 
+                }
+                /* 强制覆盖所有元素的字体 */
+                body, button, input, textarea, select, .clock-time, .app-title, .chat-contact-name { 
+                    font-family: 'UserCustomFont', -apple-system, sans-serif !important; 
+                }
+            `;
+            finalCss = fontRule + "\n" + finalCss;
         }
 
-        function applyThemeUI() {
-            // A. 应用 APP 图标
-            updateAppIcon('app-icon-msg', themeConfig.icons.msg);
-            updateAppIcon('app-icon-mem', themeConfig.icons.mem);
-            updateAppIcon('app-icon-set', themeConfig.icons.set);
-            updateAppIcon('app-icon-theme', themeConfig.icons.theme);
+        styleTag.innerHTML = finalCss;
+    }
 
-            // B. 应用全局 CSS
-            let styleTag = document.getElementById('user-custom-style');
-            if (!styleTag) {
-                styleTag = document.createElement('style');
-                styleTag.id = 'user-custom-style';
-                document.head.appendChild(styleTag);
-            }
-            styleTag.innerHTML = themeConfig.customCss;
+    function updateAppIcon(elementId, url) {
+        const el = document.getElementById(elementId);
+        if(!el) return;
+        if (url && url.trim() !== "") {
+            el.style.backgroundImage = `url(${url})`;
+            el.style.backgroundSize = 'cover';
+            el.style.backgroundPosition = 'center';
+            el.style.color = 'transparent';
+        } else {
+            el.style.backgroundImage = '';
+            el.style.color = 'white';
         }
+    }
 
-        function updateAppIcon(elementId, url) {
-            const el = document.getElementById(elementId);
-            if(!el) return;
-            if (url && url.trim() !== "") {
-                // 如果有 URL，就显示图片，文字变透明
-                el.style.backgroundImage = `url(${url})`;
-                el.style.backgroundSize = 'cover';
-                el.style.backgroundPosition = 'center';
-                el.style.color = 'transparent'; // 隐藏原来的 emoji
-            } else {
-                // 没 URL 就恢复原状
-                el.style.backgroundImage = '';
-                el.style.color = 'white'; // 恢复文字颜色
-            }
+    function resetTheme() {
+        if(confirm("确定要重置所有美化设置吗？")) {
+            localStorage.removeItem('ai_phone_theme');
+            location.reload();
         }
-
-        function resetTheme() {
-            if(confirm("确定要重置所有美化设置吗？")) {
-                localStorage.removeItem('ai_phone_theme');
-                location.reload();
-            }
-        }
+    }
 
         async function fetchModels() {
             if(!globalConfig.apiKey) return alert("请先填写 API Key");
@@ -1175,6 +1199,7 @@ const history = char.messages.slice(-limit);
     </script>
 </body>
 </html>
+
 
 
 
