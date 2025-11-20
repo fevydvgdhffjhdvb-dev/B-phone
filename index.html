@@ -313,6 +313,16 @@
             renderMessages();
             renderMemories();
         };
+        function renderMessages() {
+    const box = document.getElementById('chatBox');
+    const notice = box.querySelector('.system-notice');
+    box.innerHTML = ''; 
+    if (notice) box.appendChild(notice);
+    messages.forEach(msg => {
+        appendMessageUI(msg.role, msg.content, msg.image, false);
+    });
+    scrollToBottom();
+}
 
         // ==========================================
         // ★★★ 核心逻辑分离：发送 vs 触发 ★★★
@@ -726,5 +736,6 @@ function saveData() {
     </script>
 </body>
 </html>
+
 
 
