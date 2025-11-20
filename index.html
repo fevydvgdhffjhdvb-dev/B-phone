@@ -257,6 +257,11 @@
                     <div class="app-icon" id="app-icon-theme" style="background: linear-gradient(to bottom, #ff2d55, #ff375f);">🎨</div>
                     <div class="app-name">美化</div>
                 </div>
+                <!-- 5. 日记本 -->
+                <div class="app-icon-container" onclick="navigateTo('page-diary')">
+                    <div class="app-icon" style="background: linear-gradient(to bottom, #d4a373, #a98467);">📖</div>
+                    <div class="app-name">日记本</div>
+                </div>
             </div>
         </div>
 
@@ -433,6 +438,19 @@
                 </div>
             </div>
         </div>
+        <!-- ============ 7. 日记本 (Diary) ============ -->
+<div class="page" id="page-diary">
+    <div class="app-header">
+        <button class="btn-icon-text" onclick="goHome()">‹ 桌面</button>
+        <span class="app-title">日记本</span>
+        <span style="width:30px;"></span>
+    </div>
+    <div class="content-scroll">
+        <div class="ios-group-title">角色内心独白</div>
+        <!-- 日记列表容器 -->
+        <div id="diaryListContainer"></div>
+    </div>
+</div>
 
         <!-- ============ 弹窗组件 ============ -->
 
@@ -599,7 +617,8 @@
                 userPersona: "", // 用户在这个聊天中的人设
                 bgImage: "",     // 聊天背景
                 messages: [],
-                memories: []
+                memories: [],
+                diaries: []
             };
             contacts.push(newChar);
             saveData();
@@ -630,6 +649,10 @@
             } else if (pageId === 'page-memory' && !activeContactId) {
                 document.getElementById('memoryListContainer').innerHTML = '<p style="text-align:center;color:#999;margin-top:50px;">请先从信息列表进入一个聊天</p>';
             }
+            // --- 新增：进入日记本时刷新列表 ---
+    if (pageId === 'page-diary') {
+        renderDiaries();
+    }
         }
 
         function goHome() { navigateTo('page-home'); }
@@ -762,6 +785,13 @@
             // 构建 Prompt
             let systemPromptFull = char.systemPrompt + `\n[当前时间: ${new Date().toLocaleString()}]\n[用户名称: ${char.userName}]`;
             if(char.userPersona) systemPromptFull += `\n[用户设定: ${char.userPersona}]`;
+            // --- 新增：把日记内容喂给 AI ---
+        if (char.diaries && char.diaries.length > 0) {
+            // 取最近的 6 篇日记
+            const recentDiaries = char.diaries.slice(-6).join('\n\n---\n\n');
+            systemPromptFull += `\n\n[我的私密日记本 (只有我自己能看，用于回忆之前的经历和心情)]:\n${recentDiaries}`;
+        }
+        // ---------------------------
             if(char.memories.length > 0) {
                 systemPromptFull += `\n[长期记忆库]:\n${char.memories.join('\n')}`;
             }
@@ -856,46 +886,61 @@ const history = char.messages.slice(-limit);
         }
 
         async function doSummarize() {
-            const char = getActiveChar();
-            const startIdx = parseInt(document.getElementById('sum-start').value) - 1; // UI是1-based，数组是0-based
-            const endIdx = parseInt(document.getElementById('sum-end').value);
-            
-            if(startIdx < 0 || endIdx > char.messages.length || startIdx >= endIdx) {
-                alert("楼层范围无效");
-                return;
-            }
+    const char = getActiveChar();
+    // 兼容旧数据：如果老角色没有日记数组，给它加一个
+    if (!char.diaries) char.diaries = [];
 
-            const selectedMsgs = char.messages.slice(startIdx, endIdx);
-            const textBlock = selectedMsgs.map(m => `${m.role}: ${m.content}`).join('\n');
+    const startIdx = parseInt(document.getElementById('sum-start').value) - 1;
+    const endIdx = parseInt(document.getElementById('sum-end').value);
+    
+    if(startIdx < 0 || endIdx > char.messages.length || startIdx >= endIdx) {
+        alert("楼层范围无效");
+        return;
+    }
 
-            closeModal('modal-summary');
-            const btn = document.querySelector('.chat-header-actions button:last-child'); // 总结按钮
-            const oldIcon = btn.innerHTML;
-            btn.innerText = "⏳";
+    const selectedMsgs = char.messages.slice(startIdx, endIdx);
+    // 把对话转换成文本供 AI 阅读
+    const textBlock = selectedMsgs.map(m => `${m.role === 'user' ? '我(用户)' : char.name}: ${m.content}`).join('\n');
 
-            try {
-                const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-                    method: "POST",
-                    headers: { "Authorization": "Bearer " + globalConfig.apiKey, "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        model: globalConfig.model,
-                        messages: [
-                            { role: "system", content: "请总结以下对话中的重要事实、用户喜好或关键事件。总结应简洁明了，作为一条记忆存储。" },
-                            { role: "user", content: textBlock }
-                        ]
-                    })
-                });
-                const data = await res.json();
-                const summary = data.choices[0].message.content;
-                
-                char.memories.push(summary);
-                saveData();
-                alert("总结成功，已存入记忆库！\n\n" + summary);
-            } catch(e) {
-                alert("总结失败: " + e.message);
-            }
-            btn.innerHTML = oldIcon;
-        }
+    closeModal('modal-summary');
+    const btn = document.querySelector('.chat-header-actions button:last-child');
+    const oldIcon = btn.innerHTML;
+    btn.innerText = "✍️"; // 变成写字图标
+
+    try {
+        // --- 这里是核心修改：提示词改成了写日记 ---
+        const prompt = `请阅读以下聊天记录，以角色 "${char.name}" 的第一人称视角写一篇简短的日记。
+        要求：
+        1. 包含聊天的主要内容，但要加入角色的内心独白、情绪和对用户的看法。
+        2. 格式为：“[日期] 今天...” (如果是深夜聊天可以用“深夜...”)。
+        3. 篇幅不要太长，像真实的手机备忘录日记一样。
+        
+        聊天记录：
+        ${textBlock}`;
+
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Authorization": "Bearer " + globalConfig.apiKey, "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [
+                    { role: "system", content: "你是一个擅长模仿人类情感和内心戏的小说家。" },
+                    { role: "user", content: prompt }
+                ]
+            })
+        });
+        const data = await res.json();
+        const diaryEntry = data.choices[0].message.content;
+        
+        // 存入日记数组
+        char.diaries.push(diaryEntry);
+        saveData();
+        alert("日记已写好，快去日记本APP查看吧！");
+    } catch(e) {
+        alert("写日记失败: " + e.message);
+    }
+    btn.innerHTML = oldIcon;
+}
 
         // --- 4. 角色设置与记忆库 ---
         function openChatSettings() {
@@ -1282,10 +1327,57 @@ const history = char.messages.slice(-limit);
                 alert("连接成功！"); 
             } catch(e) { alert("连接失败: "+e.message); }
         }
+        // --- 5. 日记本渲染逻辑 (新增) ---
+    function renderDiaries() {
+        const char = getActiveChar();
+        const container = document.getElementById('diaryListContainer');
+        container.innerHTML = '';
+
+        if (!char) {
+            container.innerHTML = '<p style="text-align:center;color:#999;margin-top:50px;">请先从信息列表进入一个聊天</p>';
+            return;
+        }
+        
+        if (!char.diaries || char.diaries.length === 0) {
+            container.innerHTML = '<p style="text-align:center;color:#999;margin-top:50px;">还没有写过日记哦<br>去聊天界面点击 ✨ 生成吧</p>';
+            return;
+        }
+
+        // 倒序显示，最新的日记在最上面
+        const reversedDiaries = [...char.diaries].reverse();
+
+        reversedDiaries.forEach((content, index) => {
+            // 计算原始索引 (用于删除)
+            const originalIndex = char.diaries.length - 1 - index;
+            
+            const card = document.createElement('div');
+            card.className = 'memory-card'; // 复用记忆卡的样式
+            // 把换行符转为br，稍微美化一下显示
+            const displayContent = content.replace(/\n/g, '<br>');
+            
+            card.innerHTML = `
+                <div style="font-family: 'FangSong', 'STFangsong', serif; line-height:1.6; color:#333;">
+                    ${displayContent}
+                </div>
+                <div class="btn-del-mem" onclick="deleteDiary(${originalIndex})">×</div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function deleteDiary(index) {
+        const char = getActiveChar();
+        if (confirm('确定要撕掉这篇日记吗？')) {
+            char.diaries.splice(index, 1);
+            saveData();
+            renderDiaries();
+        }
+    }
 
     </script>
 </body>
 </html>
+
 
 
 
