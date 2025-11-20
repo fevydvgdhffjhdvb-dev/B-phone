@@ -574,10 +574,38 @@
                 document.getElementById('userAvatarPreview').src = settings.userAvatar;
             }
         }
-        function saveData() {
-            localStorage.setItem('v8_msg', JSON.stringify(messages));
-            localStorage.setItem('v8_mem', JSON.stringify(memories));
+// ==========================================
+// ★ 终极修改：智能存储 (防崩溃版) ★
+// ==========================================
+function saveData() {
+    try {
+        // 1. 贪心模式：尝试把【文字+图片】都存进去
+        localStorage.setItem('v8_msg', JSON.stringify(messages));
+        localStorage.setItem('v8_mem', JSON.stringify(memories));
+    } catch (e) {
+        // 2. 满了？别慌！启动保命模式
+        if (e.name === 'QuotaExceededError' || e.code === 22) {
+            console.log("空间已满，自动切换为【纯文字保存】...");
+            
+            // 3. 把图片扔掉，只留文字
+            const textOnlyMessages = messages.map(msg => {
+                return { 
+                    role: msg.role, 
+                    content: msg.content, 
+                    image: null // 图片变空，腾出巨大空间
+                };
+            });
+
+            try {
+                // 4. 再次保存（这次肯定能存下）
+                localStorage.setItem('v8_msg', JSON.stringify(textOnlyMessages));
+                localStorage.setItem('v8_mem', JSON.stringify(memories));
+            } catch (err) {
+                console.log("放弃保存");
+            }
         }
+    }
+}
         function loadData() {
             const m = localStorage.getItem('v8_msg'); if(m) messages = JSON.parse(m);
             const mem = localStorage.getItem('v8_mem'); if(mem) memories = JSON.parse(mem);
@@ -698,4 +726,5 @@
     </script>
 </body>
 </html>
+
 
