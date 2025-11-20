@@ -215,6 +215,19 @@
             width: 120px; height: 5px; background: #000; border-radius: 10px; z-index: 999; cursor: pointer;
         }
         #page-home .home-indicator { background: #fff; }
+        
+        /* 消息下方的工具栏 */
+        .msg-meta-row { display: flex; align-items: center; margin-top: 2px; }
+        .msg-row.left .msg-meta-row { justify-content: flex-start; margin-left: 45px; }
+        .msg-row.right .msg-meta-row { justify-content: flex-end; margin-right: 45px; }
+        
+        /* 重刷按钮 */
+        .btn-reroll { 
+            font-size: 12px; color: #999; cursor: pointer; padding: 2px 5px; 
+            background: rgba(255,255,255,0.5); border-radius: 10px;
+            display: flex; align-items: center; gap: 3px;
+        }
+        .btn-reroll:active { transform: scale(0.9); background: #ddd; }
     </style>
 </head>
 <body>
@@ -777,18 +790,39 @@
             
             const avatarUrl = role==='user' ? char.userAvatar : char.avatar;
             
+            // 1. 用户消息：添加 oncontextmenu 实现长按编辑
+            // 2. AI消息：添加 重刷按钮
+            let extraHtml = '';
+            let eventAttr = '';
+
+            if (role === 'user' && !isTemp) {
+                // 也就是手机上的“长按”，电脑上的“右键”
+                eventAttr = `oncontextmenu="handleUserEdit(event, ${index}); return false;"`;
+            } else if (role === 'assistant' && !isTemp) {
+                extraHtml = `
+                    <div class="msg-meta-row">
+                        <div class="btn-reroll" onclick="rerollMessage(${index})" title="重新生成">
+                            🔄 重来
+                        </div>
+                    </div>
+                `;
+            }
+
             let html = `
                 <span class="msg-index">#${index || '?'}</span>
                 <img src="${avatarUrl}" class="avatar">
-                <div class="message">
+                <div class="message" ${eventAttr}>
                     ${img ? `<img src="${img}" style="max-width:100%;border-radius:8px;display:block;margin-bottom:5px;">` : ''}
                     <span class="txt-content">${isTemp ? text : formatText(text)}</span>
                 </div>
             `;
-            div.innerHTML = html;
+            
+            // 把按钮拼接到气泡外面
+            div.innerHTML = html + extraHtml;
+
             box.appendChild(div);
             scrollToBottom();
-            return div.querySelector('.txt-content'); // 返回文本节点用于流式更新
+            return div.querySelector('.txt-content'); 
         }
 
         async function sendMsg(role) {
@@ -1470,10 +1504,67 @@ const history = char.messages.slice(-limit);
             alert("删除成功！");
         }
     }
+        // --- 7. 消息编辑与重刷 (新功能) ---
+
+    // 功能A：AI 重刷 (Re-roll)
+    function rerollMessage(uiIndex) {
+        const char = getActiveChar();
+        // uiIndex 是从1开始的，数组是从0开始的
+        const arrayIndex = uiIndex - 1;
+        
+        if(arrayIndex < 0 || arrayIndex >= char.messages.length) return;
+
+        // 逻辑：删除 这条AI消息 以及 它之后的所有消息（如果有的话）
+        // 因为重刷意味着时间线变动，后面的对话就作废了
+        if(confirm("要让他重新回答这一句吗？(之后的消息将被清除)")) {
+            char.messages.splice(arrayIndex, 999); // 删除当前及之后所有
+            saveData();
+            
+            // 刷新界面显示删除后的状态
+            renderChat(activeContactId);
+            
+            // 立即触发 AI 生成
+            triggerAI();
+        }
+    }
+
+    // 功能B：用户长按编辑
+    function handleUserEdit(e, uiIndex) {
+        e.preventDefault(); // 阻止浏览器默认的右键菜单
+        
+        const char = getActiveChar();
+        const arrayIndex = uiIndex - 1;
+        const msg = char.messages[arrayIndex];
+        
+        if(!msg) return;
+
+        // 使用 prompt 让用户修改文本
+        const newText = prompt("编辑消息：", msg.content);
+        
+        // 如果用户点了取消或者内容没变，就不动
+        if (newText === null || newText === msg.content) return;
+
+        if(confirm("修改后，他将根据新内容重新回复 (之后的消息将被清除)，确定吗？")) {
+            // 1. 更新当前消息内容
+            msg.content = newText;
+            
+            // 2. 删除 这条消息之后 的所有消息 (因为用户改了历史，未来必须重写)
+            char.messages.splice(arrayIndex + 1, 999);
+            
+            saveData();
+            
+            // 3. 刷新界面
+            renderChat(activeContactId);
+            
+            // 4. 触发 AI 重新回复
+            triggerAI();
+        }
+    }
 
     </script>
 </body>
 </html>
+
 
 
 
