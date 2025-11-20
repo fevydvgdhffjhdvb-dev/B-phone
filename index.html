@@ -228,6 +228,12 @@
             display: flex; align-items: center; gap: 3px;
         }
         .btn-reroll:active { transform: scale(0.9); background: #ddd; }
+        /* --- 强制修复 iOS 长按冲突 --- */
+        .msg-row.right .message {
+            -webkit-touch-callout: none !important; 
+            -webkit-user-select: none !important;
+            user-select: none !important;
+        }
     </style>
 </head>
 <body>
@@ -802,7 +808,7 @@
                 extraHtml = `
                     <div class="msg-meta-row">
                         <div class="btn-reroll" onclick="rerollMessage(${index})" title="重新生成">
-                            🔄 重来
+                            🔄 
                         </div>
                     </div>
                 `;
@@ -1564,6 +1570,7 @@ const history = char.messages.slice(-limit);
     </script>
 </body>
 </html>
+
 
 
 
