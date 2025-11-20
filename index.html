@@ -3,655 +3,940 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI 小手机 V8.0 (导演版)</title>
+    <title>AI OS 2.0</title>
     <style>
-        /* --- 基础样式 --- */
-        * { box-sizing: border-box; }
-        body { background-color: #e0e5ec; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        
+        /* --- 全局重置与基础样式 --- */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background-color: #dce1e8; display: flex; justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; 
+            overflow: hidden;
+        }
+
         /* --- 手机外壳 --- */
         .phone-frame { 
-            width: 375px; height: 85vh; max-height: 850px; 
-            background-color: #fff; border-radius: 35px; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.15); 
-            border: 10px solid #2c3e50; 
-            display: flex; flex-direction: column; 
+            width: 375px; height: 812px; /* iPhone X 尺寸 */
+            background-color: #000; border-radius: 40px; 
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); 
+            border: 12px solid #1a1a1a; 
             position: relative; overflow: hidden; 
+            display: flex; flex-direction: column;
         }
 
-        /* --- 顶部栏 --- */
-        .header { 
-            padding: 15px 20px; background-color: rgba(248, 249, 250, 0.95); backdrop-filter: blur(10px);
-            border-bottom: 1px solid #eee; 
-            display: flex; justify-content: space-between; align-items: center; z-index: 10;
+        /* --- 状态栏 --- */
+        .status-bar {
+            height: 44px; width: 100%; background: transparent; 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; color: #000; font-size: 14px; font-weight: 600;
+            z-index: 1000; pointer-events: none; position: absolute; top: 0;
         }
-        .header-title { font-weight: 700; color: #333; font-size: 16px; }
-        .header-icons { display: flex; gap: 8px; }
-        .btn-icon { background: none; border: none; font-size: 18px; cursor: pointer; padding: 6px; transition: 0.2s; border-radius: 50%; }
-        .btn-icon:hover { background-color: #e1e1e1; }
+        .status-bar.dark { color: #fff; }
 
-        /* --- 聊天区域 --- */
-        .chat-box { 
-            flex: 1; padding: 15px; overflow-y: auto; 
-            background-color: #ffffff; display: flex; flex-direction: column; gap: 20px;
-            scroll-behavior: smooth;
+        /* --- 屏幕通用容器 --- */
+        .screen {
+            width: 100%; height: 100%; position: absolute; top: 0; left: 0;
+            background: #f2f2f7; overflow-y: auto; display: none;
+            padding-top: 44px; /* 避开状态栏 */
+            padding-bottom: 20px; /* 底部安全区 */
         }
-        .msg-row { display: flex; align-items: flex-end; gap: 8px; width: 100%; animation: fadeIn 0.3s ease; }
-        .msg-row.right { flex-direction: row-reverse; }
+        .screen.active { display: flex; flex-direction: column; animation: fadeIn 0.3s ease; }
+
+        /* --- 主屏幕 (Home) --- */
+        #screen-home { 
+            background: url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1000&auto=format&fit=crop') no-repeat center center;
+            background-size: cover;
+            align-items: flex-start; align-content: flex-start; flex-direction: row; flex-wrap: wrap; padding: 60px 20px; gap: 20px;
+        }
+        .app-icon {
+            width: 64px; height: 64px; border-radius: 14px; background: #fff;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer;
+            font-size: 32px; transition: transform 0.1s;
+        }
+        .app-icon:active { transform: scale(0.9); }
+        .app-wrapper { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .app-label { color: #fff; font-size: 12px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+        /* --- 导航栏通用 --- */
+        .nav-bar {
+            height: 44px; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 15px; background: rgba(249, 249, 249, 0.94); backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,0.1); flex-shrink: 0;
+        }
+        .nav-title { font-weight: 600; font-size: 17px; }
+        .nav-btn { color: #007AFF; border: none; background: none; font-size: 16px; cursor: pointer; padding: 5px; }
+        .nav-btn.danger { color: #FF3B30; }
+
+        /* --- 列表通用 --- */
+        .list-group { background: #fff; margin: 20px 15px; border-radius: 10px; overflow: hidden; }
+        .list-item { 
+            padding: 12px 15px; display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid #eee; cursor: pointer; background: #fff;
+        }
+        .list-item:last-child { border-bottom: none; }
+        .list-item:active { background: #f0f0f0; }
+        .chevron { color: #c7c7cc; font-size: 18px; }
+
+        /* --- 聊天列表 --- */
+        .chat-row { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer;}
+        .chat-row:active { background-color: #f5f5f5; }
+        .chat-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: #ddd;}
+        .chat-info { flex: 1; min-width: 0; }
+        .chat-name { font-weight: 600; font-size: 16px; color: #000; margin-bottom: 4px; }
+        .chat-preview { color: #8e8e93; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* --- 聊天室 --- */
+        #screen-chat-room { background: #fff; padding-top: 0; } /* 聊天室全屏 */
+        .chat-room-body { 
+            flex: 1; overflow-y: auto; padding: 15px; background: #f2f2f7; 
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        .msg-bubble-row { display: flex; flex-direction: column; width: 100%; position: relative;}
+        .msg-bubble-row.user { align-items: flex-end; }
+        .msg-bubble-row.ai { align-items: flex-start; }
         
-        .avatar { 
-            width: 38px; height: 38px; border-radius: 50%; object-fit: cover; flex-shrink: 0; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1); background: #ddd; border: 1px solid #fff;
+        .msg-bubble { 
+            max-width: 75%; padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.4; 
+            position: relative; word-wrap: break-word;
         }
+        .msg-bubble.user { background: #007AFF; color: #fff; border-bottom-right-radius: 4px; }
+        .msg-bubble.ai { background: #e5e5ea; color: #000; border-bottom-left-radius: 4px; }
+        
+        .msg-time { font-size: 10px; color: #8e8e93; margin-top: 4px; padding: 0 4px; }
+        .msg-img { max-width: 100%; border-radius: 8px; margin-bottom: 5px; display: block;}
 
-        .message { 
-            max-width: 75%; padding: 12px 15px; border-radius: 18px; 
-            font-size: 14px; line-height: 1.5; word-wrap: break-word; 
-            position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        .chat-input-area {
+            padding: 8px 15px; background: #f9f9f9; border-top: 1px solid #ddd;
+            display: flex; align-items: flex-end; gap: 10px;
         }
-        .msg-row.right .message { background-color: #007AFF; color: white; border-bottom-right-radius: 4px; }
-        .msg-row.left .message { background-color: #F2F2F7; color: #000; border-bottom-left-radius: 4px; }
-        
-        .msg-index { font-size: 9px; opacity: 0.5; position: absolute; top: -15px; color: #999; width: 100%; display: none;}
-        .msg-row:hover .msg-index { display: block; } 
-        
-        .chat-img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .system-notice { text-align: center; font-size: 12px; color: #aaa; margin: 10px 0; width: 100%; }
-
-        /* --- 底部输入栏 (布局大改) --- */
-        .input-area { 
-            padding: 10px 12px; background-color: #f8f9fa; border-top: 1px solid #eee; 
-            display: flex; flex-direction: column; gap: 10px;
+        .chat-input {
+            flex: 1; border: 1px solid #ddd; border-radius: 20px; padding: 8px 12px; 
+            font-size: 15px; outline: none; background: #fff; max-height: 100px;
         }
-        
-        /* 图片预览区 */
-        #uploadPreview { display: none; padding: 8px; background: #fff; border-radius: 8px; border: 1px dashed #ccc; align-items: center; justify-content: space-between; font-size: 12px; color: #666;}
-        #previewImg { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
+        .icon-btn { font-size: 24px; color: #007AFF; cursor: pointer; background: none; border: none; padding: 0;}
 
-        /* 输入行布局 */
-        .input-toolbar { display: flex; align-items: center; gap: 8px; width: 100%; }
+        /* --- 侧边栏 (Drawer) --- */
+        .drawer {
+            position: absolute; top: 0; right: 0; width: 85%; height: 100%;
+            background: #fff; box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+            z-index: 2000; transform: translateX(100%); transition: transform 0.3s ease;
+            display: flex; flex-direction: column;
+        }
+        .drawer.open { transform: translateX(0); }
+        .drawer-content { flex: 1; overflow-y: auto; padding: 20px; }
 
-        #userInput { flex: 1; padding: 12px; border-radius: 20px; border: 1px solid #ddd; outline: none; font-size: 14px; transition: border 0.2s;}
-        #userInput:focus { border-color: #007AFF; }
-        
-        /* 按钮样式 */
-        .btn-circle { width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; color: white; transition: transform 0.1s; flex-shrink: 0; }
-        .btn-circle:active { transform: scale(0.95); }
-        .btn-circle:disabled { background-color: #ccc !important; cursor: not-allowed; }
-
-        /* 蓝色发送键 (只发不回) */
-        .btn-send-user { background-color: #007AFF; }
-        /* 紫色AI键 (触发回复) */
-        .btn-trigger-ai { background-color: #5856D6; position: relative; }
-
-        .btn-attach { background: none; border: none; font-size: 24px; color: #555; cursor: pointer; padding: 0 5px; }
-
-        /* 加载动画 */
-        .typing-indicator { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background-color: white; animation: bounce 1s infinite; margin: 0 2px;}
-        .typing-indicator:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-
-        /* --- 面板通用样式 --- */
-        .panel-overlay {
+        /* --- 弹窗 (Modal) --- */
+        .modal-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(255,255,255,0.98); backdrop-filter: blur(5px);
-            z-index: 100; padding: 20px; display: none; flex-direction: column; overflow-y: auto;
+            background: rgba(0,0,0,0.4); z-index: 3000; display: none;
+            align-items: center; justify-content: center;
         }
-        .panel-overlay.show { display: flex; animation: slideUp 0.3s ease; }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .panel-title { font-size: 20px; font-weight: bold; margin: 0; }
-        .btn-close { background: none; border: none; font-size: 24px; cursor: pointer; }
-
-        .form-group { margin-bottom: 15px; }
-        .form-label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #555; }
-        .form-input, .form-textarea, .form-select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: #fff; outline: none; }
-        .form-textarea { height: 80px; resize: none; }
-        
-        .btn { padding: 10px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; text-align: center; transition: 0.2s; width: 100%; margin-top: 5px;}
-        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
-        .btn-primary { background-color: #007AFF; color: white; }
-        .btn-secondary { background-color: #e9ecef; color: #333; border: 1px solid #ddd; }
-        .btn-danger { background-color: #FF3B30; color: white; }
-        .btn-fetch { background-color: #5856D6; color: white; } 
-
-        /* 头像上传 */
-        .avatar-uploader { display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
-        .current-avatar { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #eee; object-fit: cover; }
-        .upload-btn-label { background: #f0f0f0; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid #ccc; }
-
-        /* 记忆库 */
-        .memory-item { background: #f0f4f8; padding: 10px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: flex-start; font-size: 13px;}
-        .mem-del { color: #ff3b30; cursor: pointer; margin-left: 10px; font-weight: bold; }
-
-        /* 总结弹窗 */
-        .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:200; display:none;}
         .modal-box {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 300px; background: white; padding: 20px; border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            background: #fff; width: 80%; border-radius: 14px; padding: 20px;
+            text-align: center; animation: popIn 0.2s ease;
         }
-        .hint-text { font-size: 11px; color: #888; margin-top: 3px; }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* --- 表单元素 --- */
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-label { font-size: 13px; color: #666; margin-bottom: 5px; display: block; }
+        .form-input, .form-select, .form-textarea { 
+            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; 
+            font-size: 16px; outline: none; background: #fff;
+        }
+        .form-textarea { height: 80px; resize: none; }
+        .btn-primary { background: #007AFF; color: #fff; width: 100%; padding: 12px; border-radius: 10px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; }
+        .btn-danger { background: #FF3B30; color: #fff; width: 100%; padding: 12px; border-radius: 10px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; }
+        
+        /* Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 50px; height: 30px; float: right;}
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #34C759; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* 底部小横条 */
+        .home-indicator {
+            position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+            width: 120px; height: 5px; background: rgba(0,0,0,0.2); border-radius: 10px;
+            z-index: 9999; cursor: pointer;
+        }
+        
+        /* 图片上传预览 */
+        #img-preview-box { display: none; padding: 5px 15px; background: #f0f0f0; font-size: 12px; color: #666; justify-content: space-between; align-items: center;}
+        #preview-thumb { height: 40px; width: 40px; border-radius: 4px; object-fit: cover; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
 
     <div class="phone-frame">
-        <!-- 顶部 -->
-        <div class="header">
-            <span class="header-title">AI Phone V8.0 导演版</span>
-            <div class="header-icons">
-                <button class="btn-icon" onclick="openSummaryModal()" title="自动总结">🪄</button>
-                <button class="btn-icon" onclick="togglePanel('memoryPanel')" title="记忆库">🧠</button>
-                <button class="btn-icon" onclick="togglePanel('settingsPanel')" title="设置">⚙️</button>
+        <!-- 顶部状态栏 -->
+        <div class="status-bar" id="statusBar">
+            <span id="clock">09:41</span>
+            <span>📶 5G 🔋 100%</span>
+        </div>
+
+        <!-- ================= 1. 主屏幕 ================= -->
+        <div id="screen-home" class="screen active">
+            <div class="app-wrapper" onclick="navTo('screen-chat-list')">
+                <div class="app-icon" style="background:#34C759; color:white;">💬</div>
+                <span class="app-label">聊天</span>
+            </div>
+            <div class="app-wrapper" onclick="navTo('screen-memory')">
+                <div class="app-icon" style="background:#FF9500; color:white;">🧠</div>
+                <span class="app-label">记忆库</span>
+            </div>
+            <div class="app-wrapper" onclick="navTo('screen-settings')">
+                <div class="app-icon" style="background:#8E8E93; color:white;">⚙️</div>
+                <span class="app-label">设置</span>
             </div>
         </div>
 
-        <!-- 聊天内容 -->
-        <div class="chat-box" id="chatBox">
-            <div class="system-notice">
-                ✨ 使用指南：<br>
-                1. 点击 ⬆️ 只发送内容（不触发AI）<br>
-                2. 发完图片/文字后，点击 🤖 让 AI 回复
-            </div>
-        </div>
-
-        <!-- 底部输入 -->
-        <div class="input-area">
-            <!-- 图片预览 -->
-            <div id="uploadPreview">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <img id="previewImg" src="">
-                    <span>已添加图片</span>
-                </div>
-                <span style="cursor:pointer; color:red; font-size:16px;" onclick="clearUpload()">×</span>
-            </div>
-
-            <div class="input-toolbar">
-                <button class="btn-attach" onclick="document.getElementById('chatFileInput').click()" title="上传图片">📎</button>
-                <input type="file" id="chatFileInput" accept="image/*" style="display:none" onchange="handleChatImageSelect(event)">
-                
-                <!-- 输入框 -->
-                <input type="text" id="userInput" placeholder="输入消息..." onkeypress="handleEnter(event)">
-                
-                <!-- 按钮组 -->
-                <!-- 1. 只发送消息按钮 -->
-                <button class="btn-circle btn-send-user" id="btnSendUser" onclick="sendUserMsg()" title="发送上屏 (不触发AI)">
-                    ⬆
-                </button>
-                
-                <!-- 2. 召唤AI按钮 -->
-                <button class="btn-circle btn-trigger-ai" id="btnTriggerAI" onclick="triggerAI()" title="让 AI 回复">
-                    🤖
-                </button>
-            </div>
-        </div>
-
-        <!-- ================= 1. 设置面板 (保持 V7.5 功能) ================= -->
-        <div class="panel-overlay" id="settingsPanel">
-            <div class="panel-header">
-                <h2 class="panel-title">设置中心</h2>
-                <button class="btn-close" onclick="togglePanel('settingsPanel')">×</button>
+        <!-- ================= 2. 设置 APP ================= -->
+        <div id="screen-settings" class="screen">
+            <div class="nav-bar">
+                <button class="nav-btn" onclick="navTo('screen-home')">◀ 主页</button>
+                <span class="nav-title">设置</span>
+                <div style="width:30px"></div>
             </div>
             
-            <div style="background:#f9f9f9; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid #eee;">
+            <div style="padding:0 15px;">
+                <!-- API 配置 -->
+                <h4 style="color:#666; margin-left:10px; margin-bottom:5px; font-size:12px;">API 配置</h4>
+                <div class="list-group" style="margin-top:0;">
+                    <div class="list-item" onclick="openSettingsModal('api')">
+                        <span>API连接设置</span> <span class="chevron">›</span>
+                    </div>
+                    <div class="list-item" onclick="fetchModels()">
+                        <span style="color:#007AFF">📡 拉取最新模型</span>
+                    </div>
+                    <div class="list-item" onclick="testConnection()">
+                        <span style="color:#34C759">📶 测试连接</span>
+                    </div>
+                </div>
+
+                <!-- 模型参数 -->
+                <h4 style="color:#666; margin-left:10px; margin-bottom:5px; font-size:12px;">模型参数</h4>
+                <div class="list-group" style="margin-top:0;">
+                    <div class="list-item">
+                        <span>温度 (创意度) <span id="disp-temp" style="color:#888; font-size:12px;">0.7</span></span>
+                        <input type="range" id="set-temp" min="0" max="2" step="0.1" value="0.7" style="width:100px" oninput="updateConfig('temp', this.value); document.getElementById('disp-temp').innerText=this.value">
+                    </div>
+                    <div class="list-item">
+                        <span>记忆轮数 <span id="disp-context" style="color:#888; font-size:12px;">10</span></span>
+                        <input type="range" id="set-context" min="2" max="50" step="2" value="10" style="width:100px" oninput="updateConfig('contextLimit', this.value); document.getElementById('disp-context').innerText=this.value">
+                    </div>
+                    <div class="list-item" style="cursor:default;">
+                        <span>时间感知</span>
+                        <label class="switch">
+                            <input type="checkbox" id="set-time-aware" onchange="updateConfig('timeAware', this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div style="padding:0 15px 10px; font-size:10px; color:#888;">开启后，AI将知晓当前现实时间，并在消息气泡上显示时间戳。</div>
+                </div>
+
+                <!-- 数据存储 -->
+                <h4 style="color:#666; margin-left:10px; margin-bottom:5px; font-size:12px;">数据存储</h4>
+                <div class="list-group" style="margin-top:0;">
+                    <div class="list-item" onclick="backupData()">
+                        <span>📤 备份数据 (下载JSON)</span>
+                    </div>
+                    <div class="list-item" onclick="document.getElementById('file-restore').click()">
+                        <span>📥 恢复数据</span>
+                        <input type="file" id="file-restore" style="display:none" onchange="restoreData(event)">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 3. 记忆库 APP ================= -->
+        <div id="screen-memory" class="screen">
+            <div class="nav-bar">
+                <button class="nav-btn" onclick="navTo('screen-home')">◀ 主页</button>
+                <span class="nav-title">长期记忆</span>
+                <button class="nav-btn" onclick="addMemoryUI()">＋</button>
+            </div>
+            <div id="memory-list" style="padding:15px; display:flex; flex-direction:column; gap:10px;">
+                <!-- 动态生成记忆条目 -->
+            </div>
+        </div>
+
+        <!-- ================= 4. 聊天 APP - 联系人列表 ================= -->
+        <div id="screen-chat-list" class="screen">
+            <div class="nav-bar">
+                <button class="nav-btn" onclick="navTo('screen-home')">◀ 主页</button>
+                <span class="nav-title">聊天</span>
+                <button class="nav-btn" onclick="openNewContactModal()">＋</button>
+            </div>
+            <div id="contact-list-container">
+                <!-- 动态联系人 -->
+            </div>
+        </div>
+
+        <!-- ================= 5. 聊天 APP - 聊天室 ================= -->
+        <div id="screen-chat-room" class="screen">
+            <div class="nav-bar">
+                <button class="nav-btn" onclick="navTo('screen-chat-list')">◀</button>
+                <span class="nav-title" id="chat-room-title">AI</span>
+                <button class="nav-btn" onclick="toggleDrawer()">≡</button>
+            </div>
+
+            <div class="chat-room-body" id="chat-container">
+                <!-- 消息流 -->
+            </div>
+
+            <!-- 图片预览条 -->
+            <div id="img-preview-box">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <img id="preview-thumb" src="">
+                    <span>已添加图片</span>
+                </div>
+                <span style="color:#FF3B30; cursor:pointer;" onclick="clearImage()">✕</span>
+            </div>
+
+            <div class="chat-input-area">
+                <button class="icon-btn" onclick="document.getElementById('chat-file-input').click()">📎</button>
+                <input type="file" id="chat-file-input" accept="image/*" style="display:none" onchange="handleImageSelect(event)">
+                
+                <input type="text" class="chat-input" id="chat-input" placeholder="发消息..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button class="icon-btn" onclick="sendMessage()">➤</button>
+            </div>
+
+            <!-- 聊天室侧边栏 -->
+            <div class="drawer" id="chat-drawer">
+                <div class="nav-bar" style="background:#fff;">
+                    <button class="nav-btn" onclick="toggleDrawer()">✕</button>
+                    <span class="nav-title">详细信息</span>
+                    <div style="width:30px"></div>
+                </div>
+                <div class="drawer-content">
+                    <h4 style="margin-top:0">🤖 AI 设置</h4>
+                    <div class="form-group">
+                        <label class="form-label">头像 (点击更换)</label>
+                        <img id="drawer-ai-avatar" src="" style="width:60px; height:60px; border-radius:50%; border:1px solid #ddd;" onclick="document.getElementById('upload-ai-av').click()">
+                        <input type="file" id="upload-ai-av" style="display:none" onchange="updateContactAvatar(event, 'ai')">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">备注名 (App内显示)</label>
+                        <input type="text" id="drawer-remark" class="form-input" onchange="saveDrawerSettings()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">AI 人设 (System Prompt)</label>
+                        <textarea id="drawer-persona" class="form-textarea" onchange="saveDrawerSettings()"></textarea>
+                    </div>
+
+                    <h4 style="border-top:1px solid #eee; padding-top:15px;">👤 用户设置 (本会话)</h4>
+                    <div class="form-group">
+                        <label class="form-label">你的头像</label>
+                        <img id="drawer-user-avatar" src="" style="width:60px; height:60px; border-radius:50%; border:1px solid #ddd;" onclick="document.getElementById('upload-user-av').click()">
+                        <input type="file" id="upload-user-av" style="display:none" onchange="updateContactAvatar(event, 'user')">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">你的称呼</label>
+                        <input type="text" id="drawer-username" class="form-input" onchange="saveDrawerSettings()">
+                    </div>
+
+                    <div style="margin-top:20px;">
+                        <button class="btn-primary" style="background:#5856D6; margin-bottom:10px;" onclick="openSummaryModal()">🪄 范围自动总结</button>
+                        <button class="btn-danger" onclick="resetChat()">🗑️ 开启新对话 (清空记录)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 弹窗模态框集 ================= -->
+        
+        <!-- 1. 新建联系人弹窗 -->
+        <div class="modal-overlay" id="modal-new-contact">
+            <div class="modal-box">
+                <h3>新建联系人</h3>
                 <div class="form-group">
-                    <label class="form-label">API Base URL</label>
-                    <input type="text" id="apiUrl" class="form-input" value="https://api.openai.com/v1" onchange="saveSettings()">
-                    <div class="hint-text">⚠️ 必须包含版本号，例如 <b>/v1</b></div>
+                    <input type="text" id="new-contact-name" class="form-input" placeholder="输入名字 (如: 助手)">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-primary" style="background:#ccc; color:#000;" onclick="closeModal('modal-new-contact')">取消</button>
+                    <button class="btn-primary" onclick="createContact()">创建</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. API 设置弹窗 -->
+        <div class="modal-overlay" id="modal-api-settings">
+            <div class="modal-box" style="text-align:left;">
+                <h3 style="text-align:center; margin-top:0;">API 连接</h3>
+                <div class="form-group">
+                    <label class="form-label">Base URL (需包含 /v1)</label>
+                    <input type="text" id="cfg-url" class="form-input" placeholder="https://api.openai.com/v1">
                 </div>
                 <div class="form-group">
                     <label class="form-label">API Key</label>
-                    <input type="password" id="apiKey" class="form-input" placeholder="sk-xxxxxxxx" onchange="saveSettings()">
-                </div>
-                <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="testConnection()">📶 测试连接</button>
-                    <button class="btn btn-fetch" onclick="fetchModels()">📡 拉取模型</button>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" style="color:#007AFF">🤖 AI 设定</label>
-                <div class="avatar-uploader">
-                    <img id="aiAvatarPreview" src="https://api.dicebear.com/7.x/bottts/svg?seed=AI" class="current-avatar">
-                    <label class="upload-btn-label">AI 头像 <input type="file" style="display:none" accept="image/*" onchange="handleAvatarUpload(event, 'ai')"></label>
-                </div>
-                <textarea id="systemPrompt" class="form-textarea" onchange="saveSettings()">你是一个幽默的AI助手。</textarea>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" style="color:#34C759">👤 用户设定</label>
-                <div class="avatar-uploader">
-                    <img id="userAvatarPreview" src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" class="current-avatar">
-                    <label class="upload-btn-label">你的头像 <input type="file" style="display:none" accept="image/*" onchange="handleAvatarUpload(event, 'user')"></label>
-                </div>
-                <input type="text" id="userName" class="form-input" placeholder="怎么称呼你？" onchange="saveSettings()">
-            </div>
-
-            <div style="border-top:1px solid #eee; padding-top:15px;">
-                <div class="form-group">
-                    <label class="form-label">🌡️ 温度: <span id="tempVal" style="color:#007AFF">0.7</span></label>
-                    <input type="range" id="tempRange" min="0" max="2" step="0.1" value="0.7" style="width:100%" oninput="document.getElementById('tempVal').innerText=this.value; saveSettings()">
+                    <input type="password" id="cfg-key" class="form-input" placeholder="sk-...">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">🧠 记忆轮数: <span id="contextVal" style="color:#007AFF">10</span></label>
-                    <input type="range" id="contextRange" min="2" max="50" step="2" value="10" style="width:100%" oninput="document.getElementById('contextVal').innerText=this.value; saveSettings()">
+                    <label class="form-label">模型 ID</label>
+                    <input type="text" id="cfg-model" class="form-input" placeholder="gpt-3.5-turbo">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">模型</label>
-                    <select id="modelSelect" class="form-input" onchange="document.getElementById('customModel').value=this.value; saveSettings();">
-                        <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
-                        <option value="gpt-4o">gpt-4o (视觉推荐)</option>
-                    </select>
-                    <input type="text" id="customModel" class="form-input" style="display:none; margin-top:5px;" placeholder="输入模型ID">
-                    <div style="text-align:right; font-size:11px; color:#007AFF; margin-top:2px; cursor:pointer" onclick="toggleCustomModel()">切换手动输入</div>
-                </div>
+                <button class="btn-primary" onclick="saveApiConfig()">保存</button>
             </div>
-
-            <div class="btn-group" style="margin-top:20px;">
-                <button class="btn btn-secondary" onclick="exportData()">📤 备份</button>
-                <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 恢复</button>
-                <input type="file" id="importFile" style="display:none" onchange="importData(event)">
-            </div>
-            <button class="btn btn-danger" onclick="clearChat()" style="margin-top:10px;">🗑️ 清空对话</button>
         </div>
 
-        <!-- ================= 2. 记忆库面板 ================= -->
-        <div class="panel-overlay" id="memoryPanel">
-            <div class="panel-header">
-                <h2 class="panel-title">🧠 记忆库</h2>
-                <button class="btn-close" onclick="togglePanel('memoryPanel')">×</button>
+        <!-- 3. 记忆编辑弹窗 -->
+        <div class="modal-overlay" id="modal-memory-edit">
+            <div class="modal-box">
+                <h3>编辑记忆</h3>
+                <textarea id="mem-content" class="form-textarea" style="height:100px;"></textarea>
+                <input type="hidden" id="mem-index">
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button class="btn-danger" onclick="deleteMemory()" id="btn-del-mem">删除</button>
+                    <button class="btn-primary" onclick="saveMemoryItem()">保存</button>
+                </div>
+                <button class="nav-btn" style="margin-top:10px; width:100%;" onclick="closeModal('modal-memory-edit')">取消</button>
             </div>
-            <div style="margin-bottom: 15px;">
-                <textarea id="newMemoryInput" class="form-input" style="height:60px;" placeholder="添加记忆..."></textarea>
-                <button class="btn btn-primary" onclick="addMemoryManual()">➕ 添加</button>
-            </div>
-            <div id="memoryList"></div>
         </div>
 
-        <!-- ================= 3. 总结弹窗 ================= -->
-        <div class="modal-overlay" id="summaryModalOverlay">
+        <!-- 4. 总结范围选择弹窗 -->
+        <div class="modal-overlay" id="modal-summary">
             <div class="modal-box">
                 <h3>🪄 智能总结</h3>
-                <div class="form-group">
-                    <label class="form-label">From Msg #</label>
-                    <input type="number" id="sumStart" class="form-input" value="1">
+                <p style="font-size:12px; color:#666;">选择消息范围，AI将提取重点存入记忆库。</p>
+                <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
+                    <input type="number" id="sum-start" class="form-input" placeholder="开始#">
+                    <span>至</span>
+                    <input type="number" id="sum-end" class="form-input" placeholder="结束#">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">To Msg #</label>
-                    <input type="number" id="sumEnd" class="form-input" value="10">
-                </div>
-                <div class="hint-text" id="msgCountHint"></div>
-                <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="closeSummaryModal()">取消</button>
-                    <button class="btn btn-primary" id="btnDoSum" onclick="doSummarize()">总结</button>
-                </div>
+                <div id="sum-hint" style="font-size:10px; color:#888; margin-bottom:10px;"></div>
+                <button class="btn-primary" id="btn-do-sum" onclick="doSummarize()">开始总结</button>
+                <button class="nav-btn" style="margin-top:10px;" onclick="closeModal('modal-summary')">取消</button>
             </div>
         </div>
+
+        <!-- 底部 Home Indicator -->
+        <div class="home-indicator" onclick="navTo('screen-home')"></div>
 
     </div>
 
     <script>
-        // --- 核心变量 ---
-        let settings = {
-            aiAvatar: "https://api.dicebear.com/7.x/bottts/svg?seed=AI",
-            userAvatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=User",
-            userName: "",
-            contextLimit: 10,
-            temperature: 0.7
-        };
-        let messages = []; 
-        let memories = [];
-        let currentUploadBase64 = null; 
+        // --- 数据结构定义 ---
+        const defaultAvatarAI = "https://api.dicebear.com/7.x/bottts/svg?seed=AI";
+        const defaultAvatarUser = "https://api.dicebear.com/7.x/avataaars/svg?seed=User";
 
-        window.onload = function() {
-            loadSettings();
+        let state = {
+            config: {
+                apiUrl: "https://api.openai.com/v1",
+                apiKey: "",
+                model: "gpt-3.5-turbo",
+                temp: 0.7,
+                contextLimit: 10,
+                timeAware: false
+            },
+            contacts: [], // { id, name, remark, persona, aiAvatar, userName, userAvatar, messages: [] }
+            memories: [], // strings
+            currentContactId: null
+        };
+
+        let currentImgBase64 = null;
+
+        // --- 初始化 ---
+        window.onload = () => {
             loadData();
-            renderMessages();
-            renderMemories();
+            updateClock();
+            setInterval(updateClock, 60000);
+            if (state.contacts.length === 0) {
+                // 默认创建一个联系人
+                createContact("AI 助手", true);
+            }
         };
 
-        // ==========================================
-        // ★★★ 核心逻辑分离：发送 vs 触发 ★★★
-        // ==========================================
-
-        // 1. 只发送用户消息 (不上报 API)
-        function sendUserMsg() {
-            const input = document.getElementById('userInput');
-            const text = input.value.trim();
-
-            // 校验：不能为空，除非有图
-            if (!text && !currentUploadBase64) return;
-
-            // UI 更新
-            appendMessageUI('user', text, currentUploadBase64);
-            
-            // 数据保存
-            messages.push({ role: 'user', content: text, image: currentUploadBase64 });
-            saveData();
-
-            // 清理输入框 (防止图片残留导致误发)
-            input.value = '';
-            clearUpload();
-
-            // *这里不需要 disable 任何按钮，用户可以继续疯狂发送*
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('clock').innerText = `${h}:${m}`;
         }
 
-        // 2. 手动触发 AI 回复 (读取历史记录)
-        async function triggerAI() {
-            if (!document.getElementById('apiKey').value) {
-                alert("请先配置 API Key 🔑"); togglePanel('settingsPanel'); return;
-            }
+        // --- 导航逻辑 ---
+        function navTo(screenId) {
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            document.getElementById('statusBar').classList.toggle('dark', screenId === 'screen-home');
             
-            const btnAI = document.getElementById('btnTriggerAI');
-            const btnSend = document.getElementById('btnSendUser');
-            
-            // 锁定按钮防止重复点击
-            btnAI.disabled = true; 
-            btnAI.innerHTML = '<span class="typing-indicator"></span><span class="typing-indicator"></span>'; // 动画
+            // 特定页面初始化
+            if(screenId === 'screen-chat-list') renderContactList();
+            if(screenId === 'screen-memory') renderMemoryList();
+            if(screenId === 'screen-settings') loadSettingsUI();
+        }
 
-            // 构造 Prompt
-            const sysPromptRaw = document.getElementById('systemPrompt').value;
-            const userName = document.getElementById('userName').value || "用户";
-            const timeStr = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
-            
-            let fullSystemPrompt = `${sysPromptRaw}\n[Time: ${timeStr}]\n[User: ${userName}]`;
-            if(memories.length > 0) {
-                fullSystemPrompt += `\n\n[Memories]:\n${memories.map(m => '- ' + m).join('\n')}`;
-            }
+        function toggleDrawer() {
+            const d = document.getElementById('chat-drawer');
+            d.classList.toggle('open');
+            if (d.classList.contains('open')) loadDrawerUI();
+        }
 
-            // 构造上下文
-            const limit = parseInt(document.getElementById('contextRange').value) || 10;
-            let apiMessages = [{ role: "system", content: fullSystemPrompt }];
-            const history = messages.slice(-limit);
+        // --- 数据持久化 ---
+        function saveData() {
+            localStorage.setItem('aios_state', JSON.stringify(state));
+        }
+        function loadData() {
+            const d = localStorage.getItem('aios_state');
+            if (d) state = JSON.parse(d);
+        }
+        function backupData() {
+            const blob = new Blob([JSON.stringify(state)], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `aios_backup_${Date.now()}.json`;
+            a.click();
+        }
+        function restoreData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    state = JSON.parse(ev.target.result);
+                    saveData();
+                    alert('✅ 数据已恢复，即将重启');
+                    location.reload();
+                } catch (err) { alert('❌ 格式错误'); }
+            }
+            reader.readAsText(file);
+        }
+
+        // --- 设置 APP 逻辑 ---
+        function openSettingsModal(type) {
+            if (type === 'api') {
+                document.getElementById('cfg-url').value = state.config.apiUrl;
+                document.getElementById('cfg-key').value = state.config.apiKey;
+                document.getElementById('cfg-model').value = state.config.model;
+                document.getElementById('modal-api-settings').style.display = 'flex';
+            }
+        }
+        function saveApiConfig() {
+            state.config.apiUrl = document.getElementById('cfg-url').value.trim();
+            state.config.apiKey = document.getElementById('cfg-key').value.trim();
+            state.config.model = document.getElementById('cfg-model').value.trim();
+            saveData();
+            closeModal('modal-api-settings');
+        }
+        function loadSettingsUI() {
+            document.getElementById('set-temp').value = state.config.temp;
+            document.getElementById('disp-temp').innerText = state.config.temp;
+            document.getElementById('set-context').value = state.config.contextLimit;
+            document.getElementById('disp-context').innerText = state.config.contextLimit;
+            document.getElementById('set-time-aware').checked = state.config.timeAware;
+        }
+        function updateConfig(key, val) {
+            state.config[key] = val;
+            saveData();
+        }
+        async function testConnection() {
+            try {
+                const res = await fetch(state.config.apiUrl + '/models', {
+                    headers: { 'Authorization': 'Bearer ' + state.config.apiKey }
+                });
+                if(res.ok) alert('✅ 连接成功');
+                else throw new Error(res.statusText);
+            } catch(e) { alert('❌ 连接失败: ' + e.message); }
+        }
+        async function fetchModels() {
+            // 简单模拟，实际应当填充到select中，这里仅提示
+            try {
+                const res = await fetch(state.config.apiUrl + '/models', {
+                    headers: { 'Authorization': 'Bearer ' + state.config.apiKey }
+                });
+                const data = await res.json();
+                alert(`✅ 获取到 ${data.data.length} 个模型，已记录在控制台`);
+                console.log(data.data);
+            } catch(e) { alert('❌ 拉取失败'); }
+        }
+
+        // --- 记忆 APP 逻辑 ---
+        function renderMemoryList() {
+            const list = document.getElementById('memory-list');
+            list.innerHTML = '';
+            state.memories.forEach((mem, idx) => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.style.borderRadius = '10px';
+                div.innerHTML = `<span style="font-size:14px; line-height:1.4;">${mem.substring(0, 40)}${mem.length>40?'...':''}</span> <span class="chevron">✎</span>`;
+                div.onclick = () => openMemoryEdit(idx);
+                list.appendChild(div);
+            });
+        }
+        function addMemoryUI() { openMemoryEdit(-1); }
+        function openMemoryEdit(idx) {
+            const modal = document.getElementById('modal-memory-edit');
+            const content = idx === -1 ? '' : state.memories[idx];
+            document.getElementById('mem-content').value = content;
+            document.getElementById('mem-index').value = idx;
+            document.getElementById('btn-del-mem').style.display = idx === -1 ? 'none' : 'block';
+            modal.style.display = 'flex';
+        }
+        function saveMemoryItem() {
+            const idx = parseInt(document.getElementById('mem-index').value);
+            const txt = document.getElementById('mem-content').value.trim();
+            if(!txt) return;
+            if(idx === -1) state.memories.push(txt);
+            else state.memories[idx] = txt;
+            saveData(); renderMemoryList(); closeModal('modal-memory-edit');
+        }
+        function deleteMemory() {
+            const idx = parseInt(document.getElementById('mem-index').value);
+            if(confirm('确定删除?')) {
+                state.memories.splice(idx, 1);
+                saveData(); renderMemoryList(); closeModal('modal-memory-edit');
+            }
+        }
+
+        // --- 聊天 APP 逻辑 ---
+        
+        // 1. 联系人
+        function openNewContactModal() { document.getElementById('modal-new-contact').style.display = 'flex'; }
+        function createContact(nameOverride = null, silent = false) {
+            const nameInput = document.getElementById('new-contact-name');
+            const name = nameOverride || nameInput.value.trim();
+            if (!name) return;
             
-            history.forEach(msg => {
-                if(msg.image) {
-                    apiMessages.push({
-                        role: msg.role,
+            const newContact = {
+                id: Date.now().toString(),
+                name: name,
+                remark: "",
+                persona: "你是一个乐于助人的AI助手。",
+                aiAvatar: defaultAvatarAI,
+                userName: "我",
+                userAvatar: defaultAvatarUser,
+                messages: []
+            };
+            state.contacts.push(newContact);
+            saveData();
+            if(!silent) {
+                renderContactList();
+                closeModal('modal-new-contact');
+                nameInput.value = '';
+            }
+        }
+        
+        function renderContactList() {
+            const container = document.getElementById('contact-list-container');
+            container.innerHTML = '';
+            state.contacts.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'chat-row';
+                const lastMsg = c.messages.length > 0 ? c.messages[c.messages.length-1].content : '点击开始聊天';
+                // 优先显示备注，否则显示原名
+                const displayName = c.remark || c.name;
+                
+                div.innerHTML = `
+                    <img src="${c.aiAvatar}" class="chat-avatar">
+                    <div class="chat-info">
+                        <div class="chat-name">${displayName}</div>
+                        <div class="chat-preview">${lastMsg.replace(/<[^>]+>/g,'')}</div>
+                    </div>
+                `;
+                div.onclick = () => enterChatRoom(c.id);
+                container.appendChild(div);
+            });
+        }
+
+        // 2. 聊天室
+        function enterChatRoom(id) {
+            state.currentContactId = id;
+            const c = state.contacts.find(x => x.id === id);
+            document.getElementById('chat-room-title').innerText = c.remark || c.name;
+            
+            renderMessages();
+            navTo('screen-chat-room');
+            document.getElementById('chat-drawer').classList.remove('open');
+        }
+
+        function renderMessages() {
+            const c = state.contacts.find(x => x.id === state.currentContactId);
+            const container = document.getElementById('chat-container');
+            container.innerHTML = '';
+            
+            c.messages.forEach((msg, idx) => {
+                appendMessageUI(msg, idx);
+            });
+            scrollToBottom();
+        }
+
+        function appendMessageUI(msg, idx) {
+            const container = document.getElementById('chat-container');
+            const isUser = msg.role === 'user';
+            const c = state.contacts.find(x => x.id === state.currentContactId);
+            const avatar = isUser ? c.userAvatar : c.aiAvatar;
+            
+            const div = document.createElement('div');
+            div.className = `msg-bubble-row ${isUser ? 'user' : 'ai'}`;
+            
+            // 简易 Markdown 清洗与换行
+            let contentHtml = msg.content
+                .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // 粗体
+                .replace(/```[\s\S]*?```/g, '[代码块]') // 简化代码
+                .replace(/\n/g, '<br>');
+
+            // 图片
+            let imgHtml = msg.image ? `<img src="${msg.image}" class="msg-img">` : '';
+            
+            // 时间戳 (如果有)
+            let timeHtml = msg.timestamp ? `<div class="msg-time">${msg.timestamp}</div>` : '';
+
+            div.innerHTML = `
+                <div style="display:flex; gap:8px; max-width:100%; ${isUser?'flex-direction:row-reverse':''}">
+                    <img src="${avatar}" style="width:36px; height:36px; border-radius:50%;">
+                    <div class="msg-bubble ${isUser ? 'user' : 'ai'}">
+                        ${imgHtml}
+                        <span>${contentHtml}</span>
+                    </div>
+                </div>
+                ${timeHtml}
+            `;
+            container.appendChild(div);
+        }
+
+        function scrollToBottom() {
+            const el = document.getElementById('chat-container');
+            el.scrollTop = el.scrollHeight;
+        }
+
+        // 3. 发送与流式请求
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text && !currentImgBase64) return;
+            if (!state.config.apiKey) { alert("请先在设置中配置 API Key"); return; }
+
+            const c = state.contacts.find(x => x.id === state.currentContactId);
+            
+            // 用户消息构建
+            const userMsg = { 
+                role: 'user', 
+                content: text, 
+                image: currentImgBase64,
+                timestamp: state.config.timeAware ? new Date().toLocaleTimeString() : null
+            };
+            
+            c.messages.push(userMsg);
+            saveData();
+            appendMessageUI(userMsg, c.messages.length - 1);
+            scrollToBottom();
+
+            input.value = '';
+            clearImage();
+
+            // 准备 API 请求
+            // 1. System Prompt + Memory + Time
+            let sysPrompt = c.persona;
+            if(state.config.timeAware) {
+                sysPrompt += `\n[当前时间: ${new Date().toLocaleString()}]`;
+            }
+            if(state.memories.length > 0) {
+                sysPrompt += `\n[相关记忆库]:\n${state.memories.join('\n')}`;
+            }
+            sysPrompt += `\n[注意]: 请直接回复内容，不要使用Markdown格式，保持口语化。`;
+
+            const apiMsgs = [{role: "system", content: sysPrompt}];
+            
+            // 2. Context Window
+            const limit = parseInt(state.config.contextLimit);
+            const history = c.messages.slice(-limit);
+            
+            history.forEach(m => {
+                if(m.image) {
+                    apiMsgs.push({
+                        role: m.role,
                         content: [
-                            { type: "text", text: msg.content || " " },
-                            { type: "image_url", image_url: { url: msg.image } }
+                            {type: "text", text: m.content || " "},
+                            {type: "image_url", image_url: {url: m.image}}
                         ]
                     });
                 } else {
-                    apiMessages.push({ role: msg.role, content: msg.content });
+                    apiMsgs.push({role: m.role, content: m.content});
                 }
             });
 
-            // 准备气泡
-            const aiBubble = appendMessageUI('assistant', '', null, true);
-            let fullReply = "";
+            // 3. Stream Fetch
+            const aiTempMsg = { role: 'assistant', content: "...", timestamp: null };
+            // UI 上先占位，不存入 data
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'msg-bubble-row ai';
+            bubbleDiv.innerHTML = `
+                <div style="display:flex; gap:8px; max-width:100%;">
+                    <img src="${c.aiAvatar}" style="width:36px; height:36px; border-radius:50%;">
+                    <div class="msg-bubble ai" id="stream-bubble">...</div>
+                </div>`;
+            document.getElementById('chat-container').appendChild(bubbleDiv);
+            scrollToBottom();
 
             try {
-                const url = normalizeBaseUrl(document.getElementById('apiUrl').value);
-                const key = document.getElementById('apiKey').value;
-                const model = document.getElementById('customModel').value || "gpt-3.5-turbo";
-                const temp = parseFloat(document.getElementById('tempRange').value);
-
-                const res = await fetch(url + '/chat/completions', {
+                const res = await fetch(state.config.apiUrl + '/chat/completions', {
                     method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + state.config.apiKey },
                     body: JSON.stringify({
-                        model: model, messages: apiMessages, temperature: temp, stream: true
+                        model: state.config.model,
+                        messages: apiMsgs,
+                        temperature: parseFloat(state.config.temp),
+                        stream: true
                     })
                 });
 
-                if(!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.error?.message || res.statusText);
-                }
-
-                // 流式读取
                 const reader = res.body.getReader();
-                const decoder = new TextDecoder("utf-8");
+                const decoder = new TextDecoder();
+                let fullText = "";
+                const bubbleContent = document.getElementById('stream-bubble');
 
                 while(true) {
-                    const { done, value } = await reader.read();
+                    const {done, value} = await reader.read();
                     if(done) break;
-                    const chunk = decoder.decode(value, { stream: true });
+                    const chunk = decoder.decode(value, {stream: true});
                     const lines = chunk.split('\n');
                     for(const line of lines) {
-                        if(line.startsWith('data: ')) {
-                            const dataStr = line.replace('data: ', '').trim();
-                            if(dataStr === '[DONE]') break;
+                        if(line.startsWith('data: ') && line !== 'data: [DONE]') {
                             try {
-                                const json = JSON.parse(dataStr);
-                                const content = json.choices[0].delta.content || "";
-                                fullReply += content;
-                                aiBubble.innerHTML = cleanText(fullReply).replace(/\n/g, '<br>');
+                                const json = JSON.parse(line.replace('data: ', ''));
+                                const delta = json.choices[0].delta.content || "";
+                                fullText += delta;
+                                bubbleContent.innerHTML = fullText.replace(/\n/g, '<br>');
                                 scrollToBottom();
                             } catch(e) {}
                         }
                     }
                 }
-                
-                messages.push({ role: 'assistant', content: fullReply });
+
+                // 完成，存入数据
+                bubbleDiv.remove(); // 移除占位
+                const aiMsg = {
+                    role: 'assistant',
+                    content: fullText,
+                    timestamp: state.config.timeAware ? new Date().toLocaleTimeString() : null
+                };
+                c.messages.push(aiMsg);
                 saveData();
+                appendMessageUI(aiMsg, c.messages.length - 1);
 
-            } catch (e) {
-                aiBubble.innerHTML += `<br><span style="color:red;font-size:12px;">🚫 ${e.message}</span>`;
-            }
-
-            // 恢复按钮
-            btnAI.disabled = false; 
-            btnAI.innerHTML = '🤖';
-        }
-
-        // ==========================================
-        // 通用功能
-        // ==========================================
-
-        function cleanText(text) {
-            return text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/```/g, '').replace(/`/g, '');
-        }
-
-        function appendMessageUI(role, text, imgBase64, isStreaming) {
-            const box = document.getElementById('chatBox');
-            const div = document.createElement('div');
-            div.className = `msg-row ${role==='user'?'right':'left'}`;
-            const avatarUrl = role==='user' ? settings.userAvatar : settings.aiAvatar;
-            const index = messages.length + (isStreaming ? 1 : 0); 
-
-            div.innerHTML = `
-                <div style="position:relative"><img src="${avatarUrl}" class="avatar"></div>
-                <div class="message">
-                    <div class="msg-index">#${index}</div>
-                    ${imgBase64 ? `<img src="${imgBase64}" class="chat-img"><br>` : ''}
-                    <span class="msg-content">${cleanText(text).replace(/\n/g, '<br>')}</span>
-                </div>
-            `;
-            box.appendChild(div);
-            scrollToBottom();
-            if(isStreaming) return div.querySelector('.msg-content');
-        }
-
-        function scrollToBottom() {
-            const b = document.getElementById('chatBox');
-            b.scrollTop = b.scrollHeight;
-        }
-
-        // 快捷键 Enter 默认触发“只发送”，Shift+Enter 换行
-        // 用户如果习惯 Enter 直接发，这很自然。要触发 AI，手动点一下机器人。
-        function handleEnter(e) { 
-            if(e.key==='Enter') {
-                sendUserMsg();
+            } catch(e) {
+                document.getElementById('stream-bubble').innerText = "Error: " + e.message;
             }
         }
 
-        // 图片处理
-        function handleChatImageSelect(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                currentUploadBase64 = ev.target.result;
-                document.getElementById('previewImg').src = currentUploadBase64;
-                document.getElementById('uploadPreview').style.display = 'flex';
-            }
-            reader.readAsDataURL(file);
-            e.target.value = '';
+        // 4. 侧边栏逻辑
+        function loadDrawerUI() {
+            const c = state.contacts.find(x => x.id === state.currentContactId);
+            document.getElementById('drawer-ai-avatar').src = c.aiAvatar;
+            document.getElementById('drawer-remark').value = c.remark;
+            document.getElementById('drawer-persona').value = c.persona;
+            document.getElementById('drawer-user-avatar').src = c.userAvatar;
+            document.getElementById('drawer-username').value = c.userName;
         }
-        function clearUpload() {
-            currentUploadBase64 = null;
-            document.getElementById('uploadPreview').style.display = 'none';
-        }
-
-        // 自动总结
-        async function doSummarize() {
-            // ... (保持原有逻辑) ...
-            const start = parseInt(document.getElementById('sumStart').value) - 1;
-            const end = parseInt(document.getElementById('sumEnd').value);
-            if (isNaN(start) || end > messages.length) return;
-
-            const btn = document.getElementById('btnDoSum');
-            btn.innerText = "⏳"; btn.disabled=true;
+        function saveDrawerSettings() {
+            const c = state.contacts.find(x => x.id === state.currentContactId);
+            c.remark = document.getElementById('drawer-remark').value;
+            c.persona = document.getElementById('drawer-persona').value;
+            c.userName = document.getElementById('drawer-username').value;
             
-            try {
-                const targetText = messages.slice(start, end).map(m=>`${m.role}:${m.content}`).join('\n');
-                const url = normalizeBaseUrl(document.getElementById('apiUrl').value);
-                const key = document.getElementById('apiKey').value;
-                const model = document.getElementById('customModel').value || "gpt-3.5-turbo";
-
-                const res = await fetch(url + '/chat/completions', {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: [
-                            {role:"system", content:"Summarize briefly."},
-                            {role:"user", content: targetText}
-                        ]
-                    })
-                });
-                const d = await res.json();
-                memories.push(d.choices[0].message.content);
-                saveData(); renderMemories(); closeSummaryModal();
-            } catch(e){ alert(e.message); }
-            btn.innerText = "总结"; btn.disabled=false;
+            // 更新UI标题
+            document.getElementById('chat-room-title').innerText = c.remark || c.name;
+            saveData();
         }
-
-        // 基础配置加载与保存
-        function normalizeBaseUrl(url) {
-            url = url.trim();
-            if (url.endsWith('/')) url = url.slice(0, -1); 
-            if (url.endsWith('/chat/completions')) url = url.replace('/chat/completions', ''); 
-            if (!url.endsWith('/v1') && url.includes('openai')) url += '/v1'; 
-            return url;
-        }
-        function togglePanel(id) {
-            document.querySelectorAll('.panel-overlay').forEach(p => { if(p.id !== id) p.style.display='none'; });
-            const p = document.getElementById(id);
-            p.style.display = p.style.display==='flex' ? 'none' : 'flex';
-            if(p.style.display==='flex') p.classList.add('show');
-            else saveSettings();
-        }
-        function saveSettings() {
-            localStorage.setItem('v8_url', document.getElementById('apiUrl').value);
-            localStorage.setItem('v8_key', document.getElementById('apiKey').value);
-            localStorage.setItem('v8_sys', document.getElementById('systemPrompt').value);
-            localStorage.setItem('v8_mod', document.getElementById('customModel').value);
-            settings.userName = document.getElementById('userName').value;
-            settings.contextLimit = document.getElementById('contextRange').value;
-            settings.temperature = document.getElementById('tempRange').value;
-            localStorage.setItem('v8_settings', JSON.stringify(settings));
-        }
-        function loadSettings() {
-            if(localStorage.getItem('v8_url')) document.getElementById('apiUrl').value = localStorage.getItem('v8_url');
-            if(localStorage.getItem('v8_key')) document.getElementById('apiKey').value = localStorage.getItem('v8_key');
-            if(localStorage.getItem('v8_sys')) document.getElementById('systemPrompt').value = localStorage.getItem('v8_sys');
-            if(localStorage.getItem('v8_mod')) document.getElementById('customModel').value = localStorage.getItem('v8_mod');
-            const s = localStorage.getItem('v8_settings');
-            if(s) {
-                settings = JSON.parse(s);
-                document.getElementById('userName').value = settings.userName || "";
-                document.getElementById('contextRange').value = settings.contextLimit || 10;
-                document.getElementById('tempRange').value = settings.temperature || 0.7;
-                document.getElementById('aiAvatarPreview').src = settings.aiAvatar;
-                document.getElementById('userAvatarPreview').src = settings.userAvatar;
-            }
-        }
-        function saveData() {
-            localStorage.setItem('v8_msg', JSON.stringify(messages));
-            localStorage.setItem('v8_mem', JSON.stringify(memories));
-        }
-        function loadData() {
-            const m = localStorage.getItem('v8_msg'); if(m) messages = JSON.parse(m);
-            const mem = localStorage.getItem('v8_mem'); if(mem) memories = JSON.parse(mem);
-        }
-        function handleAvatarUpload(e, type) {
+        function updateContactAvatar(e, target) {
             const file = e.target.files[0];
             if(!file) return;
             const reader = new FileReader();
             reader.onload = (ev) => {
-                const r = ev.target.result;
-                if(type==='ai') { settings.aiAvatar=r; document.getElementById('aiAvatarPreview').src=r; }
-                else { settings.userAvatar=r; document.getElementById('userAvatarPreview').src=r; }
-                saveSettings();
-            }; reader.readAsDataURL(file);
+                const c = state.contacts.find(x => x.id === state.currentContactId);
+                if(target === 'ai') {
+                    c.aiAvatar = ev.target.result;
+                    document.getElementById('drawer-ai-avatar').src = c.aiAvatar;
+                } else {
+                    c.userAvatar = ev.target.result;
+                    document.getElementById('drawer-user-avatar').src = c.userAvatar;
+                }
+                saveData();
+                // 刷新聊天界面头像需重绘，这里偷懒直接生效于新消息或重进
+            }
+            reader.readAsDataURL(file);
         }
-        function renderMemories() {
-            const l = document.getElementById('memoryList'); l.innerHTML='';
-            memories.forEach((m,i)=> l.innerHTML+=`<div class="memory-item"><span>${m}</span><span class="mem-del" onclick="memories.splice(${i},1);saveData();renderMemories()">×</span></div>`);
+        function resetChat() {
+            if(confirm("确定清空与该人物的所有聊天记录吗？")) {
+                const c = state.contacts.find(x => x.id === state.currentContactId);
+                c.messages = [];
+                saveData();
+                renderMessages();
+                toggleDrawer();
+            }
         }
-        function addMemoryManual() {
-            const v = document.getElementById('newMemoryInput').value;
-            if(v){ memories.push(v); saveData(); renderMemories(); document.getElementById('newMemoryInput').value=''; }
-        }
+
+        // 5. 自动总结功能
         function openSummaryModal() {
-            document.getElementById('summaryModalOverlay').style.display='block';
-            document.getElementById('sumEnd').value = messages.length;
-            document.getElementById('msgCountHint').innerText = `Total: ${messages.length}`;
+            const c = state.contacts.find(x => x.id === state.currentContactId);
+            document.getElementById('sum-start').value = 1;
+            document.getElementById('sum-end').value = c.messages.length;
+            document.getElementById('sum-hint').innerText = `当前共有 ${c.messages.length} 条消息`;
+            document.getElementById('modal-summary').style.display = 'flex';
         }
-        function closeSummaryModal() { document.getElementById('summaryModalOverlay').style.display='none'; }
-        function exportData() {
-            const d = {settings, memories, messages, api:{url:document.getElementById('apiUrl').value, sys:document.getElementById('systemPrompt').value}};
-            const b = new Blob([JSON.stringify(d)],{type:'application/json'});
-            const a = document.createElement('a'); a.href=URL.createObjectURL(b); a.download='backup.json'; a.click();
+
+        async function doSummarize() {
+            const s = parseInt(document.getElementById('sum-start').value) - 1;
+            const e = parseInt(document.getElementById('sum-end').value);
+            const c = state.contacts.find(x => x.id === state.currentContactId);
+            
+            if(isNaN(s) || s < 0 || e > c.messages.length) { alert('范围无效'); return; }
+            
+            const targetMsgs = c.messages.slice(s, e);
+            const txt = targetMsgs.map(m => `${m.role}: ${m.content}`).join('\n');
+            
+            const btn = document.getElementById('btn-do-sum');
+            btn.innerText = "正在分析..."; btn.disabled = true;
+
+            try {
+                const res = await fetch(state.config.apiUrl + '/chat/completions', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + state.config.apiKey },
+                    body: JSON.stringify({
+                        model: state.config.model,
+                        messages: [
+                            {role: "system", content: "你是一个专业的记录员。请总结以下对话的关键信息，提炼成一条简短的记忆点。"},
+                            {role: "user", content: txt}
+                        ]
+                    })
+                });
+                const json = await res.json();
+                const summary = json.choices[0].message.content;
+                
+                state.memories.push(summary);
+                saveData();
+                alert("✅ 总结成功，已存入记忆库 App");
+                closeModal('modal-summary');
+                toggleDrawer(); // 关闭侧边栏
+            } catch(err) {
+                alert("总结失败: " + err.message);
+            }
+            btn.innerText = "开始总结"; btn.disabled = false;
         }
-        function importData(e) {
-            const f = e.target.files[0]; if(!f)return;
-            const r = new FileReader();
-            r.onload=(ev)=>{
-                try{
-                    const d = JSON.parse(ev.target.result);
-                    if(confirm("覆盖当前数据?")){
-                        messages=d.messages||[]; memories=d.memories||[]; settings=d.settings||settings;
-                        if(d.api){ document.getElementById('apiUrl').value=d.api.url; document.getElementById('systemPrompt').value=d.api.sys; }
-                        saveData(); saveSettings(); location.reload();
-                    }
-                }catch(err){alert("文件错误");}
-            }; r.readAsText(f);
+
+        // --- 通用工具 ---
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function handleImageSelect(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                currentImgBase64 = ev.target.result;
+                document.getElementById('preview-thumb').src = currentImgBase64;
+                document.getElementById('img-preview-box').style.display = 'flex';
+            }
+            reader.readAsDataURL(file);
+            e.target.value = '';
         }
-        function toggleCustomModel() {
-            const s = document.getElementById('modelSelect'); const i = document.getElementById('customModel');
-            if(i.style.display==='none'){i.style.display='block'; s.style.display='none'; i.value=s.value;}
-            else{i.style.display='none'; s.style.display='block';}
+        function clearImage() {
+            currentImgBase64 = null;
+            document.getElementById('img-preview-box').style.display = 'none';
         }
-        function clearChat() { if(confirm("清空?")) { messages=[]; saveData(); renderMessages(); } }
-        async function fetchModels() {
-             try{
-                 const u = normalizeBaseUrl(document.getElementById('apiUrl').value);
-                 const k = document.getElementById('apiKey').value;
-                 const r = await fetch(u+'/models',{headers:{Authorization:"Bearer "+k}});
-                 const d = await r.json();
-                 const s = document.getElementById('modelSelect'); s.innerHTML='';
-                 d.data.forEach(m=>{ const o=document.createElement('option'); o.value=m.id; o.innerText=m.id; s.appendChild(o); });
-                 alert(`Loaded ${d.data.length} models`);
-             } catch(e){alert(e.message); toggleCustomModel();}
-        }
-        async function testConnection(){
-            try{
-                 const u = normalizeBaseUrl(document.getElementById('apiUrl').value);
-                 const k = document.getElementById('apiKey').value;
-                 await fetch(u+'/models',{headers:{Authorization:"Bearer "+k}});
-                 alert("✅ OK");
-            }catch(e){alert("❌ "+e.message);}
-        }
+
     </script>
 </body>
 </html>
-
