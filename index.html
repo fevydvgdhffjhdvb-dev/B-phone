@@ -221,21 +221,25 @@
                 <div class="clock-date" id="clockDate">1月1日 星期一</div>
             </div>
             <div class="app-grid">
+                <!-- 1. 信息 (加了 id="app-icon-msg") -->
                 <div class="app-icon-container" onclick="navigateTo('page-msg-list')">
-                    <div class="app-icon icon-msg">💬</div>
+                    <div class="app-icon icon-msg" id="app-icon-msg">💬</div>
                     <div class="app-name">信息</div>
                 </div>
+                <!-- 2. 记忆库 (加了 id="app-icon-mem") -->
                 <div class="app-icon-container" onclick="navigateTo('page-memory')">
-                    <div class="app-icon icon-note">📝</div>
+                    <div class="app-icon icon-note" id="app-icon-mem">📝</div>
                     <div class="app-name">记忆库</div>
                 </div>
+                <!-- 3. 设置 (加了 id="app-icon-set") -->
                 <div class="app-icon-container" onclick="navigateTo('page-settings')">
-                    <div class="app-icon icon-settings">⚙️</div>
+                    <div class="app-icon icon-settings" id="app-icon-set">⚙️</div>
                     <div class="app-name">设置</div>
                 </div>
-                <div class="app-icon-container">
-                    <div class="app-icon" style="background:#007AFF">📷</div>
-                    <div class="app-name">相机</div>
+                <!-- 4. 原相机 -> 改成 美化 (加了 id="app-icon-theme") -->
+                <div class="app-icon-container" onclick="navigateTo('page-theme')">
+                    <div class="app-icon" id="app-icon-theme" style="background: linear-gradient(to bottom, #ff2d55, #ff375f);">🎨</div>
+                    <div class="app-name">美化</div>
                 </div>
             </div>
         </div>
@@ -355,6 +359,45 @@
                     <button class="ios-btn" onclick="document.getElementById('importFile').click()">恢复数据</button>
                     <input type="file" id="importFile" hidden onchange="importData(event)">
                     <button class="ios-btn danger" onclick="resetAll()">重置应用 (清除所有)</button>
+                </div>
+            </div>
+        </div>
+        <!-- ============ 6. 美化中心 (Theme) ============ -->
+        <div class="page" id="page-theme">
+            <div class="app-header">
+                <button class="btn-icon-text" onclick="goHome()">‹ 桌面</button>
+                <span class="app-title">美化中心</span>
+                <span style="width:50px;"></span>
+            </div>
+            <div class="content-scroll">
+                
+                <div class="ios-group-title">APP 图标替换 (输入图片URL)</div>
+                <div class="ios-list">
+                    <div class="ios-item">
+                        <span class="ios-label">信息图标</span>
+                        <input type="text" id="iconInput-msg" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+                    </div>
+                    <div class="ios-item">
+                        <span class="ios-label">记忆图标</span>
+                        <input type="text" id="iconInput-mem" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+                    </div>
+                    <div class="ios-item">
+                        <span class="ios-label">设置图标</span>
+                        <input type="text" id="iconInput-set" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+                    </div>
+                    <div class="ios-item">
+                        <span class="ios-label">美化图标</span>
+                        <input type="text" id="iconInput-theme" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+                    </div>
+                </div>
+
+                <div class="ios-group-title">全局 CSS 代码 (高级美化)</div>
+                <div style="font-size:12px; color:#666; margin:0 15px 5px;">在这里输入 CSS 可以替换按钮素材、修改字体等。</div>
+                <div class="ios-list" style="height: 200px;">
+                    <textarea id="customCssInput" style="width:100%; height:100%; border:none; padding:15px; font-family:monospace; font-size:12px; resize:none; outline:none;" placeholder=".btn-back { ... }" onchange="saveTheme()"></textarea>
+                </div>
+                <div style="text-align:center; padding:20px;">
+                    <button class="ios-btn danger" style="border-radius:10px;" onclick="resetTheme()">重置所有美化</button>
                 </div>
             </div>
         </div>
@@ -495,6 +538,7 @@
             }
             updateContactList();
             updateGlobalSettingsUI();
+            loadTheme();
         };
 
         // --- 数据持久化 ---
@@ -938,6 +982,84 @@ const history = char.messages.slice(-limit);
             globalConfig.historyLimit = parseInt(document.getElementById('historyLimit').value) || 20;
             saveData();
         }
+        // --- 美化/主题系统 ---
+        let themeConfig = {
+            icons: {
+                msg: "",
+                mem: "",
+                set: "",
+                theme: ""
+            },
+            customCss: ""
+        };
+
+        // 初始化时加载主题
+        // 请把 loadTheme() 加到 window.onload 里去！
+        function loadTheme() {
+            const t = localStorage.getItem('ai_phone_theme');
+            if(t) themeConfig = JSON.parse(t);
+
+            // 1. 恢复输入框的值
+            document.getElementById('iconInput-msg').value = themeConfig.icons.msg || "";
+            document.getElementById('iconInput-mem').value = themeConfig.icons.mem || "";
+            document.getElementById('iconInput-set').value = themeConfig.icons.set || "";
+            document.getElementById('iconInput-theme').value = themeConfig.icons.theme || "";
+            document.getElementById('customCssInput').value = themeConfig.customCss || "";
+
+            // 2. 应用样式
+            applyThemeUI();
+        }
+
+        function saveTheme() {
+            themeConfig.icons.msg = document.getElementById('iconInput-msg').value;
+            themeConfig.icons.mem = document.getElementById('iconInput-mem').value;
+            themeConfig.icons.set = document.getElementById('iconInput-set').value;
+            themeConfig.icons.theme = document.getElementById('iconInput-theme').value;
+            themeConfig.customCss = document.getElementById('customCssInput').value;
+
+            localStorage.setItem('ai_phone_theme', JSON.stringify(themeConfig));
+            applyThemeUI();
+        }
+
+        function applyThemeUI() {
+            // A. 应用 APP 图标
+            updateAppIcon('app-icon-msg', themeConfig.icons.msg);
+            updateAppIcon('app-icon-mem', themeConfig.icons.mem);
+            updateAppIcon('app-icon-set', themeConfig.icons.set);
+            updateAppIcon('app-icon-theme', themeConfig.icons.theme);
+
+            // B. 应用全局 CSS
+            let styleTag = document.getElementById('user-custom-style');
+            if (!styleTag) {
+                styleTag = document.createElement('style');
+                styleTag.id = 'user-custom-style';
+                document.head.appendChild(styleTag);
+            }
+            styleTag.innerHTML = themeConfig.customCss;
+        }
+
+        function updateAppIcon(elementId, url) {
+            const el = document.getElementById(elementId);
+            if(!el) return;
+            if (url && url.trim() !== "") {
+                // 如果有 URL，就显示图片，文字变透明
+                el.style.backgroundImage = `url(${url})`;
+                el.style.backgroundSize = 'cover';
+                el.style.backgroundPosition = 'center';
+                el.style.color = 'transparent'; // 隐藏原来的 emoji
+            } else {
+                // 没 URL 就恢复原状
+                el.style.backgroundImage = '';
+                el.style.color = 'white'; // 恢复文字颜色
+            }
+        }
+
+        function resetTheme() {
+            if(confirm("确定要重置所有美化设置吗？")) {
+                localStorage.removeItem('ai_phone_theme');
+                location.reload();
+            }
+        }
 
         async function fetchModels() {
             if(!globalConfig.apiKey) return alert("请先填写 API Key");
@@ -1053,6 +1175,7 @@ const history = char.messages.slice(-limit);
     </script>
 </body>
 </html>
+
 
 
 
