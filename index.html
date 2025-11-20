@@ -197,8 +197,8 @@
             <span class="header-title">AI Phone V8.1</span>
             <div class="header-icons">
                 <button class="btn-icon" onclick="openSummaryModal()" title="自动总结">^ω^</button>
-                <button class="btn-icon" onclick="togglePanel('memoryPanel')" title="记忆库">໒  ྀིɞ̴̶̷ . ɞ̴̶̷𓍼ིྀა♡</button>
-                <button class="btn-icon" onclick="togglePanel('settingsPanel')" title="设置">૮₍ᵔ⤙ᵔ₎ა</button>
+                <button class="btn-icon" onclick="togglePanel('memoryPanel')" title="记忆库">՞⦁༝⦁՞</button>
+                <button class="btn-icon" onclick="togglePanel('settingsPanel')" title="设置">⩌⤙⩌</button>
             </div>
         </div>
 
@@ -221,7 +221,7 @@
             </div>
 
             <div class="input-toolbar">
-                <button class="btn-attach" onclick="document.getElementById('chatFileInput').click()" title="上传图片">⌯>ᴗo⌯ .ᐟ.ᐟ</button>
+                <button class="btn-attach" onclick="document.getElementById('chatFileInput').click()" title="上传图片">⩌ ⩌</button>
                 <input type="file" id="chatFileInput" accept="image/*" style="display:none" onchange="handleChatImageSelect(event)">
                 
                 <!-- 输入框 -->
@@ -229,11 +229,11 @@
                 
                 <!-- 按钮组 -->
                 <button class="btn-circle btn-send-user" id="btnSendUser" onclick="sendUserMsg()" title="发送上屏 (不触发AI)">
-                    つ♡⊂
+                    💭
                 </button>
                 
                 <button class="btn-circle btn-trigger-ai" id="btnTriggerAI" onclick="triggerAI()" title="让 AI 回复">
-                    づ♡ど
+                    💬
                 </button>
             </div>
         </div>
@@ -249,7 +249,7 @@
                 <div class="form-group">
                     <label class="form-label">API Base URL</label>
                     <input type="text" id="apiUrl" class="form-input" value="https://api.openai.com/v1" onchange="saveSettings()">
-                    <div class="hint-text">⚠️ 必须包含版本号，例如 <b>/v1</b></div>
+                    <div class="hint-text">必须包含版本号，例如 <b>/v1</b></div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">API Key</label>
@@ -788,4 +788,5 @@
     </script>
 </body>
 </html>
+
 
