@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#f2f2f7">
-    <title>AI OS V5.1 (完美修复版)</title>
+    <title>AI OS V5.2 (无限存储版)</title>
     <style>
         /* --- 基础样式 (iOS 风格) --- */
         :root {
@@ -97,7 +97,7 @@
             flex: 1; background: #fff; border: 1px solid #ddd; border-radius: 20px; 
             padding: 10px 12px; font-size: 16px; outline: none; max-height: 100px; overflow-y: auto;
         }
-        .btn-round { width: 36px; height: 36px; border-radius: 50%; background: #eee; color: #007AFF; display: flex; align-items: center; justify-content: center; border: none; font-size: 20px; flex-shrink: 0; cursor: pointer;}
+        .btn-round { width: 36px; height: 36px; border-radius: 50%; background: #eee; color: #007AFF; display: flex; align-items: center; justify-content: center; border: none; font-size: 20px; flex-shrink: 0; cursor: pointer; }
 
         /* --- 侧边栏 (Drawer) --- */
         .drawer-mask { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); z-index: 300; display: none; }
@@ -113,16 +113,26 @@
         /* --- 模态框 --- */
         .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 500; display: none; align-items: center; justify-content: center; }
         .modal-content { background: #fff; width: 80%; border-radius: 14px; padding: 20px; text-align: center; }
+        
+        /* 提示框 */
+        #toast {
+            position: fixed; top: 50px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px;
+            z-index: 999; font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.3s;
+        }
     </style>
 </head>
 <body>
+
+    <!-- 提示框 -->
+    <div id="toast"></div>
 
     <!-- 1. 主屏幕 -->
     <div id="home-screen">
         <div class="widget">
             <div style="font-size:12px; color:#888; font-weight:600;">THURSDAY</div>
             <div style="font-size:48px; font-weight:300; line-height:1.1;" id="clock">09:41</div>
-            <div style="font-size:14px; color:#007AFF; margin-top:5px;">AI OS System Ready</div>
+            <div style="font-size:14px; color:#007AFF; margin-top:5px;">AI OS V5.2 (Unlimited)</div>
         </div>
 
         <div class="app-grid">
@@ -172,7 +182,6 @@
             <button class="btn-round" onclick="document.getElementById('file-input').click()">📷</button>
             <input type="file" id="file-input" hidden accept="image/*" onchange="handleImage(event)">
             
-            <!-- 修复：Enter发送 -->
             <input type="text" id="chat-input" class="chat-input" placeholder="发消息..." onkeydown="handleInputKey(event)">
             
             <button class="btn-round" style="font-size:14px; font-weight:bold;" onclick="sendMessage(false)" title="只发不回">💬</button>
@@ -288,6 +297,7 @@
                     📥 恢复数据
                     <input type="file" style="position:absolute; left:0; top:0; width:100%; height:100%; opacity:0;" onchange="importData(event)">
                 </div>
+                <div class="list-item" onclick="resetAll()" style="color:red; justify-content:center;">⚠️ 重置所有数据</div>
              </div>
         </div>
     </div>
@@ -305,6 +315,53 @@
     </div>
 
     <script>
+        // --- 强大的存储引擎：IndexedDB 封装 ---
+        // 解决了 LocalStorage 只有 5MB 的问题，现在可以使用硬盘空间，存大图毫无压力
+        const DB_NAME = "AIOS_V5_DB";
+        const DB_STORE = "state_store";
+        
+        const db = {
+            open: () => {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(DB_NAME, 1);
+                    request.onupgradeneeded = (e) => {
+                        const d = e.target.result;
+                        if (!d.objectStoreNames.contains(DB_STORE)) {
+                            d.createObjectStore(DB_STORE);
+                        }
+                    };
+                    request.onsuccess = (e) => resolve(e.target.result);
+                    request.onerror = (e) => reject(e);
+                });
+            },
+            save: async (key, data) => {
+                const d = await db.open();
+                return new Promise((resolve, reject) => {
+                    const tx = d.transaction([DB_STORE], "readwrite");
+                    const store = tx.objectStore(DB_STORE);
+                    const req = store.put(data, key);
+                    req.onsuccess = () => resolve(true);
+                    req.onerror = () => reject(false);
+                });
+            },
+            load: async (key) => {
+                const d = await db.open();
+                return new Promise((resolve, reject) => {
+                    const tx = d.transaction([DB_STORE], "readonly");
+                    const store = tx.objectStore(DB_STORE);
+                    const req = store.get(key);
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(null);
+                });
+            },
+            clear: async () => {
+                const d = await db.open();
+                const tx = d.transaction([DB_STORE], "readwrite");
+                tx.objectStore(DB_STORE).clear();
+                return true;
+            }
+        };
+
         // --- 数据状态管理 ---
         const defaultState = {
             config: { url: "https://api.openai.com/v1", key: "", model: "gpt-3.5-turbo", temp: 0.7 },
@@ -314,16 +371,28 @@
         let state = { ...defaultState };
         let currentContactId = null;
         let currentImgBase64 = null;
+        let saveTimeout = null;
 
         // --- 初始化 ---
-        window.onload = () => {
-            const saved = localStorage.getItem('aios_v5');
-            if(saved) {
-                try {
-                    state = JSON.parse(saved);
-                } catch(e) { console.error("数据损坏", e); }
-            }
+        window.onload = async () => {
+            // 1. 尝试从 IndexedDB 加载
+            const saved = await db.load("main_state");
             
+            if (saved) {
+                state = saved;
+                showToast("✅ 数据已从硬盘加载");
+            } else {
+                // 2. 迁移旧的 LocalStorage 数据 (如果有)
+                const oldLS = localStorage.getItem('aios_v5');
+                if(oldLS) {
+                    try {
+                        state = JSON.parse(oldLS);
+                        showToast("📦 已迁移旧数据到大容量存储");
+                        triggerSave();
+                    } catch(e) {}
+                }
+            }
+
             // 如果没有联系人，创建一个默认的
             if(state.contacts.length === 0) createContact("AI 助手", true);
 
@@ -331,14 +400,22 @@
             loadConfigUI();
         };
 
-        function saveData() { 
-            try {
-                localStorage.setItem('aios_v5', JSON.stringify(state)); 
-            } catch(e) {
-                // 捕获 LocalStorage 已满的错误，防止脚本崩溃
-                console.error("保存失败，可能是空间不足", e);
-                alert("⚠️ 存储空间已满！请清理聊天记录或不要发送太多大图片。");
-            }
+        // 防抖保存，避免频繁写入硬盘
+        function triggerSave() {
+            if(saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(async () => {
+                await db.save("main_state", state);
+                // 可选：同时也存一份到 LocalStorage 作为双重备份(如果体积小的话)
+                // 但因为现在支持大图，LocalStorage 可能会炸，所以只存 DB
+            }, 500);
+        }
+
+        // 提示框辅助函数
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.opacity = 1;
+            setTimeout(()=>t.style.opacity=0, 2000);
         }
 
         // --- 界面导航 ---
@@ -355,7 +432,7 @@
             document.getElementById('clock').innerText = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
         }
 
-        // --- 聊天功能 (修复版) ---
+        // --- 聊天功能 ---
         function createContact(name=null, silent=false) {
             const n = name || document.getElementById('new-contact-name').value;
             if(!n) return;
@@ -371,7 +448,7 @@
                 messages: []
             };
             state.contacts.push(newC);
-            saveData();
+            triggerSave();
             if(!silent) {
                 document.getElementById('modal-add-contact').style.display='none';
                 document.getElementById('new-contact-name').value='';
@@ -405,7 +482,6 @@
             const c = state.contacts.find(x => x.id === id);
             document.getElementById('chat-title').innerText = c.remark || c.name;
             
-            // 预填侧边栏
             document.getElementById('drawer-ai-av').src = c.aiAvatar;
             document.getElementById('drawer-remark').value = c.remark;
             document.getElementById('drawer-persona').value = c.persona;
@@ -432,7 +508,6 @@
             });
         }
 
-        // 辅助：把消息插入到 DOM，不重绘整个列表
         function appendMessageToUI(role, content, image, contact) {
             const box = document.getElementById('msg-box');
             const isMe = role === 'user';
@@ -448,61 +523,45 @@
             `;
             box.appendChild(div);
             scrollToBottom();
-            return div; // 返回元素以便后续操作
+            return div;
         }
 
-        // 键盘事件处理
         function handleInputKey(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault(); // 阻止换行
+                e.preventDefault();
                 sendMessage(true);
             }
         }
 
-        // --- 发送与 API 请求 (核心重写) ---
+        // --- 发送与 API 请求 ---
         async function sendMessage(triggerAI) {
             const input = document.getElementById('chat-input');
             const txt = input.value.trim();
             const c = state.contacts.find(x => x.id === currentContactId);
 
-            // 1. 用户消息上屏 (立即执行)
             if (txt || currentImgBase64) {
-                // 先更新界面，保证用户感觉"快"
                 appendMessageToUI('user', txt, currentImgBase64, c);
-                
-                // 更新数据
                 c.messages.push({
                     role: 'user',
                     content: txt,
-                    image: currentImgBase64
+                    image: currentImgBase64 // 这里现在可以存原图，不需要担心空间了
                 });
-
-                // 清理输入框
                 input.value = '';
                 clearImage();
-                
-                // 最后保存 (如果保存失败也不影响界面显示)
-                saveData();
+                triggerSave();
             } else {
-                // 没内容且不触发AI -> 退出
                 if(!triggerAI) return;
                 if(c.messages.length === 0) return;
             }
 
             if (!triggerAI) return; 
+            if (!state.config.key) { alert("请先去设置配置 API Key"); return; }
 
-            if (!state.config.key) {
-                alert("请先去设置配置 API Key");
-                return;
-            }
-
-            // 2. 准备 UI：显示 Loading 气泡
-            // 创建一个临时的 UI 对象，稍后填充内容
             const loadingBubbleDiv = appendMessageToUI('assistant', '...', null, c);
             const bubbleContent = loadingBubbleDiv.querySelector('.bubble');
             bubbleContent.style.color = '#888';
 
-            // 3. 构造 Prompt
+            // 构造 Prompt
             let sysPrompt = `${c.persona}\n`;
             sysPrompt += `[User Info] Name: ${c.userName}.`;
             if(c.userPersona) sysPrompt += ` Persona: ${c.userPersona}.`;
@@ -512,6 +571,7 @@
             const messages = [{role:'system', content: sysPrompt}];
             c.messages.slice(-10).forEach(m => {
                 if(m.image) {
+                    // 给 AI 发送也是原图（或者后端会自动处理），现在本地存储不是瓶颈了
                     messages.push({role: m.role, content:[{type:"text", text:m.content||" "}, {type:"image_url", image_url:{url:m.image}}]});
                 } else {
                     messages.push({role: m.role, content: m.content});
@@ -521,15 +581,12 @@
             try {
                 const res = await fetch(state.config.url + '/chat/completions', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + state.config.key
-                    },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + state.config.key },
                     body: JSON.stringify({
                         model: state.config.model,
                         messages: messages,
                         temperature: parseFloat(state.config.temp),
-                        stream: true // 开启流式
+                        stream: true
                     })
                 });
 
@@ -538,24 +595,19 @@
                     throw new Error(errData.error?.message || res.statusText);
                 }
 
-                // 4. 流式处理 (增强版，防止 JSON 断裂)
                 const reader = res.body.getReader();
                 const decoder = new TextDecoder();
                 let aiText = "";
-                let buffer = ""; // 缓冲区
+                let buffer = "";
 
                 bubbleContent.style.color = "#000";
-                bubbleContent.innerHTML = ""; // 清空 "..."
+                bubbleContent.innerHTML = ""; 
 
                 while(true) {
                     const { done, value } = await reader.read();
                     if (done) break;
-                    
                     buffer += decoder.decode(value, { stream: true });
-                    
-                    // 按照换行符切割数据块
                     let lines = buffer.split('\n');
-                    // 最后一个可能是不完整的，留到下一次处理
                     buffer = lines.pop(); 
 
                     for (const line of lines) {
@@ -567,23 +619,18 @@
                                 const json = JSON.parse(dataStr);
                                 const delta = json.choices[0].delta.content || "";
                                 aiText += delta;
-                                // 实时更新界面
                                 bubbleContent.innerHTML = aiText.replace(/\n/g, '<br>');
                                 scrollToBottom();
-                            } catch(e) {
-                                // 忽略解析错误的行（通常是因为流被切断），等待Buffer拼接完整
-                            }
+                            } catch(e) {}
                         }
                     }
                 }
                 
-                // 5. 对话完成，保存到历史
                 c.messages.push({ role: 'assistant', content: aiText });
-                saveData();
+                triggerSave();
 
             } catch (err) {
                 bubbleContent.innerHTML = `<span style="color:red;">❌ 错误: ${err.message}</span>`;
-                console.error(err);
             }
         }
 
@@ -603,7 +650,7 @@
                 c.persona = document.getElementById('drawer-persona').value;
                 c.username = document.getElementById('drawer-username').value;
                 c.userPersona = document.getElementById('drawer-userpersona').value;
-                saveData();
+                triggerSave();
                 document.getElementById('chat-title').innerText = c.remark || c.name;
             }
         }
@@ -613,13 +660,10 @@
             const r = new FileReader();
             r.onload = (ev) => {
                 const c = state.contacts.find(x => x.id === currentContactId);
-                // 简单压缩检查：如果 Base64 太长，LocalStorage 可能会炸
-                if(ev.target.result.length > 500000) {
-                    alert("图片太大了，可能会导致保存失败。请使用小一点的图片。");
-                }
+                // 现在不需要刻意限制大小了， IndexedDB 很能装
                 if(type==='ai') { c.aiAvatar = ev.target.result; document.getElementById('drawer-ai-av').src = c.aiAvatar; }
                 else { c.userAvatar = ev.target.result; document.getElementById('drawer-user-av').src = c.userAvatar; }
-                saveData();
+                triggerSave();
                 renderMessages();
             };
             r.readAsDataURL(f);
@@ -627,7 +671,7 @@
         function clearHistory() {
             if(confirm("清空所有记录？")) {
                 state.contacts.find(x=>x.id===currentContactId).messages = [];
-                saveData(); renderMessages(); closeDrawer();
+                triggerSave(); renderMessages(); closeDrawer();
             }
         }
         
@@ -645,13 +689,13 @@
                 });
                 const d = await res.json();
                 state.memories.push(d.choices[0].message.content);
-                saveData();
+                triggerSave();
                 alert("✅ 已存入记忆库");
                 closeDrawer();
             } catch(e) { alert("总结失败:"+e.message); }
         }
 
-        // --- 设置与模型拉取 ---
+        // --- 设置与杂项 ---
         function loadConfigUI() {
             document.getElementById('cfg-url').value = state.config.url;
             document.getElementById('cfg-key').value = state.config.key;
@@ -683,13 +727,13 @@
             if(document.getElementById('cfg-model-select').value === 'custom') {
                  state.config.model = document.getElementById('cfg-model').value;
             }
-            saveData();
+            triggerSave();
         }
         
         function updateTemp(v) {
             state.config.temp = v;
             document.getElementById('val-temp').innerText = v;
-            saveData();
+            triggerSave();
         }
 
         function applyModelSelect() {
@@ -701,7 +745,7 @@
             } else {
                 input.style.display = 'none';
                 state.config.model = sel.value;
-                saveData();
+                triggerSave();
             }
         }
 
@@ -727,12 +771,10 @@
                         sel.value = data.data[0].id;
                         state.config.model = data.data[0].id;
                         document.getElementById('cfg-model').style.display = 'none';
-                        saveData();
+                        triggerSave();
                     }
                 }
-            } catch(e) {
-                alert("❌ 拉取失败: " + e.message);
-            }
+            } catch(e) { alert("❌ 拉取失败: " + e.message); }
         }
         
         async function testConnection() {
@@ -742,7 +784,6 @@
             } catch(e) { alert("❌ 错误: " + e.message); }
         }
 
-        // --- 记忆库管理 ---
         function renderMemoryList() {
             const list = document.getElementById('memory-list');
             list.innerHTML = '';
@@ -755,19 +796,15 @@
         }
         function addMemory() {
             const t = prompt("输入新记忆:");
-            if(t) { state.memories.push(t); saveData(); renderMemoryList(); }
+            if(t) { state.memories.push(t); triggerSave(); renderMemoryList(); }
         }
         function delMem(i) {
-            if(confirm("删除此条记忆？")) { state.memories.splice(i, 1); saveData(); renderMemoryList(); }
+            if(confirm("删除此条记忆？")) { state.memories.splice(i, 1); triggerSave(); renderMemoryList(); }
         }
 
         // --- 图片与备份 ---
         function handleImage(e) {
             const f = e.target.files[0]; if(!f) return;
-            // 限制图片大小，防止 LocalStorage 崩溃
-            if(f.size > 1024 * 1024) { // 1MB
-                alert("图片太大，建议上传小于1MB的图片");
-            }
             const r = new FileReader();
             r.onload = (ev) => { 
                 currentImgBase64 = ev.target.result; 
@@ -778,19 +815,32 @@
         }
         function clearImage() { currentImgBase64 = null; document.getElementById('img-preview').style.display = 'none'; }
         
-        function exportData() {
+        async function exportData() {
             const blob = new Blob([JSON.stringify(state)], {type:'application/json'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `aios_backup_${Date.now()}.json`;
+            a.download = `aios_unlimited_backup_${Date.now()}.json`;
             a.click();
         }
         function importData(e) {
             const r = new FileReader();
             r.onload = (ev) => {
-                try { state = JSON.parse(ev.target.result); saveData(); location.reload(); } catch(e){ alert("文件无效"); }
+                try { 
+                    state = JSON.parse(ev.target.result); 
+                    triggerSave(); 
+                    showToast("✅ 数据恢复成功");
+                    setTimeout(()=>location.reload(), 1000);
+                } catch(e){ alert("文件无效"); }
             };
             r.readAsText(e.target.files[0]);
+        }
+        
+        async function resetAll() {
+            if(confirm("⚠️ 警告：这将删除所有聊天记录和设置！\n确定要重置吗？")) {
+                await db.clear();
+                localStorage.clear();
+                location.reload();
+            }
         }
     </script>
 </body>
