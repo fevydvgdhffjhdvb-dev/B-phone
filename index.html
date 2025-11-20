@@ -570,20 +570,44 @@
             localStorage.setItem('v8_settings', JSON.stringify(settings));
         }
         function loadSettings() {
-            if(localStorage.getItem('v8_url')) document.getElementById('apiUrl').value = localStorage.getItem('v8_url');
-            if(localStorage.getItem('v8_key')) document.getElementById('apiKey').value = localStorage.getItem('v8_key');
-            if(localStorage.getItem('v8_sys')) document.getElementById('systemPrompt').value = localStorage.getItem('v8_sys');
-            if(localStorage.getItem('v8_mod')) document.getElementById('customModel').value = localStorage.getItem('v8_mod');
-            const s = localStorage.getItem('v8_settings');
-            if(s) {
-                settings = JSON.parse(s);
-                document.getElementById('userName').value = settings.userName || "";
-                document.getElementById('contextRange').value = settings.contextLimit || 10;
-                document.getElementById('tempRange').value = settings.temperature || 0.7;
-                document.getElementById('aiAvatarPreview').src = settings.aiAvatar;
-                document.getElementById('userAvatarPreview').src = settings.userAvatar;
-            }
+    // 1. 恢复 API 设置
+    if(localStorage.getItem('v8_url')) document.getElementById('apiUrl').value = localStorage.getItem('v8_url');
+    if(localStorage.getItem('v8_key')) document.getElementById('apiKey').value = localStorage.getItem('v8_key');
+    if(localStorage.getItem('v8_sys')) document.getElementById('systemPrompt').value = localStorage.getItem('v8_sys');
+    
+    // 2. 恢复模型选择
+    const savedModel = localStorage.getItem('v8_mod');
+    if(savedModel) {
+        document.getElementById('customModel').value = savedModel;
+        const select = document.getElementById('modelSelect');
+        // 尝试在下拉框里选中它
+        select.value = savedModel;
+        // 如果下拉框里没有这个模型（说明是手动输入的），就显示手动输入框
+        if(select.value !== savedModel) {
+            toggleCustomModel(); // 切换到输入框显示
         }
+    }
+
+    // 3. 恢复滑块和数字显示
+    const s = localStorage.getItem('v8_settings');
+    if(s) {
+        settings = JSON.parse(s);
+        document.getElementById('userName').value = settings.userName || "";
+        
+        // 恢复记忆轮数 + 更新数字显示
+        const ctx = settings.contextLimit || 10;
+        document.getElementById('contextRange').value = ctx;
+        document.getElementById('contextVal').innerText = ctx; // ★ 关键修复：让数字也变过来
+        
+        // 恢复温度 + 更新数字显示
+        const temp = settings.temperature || 0.7;
+        document.getElementById('tempRange').value = temp;
+        document.getElementById('tempVal').innerText = temp;   // ★ 关键修复：让数字也变过来
+
+        document.getElementById('aiAvatarPreview').src = settings.aiAvatar;
+        document.getElementById('userAvatarPreview').src = settings.userAvatar;
+    }
+}
 // ==========================================
 // ★ 终极修改：智能存储 (防崩溃版) ★
 // ==========================================
@@ -736,6 +760,7 @@ function saveData() {
     </script>
 </body>
 </html>
+
 
 
 
