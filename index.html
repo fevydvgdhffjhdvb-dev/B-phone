@@ -215,31 +215,31 @@
                     <input type="password" id="apiKey" class="form-input" placeholder="sk-xxxxxxxx" onchange="saveSettings()">
                 </div>
                 <div class="btn-group">
-                    <button class="btn btn-secondary" onclick="testConnection()">📶 测试连接</button>
-                    <button class="btn btn-fetch" onclick="fetchModels()">📡 拉取模型</button>
+                    <button class="btn btn-secondary" onclick="testConnection()">测试连接</button>
+                    <button class="btn btn-fetch" onclick="fetchModels()">拉取模型</button>
                 </div>
             </div>
 
             <div class="form-group">
-                <label class="form-label" style="color:#007AFF">🤖 AI 设定</label>
+                <label class="form-label" style="color:#007AFF">角色设定</label>
                 <div class="avatar-uploader">
                     <img id="aiAvatarPreview" src="https://api.dicebear.com/7.x/bottts/svg?seed=AI" class="current-avatar">
-                    <label class="upload-btn-label">AI 头像 <input type="file" style="display:none" accept="image/*" onchange="handleAvatarUpload(event, 'ai')"></label>
+                    <label class="upload-btn-label">角色头像 <input type="file" style="display:none" accept="image/*" onchange="handleAvatarUpload(event, 'ai')"></label>
                 </div>
                 <textarea id="systemPrompt" class="form-textarea" onchange="saveSettings()">你是一个幽默的AI助手。</textarea>
             </div>
 
             <div class="form-group">
-                <label class="form-label" style="color:#34C759">👤 用户设定</label>
+                <label class="form-label" style="color:#34C759">我的设定</label>
                 <div class="avatar-uploader">
                     <img id="userAvatarPreview" src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" class="current-avatar">
-                    <label class="upload-btn-label">你的头像 <input type="file" style="display:none" accept="image/*" onchange="handleAvatarUpload(event, 'user')"></label>
+                    <label class="upload-btn-label">我的头像 <input type="file" style="display:none" accept="image/*" onchange="handleAvatarUpload(event, 'user')"></label>
                 </div>
                 <input type="text" id="userName" class="form-input" placeholder="怎么称呼你？" onchange="saveSettings()">
             </div>
             <!-- 新增：壁纸设置 -->
             <div class="form-group">
-                <label class="form-label" style="color:#FF9500">🎨 聊天壁纸</label>
+                <label class="form-label" style="color:#FF9500">自定义聊天壁纸</label>
                 <div class="avatar-uploader">
                     <!-- 预览图做成 16:9 的长方形 -->
                     <div id="bgPreview" style="width: 60px; height: 100px; border-radius: 8px; border: 2px solid #eee; background: #f0f0f0; background-size: cover; background-position: center;"></div>
@@ -249,6 +249,12 @@
                         <button onclick="resetBg()" style="background:none; border:1px solid #ccc; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer;">恢复默认</button>
                     </div>
                 </div>
+            </div>
+            <!-- 新增：自定义 CSS -->
+            <div class="form-group">
+                <label class="form-label" style="color:#9C27B0">自定义气泡美化 (CSS)</label>
+                <textarea id="userCss" class="form-textarea" style="height:100px; font-family:monospace; font-size:12px; background:#282c34; color:#98c379;" placeholder="在这里输入 CSS 代码...&#10;例如: .message { background: pink !important; }" oninput="applyUserCss(this.value); saveSettings();"></textarea>
+                <div class="hint-text">⚠️ 高手模式：代码会实时生效并自动保存</div>
             </div>
 
             <div style="border-top:1px solid #eee; padding-top:15px;">
@@ -584,6 +590,7 @@
             localStorage.setItem('v8_key', document.getElementById('apiKey').value);
             localStorage.setItem('v8_sys', document.getElementById('systemPrompt').value);
             localStorage.setItem('v8_mod', document.getElementById('customModel').value);
+            localStorage.setItem('v8_css', document.getElementById('userCss').value);
             settings.userName = document.getElementById('userName').value;
             settings.contextLimit = document.getElementById('contextRange').value;
             settings.temperature = document.getElementById('tempRange').value;
@@ -632,6 +639,13 @@
     if(bg) {
         document.getElementById('chatBox').style.backgroundImage = `url(${bg})`;
         document.getElementById('bgPreview').style.backgroundImage = `url(${bg})`;
+    }
+            // 5. 恢复自定义 CSS
+    const css = localStorage.getItem('v8_css');
+    if(css) {
+        const area = document.getElementById('userCss');
+        if(area) area.value = css;
+        applyUserCss(css);
     }
 }
 // ==========================================
@@ -810,9 +824,20 @@ function saveData() {
         document.getElementById('chatBox').style.backgroundImage = 'none';
         document.getElementById('bgPreview').style.backgroundImage = 'none';
     }
+        // ================= CSS 美化功能 =================
+    function applyUserCss(cssCode) {
+        let styleTag = document.getElementById('custom-style-tag');
+        if (!styleTag) {
+            styleTag = document.createElement('style');
+            styleTag.id = 'custom-style-tag';
+            document.head.appendChild(styleTag);
+        }
+        styleTag.innerHTML = cssCode;
+    }
     </script>
 </body>
 </html>
+
 
 
 
