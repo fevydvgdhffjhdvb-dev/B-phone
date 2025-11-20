@@ -526,6 +526,14 @@
                         </div>
                     </div>
 
+                    <div class="ios-group-title">聊天记录管理</div>
+                    <div class="ios-list">
+                        <div class="ios-item" onclick="openDeleteMsgModal()">
+                            <span class="ios-label" style="color: #ff3b30;">删除聊天记录</span>
+                            <span style="color:#999; font-size:12px;"> > </span>
+                        </div>
+                    </div>
+
                     <button class="ios-btn danger" style="border-radius:12px; margin-bottom:20px;" onclick="deleteCurrentChar()">删除此角色</button>
                 </div>
                 <div class="modal-footer">
@@ -558,6 +566,36 @@
                 <div class="modal-footer">
                     <button class="modal-btn" onclick="closeModal('modal-summary')">取消</button>
                     <button class="modal-btn" onclick="doSummarize()">生成并存储</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 删除消息弹窗 (新) -->
+        <div class="modal-overlay" id="modal-del-msg">
+            <div class="modal-box">
+                <div class="modal-header" style="color:#ff3b30">批量删除消息</div>
+                <div class="modal-body" style="padding:20px;">
+                    <p style="font-size:13px; color:#666; text-align:center; margin-top:0;">
+                        请输入要删除的消息楼层范围<br>(#数字)
+                    </p>
+                    
+                    <div class="ios-list">
+                        <div class="ios-item">
+                            <span class="ios-label">起始楼层 (#)</span>
+                            <input type="number" id="del-start" class="ios-input" value="1">
+                        </div>
+                        <div class="ios-item">
+                            <span class="ios-label">结束楼层 (#)</span>
+                            <input type="number" id="del-end" class="ios-input">
+                        </div>
+                    </div>
+                    <div style="text-align:center; font-size:12px; color:#999; margin-top:10px;">
+                        当前共有 <span id="del-total-count">0</span> 条消息
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-btn" onclick="closeModal('modal-del-msg')">取消</button>
+                    <button class="modal-btn" style="color:#ff3b30; font-weight:bold;" onclick="commitDeleteMsg()">确认删除</button>
                 </div>
             </div>
         </div>
@@ -1380,10 +1418,63 @@ const history = char.messages.slice(-limit);
             renderDiaries();
         }
     }
+        // --- 6. 删除指定范围消息的逻辑 (新) ---
+    function openDeleteMsgModal() {
+        const char = getActiveChar();
+        if(!char) return;
+        
+        // 先关闭设置弹窗，再开删除弹窗，体验更好
+        closeModal('modal-chat-settings');
+
+        const total = char.messages.length;
+        if (total === 0) return alert("在这个聊天中还没有消息哦");
+
+        document.getElementById('del-total-count').innerText = total;
+        // 默认填入：从最后一条删到最后一条（即删除最新的一条）
+        document.getElementById('del-start').value = total; 
+        document.getElementById('del-end').value = total;
+        
+        openModal('modal-del-msg');
+    }
+
+    function commitDeleteMsg() {
+        const char = getActiveChar();
+        const startVal = parseInt(document.getElementById('del-start').value);
+        const endVal = parseInt(document.getElementById('del-end').value);
+        const total = char.messages.length;
+
+        // 1. 校验输入
+        if (isNaN(startVal) || isNaN(endVal)) return alert("请输入有效的数字");
+        if (startVal < 1 || startVal > total) return alert("起始楼层不存在");
+        if (endVal < 1 || endVal > total) return alert("结束楼层不存在");
+        if (startVal > endVal) return alert("起始楼层不能大于结束楼层");
+
+        // 2. 计算删除数量
+        // 比如要删第3条到第5条 (3, 4, 5)，那就是删掉 (5-3)+1 = 3条
+        // 数组索引是 0-based，所以第3条对应的索引是 2
+        const startIndex = startVal - 1;
+        const deleteCount = endVal - startVal + 1;
+
+        if (confirm(`⚠️  \n\n确定要永久删除第 ${startVal} 到 ${endVal} 楼的 ${deleteCount} 条消息吗？\n此操作无法撤销！`)) {
+            
+            // 执行删除 (splice会修改原数组)
+            char.messages.splice(startIndex, deleteCount);
+            
+            saveData(); // 保存
+            
+            // 刷新界面
+            renderChat(activeContactId);
+            updateContactList(); // 列表里的预览文字也可能变了
+            
+            closeModal('modal-del-msg');
+            alert("删除成功！");
+        }
+    }
 
     </script>
 </body>
 </html>
+
 
 
 
