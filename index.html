@@ -287,6 +287,32 @@
         .msg-row.left .msg-time-stamp {
             color: rgba(0, 0, 0, 0.5);
         }
+        /* --- 日历 App 样式 --- */
+.cal-month-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 20px; font-size: 18px; font-weight: bold; border-bottom: 1px solid #eee;
+}
+.cal-month-nav button { background:none; border:none; font-size:20px; color:#007AFF; cursor:pointer; padding: 0 10px;}
+
+.cal-week-header { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; padding: 10px 0; font-size: 12px; color: #999; border-bottom: 1px solid #f0f0f0; }
+
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); auto-rows: 50px; }
+.cal-cell { 
+    border-bottom: 1px solid #fafafa; border-right: 1px solid #fafafa;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative; cursor: pointer;
+}
+.cal-cell.active { background-color: #e5f1ff; } /* 选中态 */
+.cal-cell.today { color: #007AFF; font-weight: bold; }
+.cal-cell.empty { background: #fcfcfc; }
+
+/* 标记点样式 */
+.cal-dot-container { display: flex; gap: 2px; margin-top: 2px; }
+.dot-event { width: 5px; height: 5px; border-radius: 50%; background-color: #ff9500; } /* 节日是橙色点 */
+.dot-period { width: 6px; height: 6px; border-radius: 50%; background-color: #ff2d55; border: 1px solid #fff;} /* 经期是粉红大点 */
+
+/* 经期预测区间背景 (进阶效果) */
+.cal-cell.period-range { background-color: rgba(255, 45, 85, 0.1); }
     </style>
 </head>
 <body>
@@ -335,6 +361,11 @@
                     <div class="app-icon" id="app-icon-pomo" style="background: linear-gradient(to bottom, #ff6b6b, #ee5253);">🍅</div>
                     <div class="app-name">番茄钟</div>
                 </div>
+                <!-- 7. 日历 (新增) -->
+<div class="app-icon-container" onclick="navigateTo('page-calendar'); initCalendarPage();">
+    <div class="app-icon" id="app-icon-cal" style="background: #fff; color: #333;">📅</div>
+    <div class="app-name">日历</div>
+</div>
             </div>
         </div>
 
@@ -500,6 +531,11 @@
                         <span class="ios-label">番茄钟图标</span>
                         <input type="text" id="iconInput-pomo" class="ios-input" placeholder="http://..." onchange="saveTheme()">
                     </div>
+                    <!-- 原有的番茄钟代码在上面 -->
+                    <div class="ios-item">
+                        <span class="ios-label">日历图标</span>
+                        <input type="text" id="iconInput-cal" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+                    </div>
                 </div>
 
                 <div class="ios-group-title">全局 CSS 代码 (高级美化)</div>
@@ -615,6 +651,58 @@
                     点击头像戳一戳我，我会监督你哦！
                 </div>
 
+            </div>
+        </div>
+        <!-- ============ 9. 日历 (Calendar) ============ -->
+        <div class="page" id="page-calendar">
+            <div class="app-header">
+                <button class="btn-icon-text" onclick="goHome()">‹ 桌面</button>
+                <span class="app-title">生活日历</span>
+                <button class="btn-icon-only" onclick="jumpToToday()" style="font-size:14px;">今天</button>
+            </div>
+            
+            <div class="content-scroll" style="background:#fff; padding:0;">
+                <!-- 月份切换栏 -->
+                <div class="cal-month-nav">
+                    <button onclick="changeMonth(-1)">◀</button>
+                    <span id="cal-current-month">2025年 11月</span>
+                    <button onclick="changeMonth(1)">▶</button>
+                </div>
+
+                <!-- 星期头 -->
+                <div class="cal-week-header">
+                    <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                </div>
+
+                <!-- 日历格子容器 -->
+                <div id="cal-grid" class="cal-grid"></div>
+
+                <!-- 选中日期的详情操作区 -->
+                <div id="cal-detail-panel" style="padding:20px; background:#f2f2f7; min-height:300px;">
+                    <div class="ios-group-title" id="selected-date-title">请选择日期</div>
+                    <div class="ios-list">
+                        <!-- 纪念日/节日输入 -->
+                        <div class="ios-item">
+                            <span class="ios-label">特殊日子</span>
+                            <input type="text" id="cal-event-input" class="ios-input" placeholder="例如: 生日、纪念日" onchange="saveCalendarEvent()">
+                        </div>
+                    </div>
+
+                    <div class="ios-group-title">生理期记录</div>
+                    <div class="ios-list">
+                        <div class="ios-item" onclick="togglePeriodMark()">
+                            <span class="ios-label">标记为经期开始日</span>
+                            <div id="period-check-icon" style="font-size:20px; display:none;">🩸</div>
+                        </div>
+                    </div>
+                    
+                    <div style="padding:15px; font-size:12px; color:#888; line-height:1.5;">
+                        * 说明：<br>
+                        1. 点击“标记为经期开始日”，AI 会自动推算你的周期。<br>
+                        2. 在特殊日子，AI 可能会在零点给你惊喜。<br>
+                        3. 目前数据是跟随当前聊天角色的。
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -835,6 +923,9 @@
                 messages: [],
                 memories: [],
                 diaries: [],
+                // --- 新增：日历与生理期数据 ---
+                calendarEvents: {}, // 格式: { "2025-11-21": "纪念日" }
+                periodLog: [],      // 格式: ["2025-10-01", "2025-11-28"] (记录经期开始的日子)
                 // --- 新增字段 ---
                 autoReplyInterval: 0, // 默认不主动
                 lastActiveTime: Date.now()
@@ -1369,6 +1460,9 @@
             const iconPomo = document.getElementById('iconInput-pomo');
             if(iconPomo) iconPomo.value = themeConfig.icons.pomo || "";
 
+            const iconCal = document.getElementById('iconInput-cal');
+        if(iconCal) iconCal.value = themeConfig.icons.cal || "";
+
             // 2. 恢复CSS和字体
             const cssInput = document.getElementById('customCssInput');
             if(cssInput) cssInput.value = themeConfig.customCss || "";
@@ -1398,6 +1492,7 @@
         themeConfig.icons.theme = document.getElementById('iconInput-theme')?.value || "";
         themeConfig.icons.diary = document.getElementById('iconInput-diary')?.value || "";
         themeConfig.icons.pomo = document.getElementById('iconInput-pomo')?.value || "";
+        themeConfig.icons.cal = document.getElementById('iconInput-cal')?.value || "";
         
         themeConfig.customCss = document.getElementById('customCssInput')?.value || "";
         themeConfig.bubbleCss = document.getElementById('bubbleCssInput')?.value || ""; // 气泡美化
@@ -1420,6 +1515,7 @@
         updateAppIcon('app-icon-theme', themeConfig.icons.theme);
         updateAppIcon('app-icon-diary', themeConfig.icons.diary);
         updateAppIcon('app-icon-pomo', themeConfig.icons.pomo);
+        updateAppIcon('app-icon-cal', themeConfig.icons.cal);
 
         // B. 应用壁纸
         const homePage = document.getElementById('page-home');
@@ -2187,10 +2283,194 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
         console.error("补发生成失败", e);
     }
 }
+        // ==========================================
+// --- 9. 日历 (Calendar) 逻辑模块 ---
+// ==========================================
+
+let calState = {
+    year: new Date().getFullYear(),
+    month: new Date().getMonth(), // 0-11
+    selectedDateStr: null // 格式 YYYY-MM-DD
+};
+
+// 初始化页面
+function initCalendarPage() {
+    const now = new Date();
+    calState.year = now.getFullYear();
+    calState.month = now.getMonth();
+    renderCalendar();
+    // 默认选中今天
+    selectDate(formatDateKey(now.getFullYear(), now.getMonth(), now.getDate()));
+}
+
+function jumpToToday() {
+    initCalendarPage();
+}
+
+function changeMonth(delta) {
+    calState.month += delta;
+    if(calState.month > 11) {
+        calState.month = 0;
+        calState.year++;
+    } else if(calState.month < 0) {
+        calState.month = 11;
+        calState.year--;
+    }
+    renderCalendar();
+}
+
+// 核心：渲染日历网格
+function renderCalendar() {
+    const grid = document.getElementById('cal-grid');
+    const title = document.getElementById('cal-current-month');
+    
+    grid.innerHTML = '';
+    title.innerText = `${calState.year}年 ${calState.month + 1}月`;
+
+    const char = getActiveChar(); // 获取当前聊天的角色数据
+    
+    // 计算当月第一天是星期几
+    const firstDay = new Date(calState.year, calState.month, 1).getDay();
+    // 计算当月有多少天
+    const daysInMonth = new Date(calState.year, calState.month + 1, 0).getDate();
+
+    // 填充空白格 (上个月的余尾)
+    for(let i=0; i<firstDay; i++) {
+        const div = document.createElement('div');
+        div.className = 'cal-cell empty';
+        grid.appendChild(div);
+    }
+
+    // 填充真实日期
+    const todayKey = formatDateKey(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
+    for(let d=1; d<=daysInMonth; d++) {
+        const dateKey = formatDateKey(calState.year, calState.month, d);
+        const div = document.createElement('div');
+        div.className = 'cal-cell';
+        if(dateKey === todayKey) div.classList.add('today');
+        
+        // 渲染数字
+        div.innerHTML = `<span>${d}</span><div class="cal-dot-container"></div>`;
+        
+        // --- 渲染标记点 (如果有数据) ---
+        if(char) {
+            // 1. 渲染节日/事件 (橙色点)
+            if(char.calendarEvents && char.calendarEvents[dateKey]) {
+                const dot = document.createElement('div');
+                dot.className = 'dot-event';
+                div.querySelector('.cal-dot-container').appendChild(dot);
+            }
+            // 2. 渲染经期开始日 (粉色点)
+            if(char.periodLog && char.periodLog.includes(dateKey)) {
+                const dot = document.createElement('div');
+                dot.className = 'dot-period';
+                div.querySelector('.cal-dot-container').appendChild(dot);
+            }
+        }
+
+        div.onclick = () => selectDate(dateKey, div);
+        // 记录DOM引用方便高亮
+        div.dataset.date = dateKey; 
+        grid.appendChild(div);
+    }
+    
+    // 重新高亮当前选中的日期
+    if(calState.selectedDateStr) {
+        const el = grid.querySelector(`div[data-date="${calState.selectedDateStr}"]`);
+        if(el) el.classList.add('active');
+    }
+}
+
+// 选中某一天的逻辑
+function selectDate(dateKey, element) {
+    calState.selectedDateStr = dateKey;
+    
+    // UI 高亮切换
+    document.querySelectorAll('.cal-cell').forEach(c => c.classList.remove('active'));
+    if(element) {
+        element.classList.add('active');
+    } else {
+        // 如果是从代码调用的（比如初始化），手动找DOM
+        const el = document.getElementById('cal-grid').querySelector(`div[data-date="${dateKey}"]`);
+        if(el) el.classList.add('active');
+    }
+
+    // 更新下方详情面板
+    document.getElementById('selected-date-title').innerText = dateKey;
+    
+    const char = getActiveChar();
+    if(!char) {
+        // 如果没选角色，禁用输入
+        document.getElementById('cal-event-input').disabled = true;
+        document.getElementById('cal-event-input').placeholder = "请先在信息列表选择一个角色";
+        return;
+    } else {
+        document.getElementById('cal-event-input').disabled = false;
+    }
+
+    // 1. 回显事件文字
+    // 兼容旧数据：如果没有对象先创建
+    if(!char.calendarEvents) char.calendarEvents = {};
+    const eventText = char.calendarEvents[dateKey] || "";
+    document.getElementById('cal-event-input').value = eventText;
+
+    // 2. 回显经期标记
+    if(!char.periodLog) char.periodLog = [];
+    const isPeriodStart = char.periodLog.includes(dateKey);
+    document.getElementById('period-check-icon').style.display = isPeriodStart ? 'block' : 'none';
+}
+
+// 保存事件文字
+function saveCalendarEvent() {
+    const char = getActiveChar();
+    if(!char || !calState.selectedDateStr) return;
+
+    const val = document.getElementById('cal-event-input').value.trim();
+    if(val) {
+        char.calendarEvents[calState.selectedDateStr] = val;
+    } else {
+        delete char.calendarEvents[calState.selectedDateStr]; // 清空则删除
+    }
+    saveData();
+    renderCalendar(); // 刷新格子上的点
+}
+
+// 切换经期标记
+function togglePeriodMark() {
+    const char = getActiveChar();
+    if(!char || !calState.selectedDateStr) return;
+
+    const dateKey = calState.selectedDateStr;
+    const index = char.periodLog.indexOf(dateKey);
+
+    if(index >= 0) {
+        // 已经标记了 -> 取消标记
+        char.periodLog.splice(index, 1);
+        document.getElementById('period-check-icon').style.display = 'none';
+    } else {
+        // 没标记 -> 添加标记
+        char.periodLog.push(dateKey);
+        // 排序一下，方便以后计算周期
+        char.periodLog.sort();
+        document.getElementById('period-check-icon').style.display = 'block';
+    }
+    saveData();
+    renderCalendar(); // 刷新格子上的点
+}
+
+// 辅助：生成 YYYY-MM-DD 字符串
+function formatDateKey(year, month, day) {
+    // month 是 0-11，需要+1
+    const m = (month + 1).toString().padStart(2, '0');
+    const d = day.toString().padStart(2, '0');
+    return `${year}-${m}-${d}`;
+}
 
     </script>
 </body>
 </html>
+
 
 
 
