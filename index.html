@@ -2507,7 +2507,7 @@ function getStatusContext(char) {
 
     return context;
 }
-        // --- 11. 节日零点祝福补发机制 ---
+        // --- 11. 节日零点祝福补发机制 (调试版) ---
 
 async function checkAndSendHolidayGreeting(char) {
     // 1. 基础检查
@@ -2517,17 +2517,22 @@ async function checkAndSendHolidayGreeting(char) {
     const todayKey = formatDateKey(now.getFullYear(), now.getMonth(), now.getDate());
     const eventName = char.calendarEvents[todayKey];
 
-    // 如果今天不是节日，或者今天已经发过祝福了，就退出
+    // 如果今天不是节日，直接退出
     if (!eventName) return;
-    if (char.lastHolidayGreeting === todayKey) return;
 
-    // 2. 准备“作弊”：构造今天的 00:00:01 时间戳
+    // 如果今天已经发过，也退出
+    if (char.lastHolidayGreeting === todayKey) {
+        // console.log("今天已经发过祝福了");
+        return; 
+    }
+
+    // 2. 准备时间戳
     const midnightTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1).getTime();
 
-    // UI 上显示一个小提示（可选）
+    // UI 提示
     const titleDom = document.getElementById('chat-title-name');
     const oldTitle = titleDom ? titleDom.innerText : "";
-    if(titleDom) titleDom.innerText = "正在接收节日祝福...";
+    if(titleDom) titleDom.innerText = "正在获取节日祝福...";
 
     // 3. 构造 Prompt
     const greetingPrompt = `
@@ -2540,14 +2545,15 @@ async function checkAndSendHolidayGreeting(char) {
     1. 表达节日/纪念日快乐。
     2. 语气要惊喜、深情或温暖（符合你的人设）。
     3. 提到你一直在等零点。
+    4. 字数不要太多。
     `;
 
     try {
         // 4. 调用 API
-        // 简单起见，这里不带太多历史记录，只带人设，防止上下文干扰
+        // 【修改点】: 把第二条改成 'user'，兼容性更好
         const msgs = [
             { role: "system", content: char.systemPrompt },
-            { role: "system", content: greetingPrompt }
+            { role: "user", content: greetingPrompt }
         ];
 
         const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
@@ -2560,19 +2566,27 @@ async function checkAndSendHolidayGreeting(char) {
             })
         });
 
+        if (!res.ok) {
+            throw new Error(`网络错误: ${res.status}`);
+        }
+
         const data = await res.json();
+        
+        // 【新增检查】: 防止 API 返回空数据
+        if (!data.choices || data.choices.length === 0) {
+            throw new Error("API 返回内容为空");
+        }
+
         const reply = data.choices[0].message.content;
 
-        // 5. 插入消息 (关键：使用 midnightTime 而不是 Date.now())
-        // 为了保证消息顺序，我们需要把它插在正确的位置
-        // 简单做法：直接 push，然后按时间排序（或者简单 push 也行，因为是补发，通常显示在最下面也没问题，只要时间显示是 00:00 就很有感觉）
+        // 5. 插入消息
         char.messages.push({
             role: 'assistant',
             content: reply,
             timestamp: midnightTime
         });
 
-        // 6. 标记今天已发送 (防止重复发)
+        // 6. 标记并保存
         char.lastHolidayGreeting = todayKey;
         saveData();
 
@@ -2580,9 +2594,13 @@ async function checkAndSendHolidayGreeting(char) {
         if (activeContactId === char.id) {
             renderChat(char.id);
         }
+        
+        // 成功提示 (测试通了后可以删掉这行)
+        // alert("祝福接收成功！"); 
 
     } catch (e) {
-        console.error("节日祝福生成失败", e);
+        // 【关键】: 弹窗显示错误原因
+        alert("节日祝福生成失败: " + e.message);
     } finally {
         if(titleDom) titleDom.innerText = oldTitle;
     }
@@ -2591,6 +2609,7 @@ async function checkAndSendHolidayGreeting(char) {
     </script>
 </body>
 </html>
+
 
 
 
