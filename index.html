@@ -1060,7 +1060,7 @@
             if (role === 'user' && !isTemp) {
                 eventAttr = `ondblclick="handleUserEdit(event, ${index}); return false;"`;
             } else if (role === 'assistant' && !isTemp) {
-                extraHtml = `<div class="msg-meta-row"><div class="btn-reroll" onclick="rerollMessage(${index})">🔄</div></div>`;
+                extraHtml = ``;
             }
 
             // --- 时间戳处理逻辑 (修复Safari Invalid Date错误) ---
@@ -1125,10 +1125,28 @@
             if(!char) return;
             if(!globalConfig.apiKey) return alert("请先在设置中配置 API Key");
 
-            const btn = document.getElementById('btn-ai');
-            const originalBtnContent = btn.innerHTML;
-            btn.innerHTML = '<span class="typing-indicator"></span><span class="typing-indicator"></span>';
-            btn.disabled = true;
+            // === ✨ 新增的智能重刷逻辑 START ===
+    // 检查最后一条消息是不是 AI 发的
+    if (char.messages.length > 0) {
+        const lastMsg = char.messages[char.messages.length - 1];
+        // 如果最后一条是 AI (assistant)，说明用户想重刷
+        if (lastMsg.role === 'assistant') {
+            // 1. 删掉最后这条 AI 消息
+            char.messages.pop(); 
+            saveData(); // 保存删除后的状态
+            
+            // 2. 刷新界面（让那条消息在屏幕上消失）
+            renderChat(activeContactId);
+        }
+    }
+    // === ✨ 新增的智能重刷逻辑 END ===
+
+    const btn = document.getElementById('btn-ai');
+    const originalBtnContent = btn.innerHTML;
+    
+    // 变成打字机动画
+    btn.innerHTML = '<span class="typing-indicator"></span><span class="typing-indicator"></span>';
+    btn.disabled = true;
 
             // 构建 Prompt
             let systemPromptFull = char.systemPrompt + `\n[当前时间: ${new Date().toLocaleString()}]\n[用户名称: ${char.userName}]`;
@@ -2609,6 +2627,7 @@ async function checkAndSendHolidayGreeting(char) {
     </script>
 </body>
 </html>
+
 
 
 
