@@ -1327,51 +1327,73 @@ char.messages.push({ role: 'assistant', content: fullText, timestamp: Date.now()
         }
         // --- 美化/主题系统 (终极版: 图标+字体+壁纸) ---
     let themeConfig = {
-        icons: { msg: "", mem: "", set: "", theme: "", diary: "", pomo: "" },
-        customCss: "",
-        bubbleCss: "",
-        customFont: "",
-        homeWallpaper: "" // <--- 新增: 存储壁纸链接
-    };
+            icons: { msg: "", mem: "", set: "", theme: "", diary: "", pomo: "" },
+            customCss: "",
+            bubbleCss: "",
+            customFont: "",
+            homeWallpaper: "" 
+        };
 
     function loadTheme() {
-        const t = localStorage.getItem('ai_phone_theme');
-        if(t) themeConfig = JSON.parse(t);
+        try {
+            const t = localStorage.getItem('ai_phone_theme');
+            if(t) themeConfig = JSON.parse(t);
 
-        // 1. 恢复图标输入框
-        document.getElementById('iconInput-msg').value = themeConfig.icons.msg || "";
-        document.getElementById('iconInput-mem').value = themeConfig.icons.mem || "";
-        document.getElementById('iconInput-set').value = themeConfig.icons.set || "";
-        document.getElementById('iconInput-theme').value = themeConfig.icons.theme || "";
-        document.getElementById('iconInput-diary').value = themeConfig.icons.diary || "";
-        document.getElementById('iconInput-pomo').value = themeConfig.icons.pomo || "";
-        // 2. 恢复CSS和字体输入框
-        document.getElementById('customCssInput').value = themeConfig.customCss || "";
-        document.getElementById('bubbleCssInput').value = themeConfig.bubbleCss || "";
-        const fontInput = document.getElementById('fontInput');
-        if(fontInput) fontInput.value = themeConfig.customFont || "";
-        
-        // 3. 恢复壁纸输入框 (新)
-        const wpInput = document.getElementById('wallpaperInput');
-        if(wpInput) wpInput.value = themeConfig.homeWallpaper || "";
+            // 1. 恢复图标
+            const iconMsg = document.getElementById('iconInput-msg');
+            if(iconMsg) iconMsg.value = themeConfig.icons.msg || "";
+            
+            const iconMem = document.getElementById('iconInput-mem');
+            if(iconMem) iconMem.value = themeConfig.icons.mem || "";
+            
+            const iconSet = document.getElementById('iconInput-set');
+            if(iconSet) iconSet.value = themeConfig.icons.set || "";
+            
+            const iconTheme = document.getElementById('iconInput-theme');
+            if(iconTheme) iconTheme.value = themeConfig.icons.theme || "";
+            
+            const iconDiary = document.getElementById('iconInput-diary');
+            if(iconDiary) iconDiary.value = themeConfig.icons.diary || "";
+            
+            const iconPomo = document.getElementById('iconInput-pomo');
+            if(iconPomo) iconPomo.value = themeConfig.icons.pomo || "";
 
-        applyThemeUI();
+            // 2. 恢复CSS和字体
+            const cssInput = document.getElementById('customCssInput');
+            if(cssInput) cssInput.value = themeConfig.customCss || "";
+
+            // --- 关键点：防止报错，先检查元素是否存在 ---
+            const bubbleInput = document.getElementById('bubbleCssInput');
+            if(bubbleInput) bubbleInput.value = themeConfig.bubbleCss || "";
+
+            const fontInput = document.getElementById('fontInput');
+            if(fontInput) fontInput.value = themeConfig.customFont || "";
+            
+            // 3. 恢复壁纸
+            const wpInput = document.getElementById('wallpaperInput');
+            if(wpInput) wpInput.value = themeConfig.homeWallpaper || "";
+
+            applyThemeUI();
+        } catch(e) {
+            console.error("加载主题出错，但这不影响数据安全", e);
+        }
     }
 
     function saveTheme() {
-        themeConfig.icons.msg = document.getElementById('iconInput-msg').value;
-        themeConfig.icons.mem = document.getElementById('iconInput-mem').value;
-        themeConfig.icons.set = document.getElementById('iconInput-set').value;
-        themeConfig.icons.theme = document.getElementById('iconInput-theme').value;
-        themeConfig.icons.diary = document.getElementById('iconInput-diary').value;
-        themeConfig.icons.pomo = document.getElementById('iconInput-pomo').value;
-        themeConfig.customCss = document.getElementById('customCssInput').value;
-        themeConfig.bubbleCss = document.getElementById('bubbleCssInput').value;
+        // 使用可选链 (?.) 防止元素不存在时报错
+        themeConfig.icons.msg = document.getElementById('iconInput-msg')?.value || "";
+        themeConfig.icons.mem = document.getElementById('iconInput-mem')?.value || "";
+        themeConfig.icons.set = document.getElementById('iconInput-set')?.value || "";
+        themeConfig.icons.theme = document.getElementById('iconInput-theme')?.value || "";
+        themeConfig.icons.diary = document.getElementById('iconInput-diary')?.value || "";
+        themeConfig.icons.pomo = document.getElementById('iconInput-pomo')?.value || "";
+        
+        themeConfig.customCss = document.getElementById('customCssInput')?.value || "";
+        themeConfig.bubbleCss = document.getElementById('bubbleCssInput')?.value || ""; // 气泡美化
         
         const fontInput = document.getElementById('fontInput');
         if(fontInput) themeConfig.customFont = fontInput.value;
         
-        // 保存壁纸链接 (新)
         const wpInput = document.getElementById('wallpaperInput');
         if(wpInput) themeConfig.homeWallpaper = wpInput.value;
 
@@ -1388,13 +1410,11 @@ char.messages.push({ role: 'assistant', content: fullText, timestamp: Date.now()
         updateAppIcon('app-icon-diary', themeConfig.icons.diary);
         updateAppIcon('app-icon-pomo', themeConfig.icons.pomo);
 
-        // B. 应用壁纸 (新逻辑)
+        // B. 应用壁纸
         const homePage = document.getElementById('page-home');
         if (themeConfig.homeWallpaper && themeConfig.homeWallpaper.trim() !== "") {
-            // 如果有设置壁纸，就用设置的
             homePage.style.backgroundImage = `url(${themeConfig.homeWallpaper})`;
         } else {
-            // 如果没设置，就恢复默认的 Unsplash 壁纸
             homePage.style.backgroundImage = "url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop')";
         }
 
@@ -1407,13 +1427,17 @@ char.messages.push({ role: 'assistant', content: fullText, timestamp: Date.now()
         }
 
         let finalCss = themeConfig.customCss || "";
+        // 只有当有字体时才拼接字体规则
         if (themeConfig.customFont && themeConfig.customFont.trim() !== "") {
             const fontRule = `
                 @font-face { font-family: 'UserCustomFont'; src: url('${themeConfig.customFont}'); font-display: swap; }
                 body, button, input, textarea, select, .clock-time, .app-title, .chat-contact-name { font-family: 'UserCustomFont', -apple-system, sans-serif !important; }
             `;
             finalCss = fontRule + "\n" + finalCss;
-            // D. 应用气泡美化 (独立样式标签)
+        }
+        styleTag.innerHTML = finalCss;
+
+        // D. 应用气泡美化 (独立样式标签) - 【修复：移到了if外面】
         let bubbleStyleTag = document.getElementById('user-bubble-style');
         if (!bubbleStyleTag) {
             bubbleStyleTag = document.createElement('style');
@@ -1421,9 +1445,6 @@ char.messages.push({ role: 'assistant', content: fullText, timestamp: Date.now()
             document.head.appendChild(bubbleStyleTag);
         }
         bubbleStyleTag.innerHTML = themeConfig.bubbleCss || "";
-        }
-        
-        styleTag.innerHTML = finalCss;
     }
 
     function updateAppIcon(elementId, url) {
@@ -2159,6 +2180,7 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
     </script>
 </body>
 </html>
+
 
 
 
