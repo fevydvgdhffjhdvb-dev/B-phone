@@ -1131,6 +1131,7 @@
             // 构建 Prompt
             let systemPromptFull = char.systemPrompt + `\n[当前时间: ${new Date().toLocaleString()}]\n[用户名称: ${char.userName}]`;
             if(char.userPersona) systemPromptFull += `\n[用户设定: ${char.userPersona}]`;
+            systemPromptFull += getStatusContext(char);
             // --- 新增：把日记内容喂给 AI ---
             if (char.diaries && char.diaries.length > 0) {
                 // 取最近的 6 篇日记
@@ -2466,10 +2467,49 @@ function formatDateKey(year, month, day) {
     const d = day.toString().padStart(2, '0');
     return `${year}-${m}-${d}`;
 }
+        // --- 10. AI 感知逻辑 (大脑升级) ---
+
+function getStatusContext(char) {
+    let context = "";
+    const now = new Date();
+    const todayKey = formatDateKey(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // 1. 检查特殊节日/纪念日
+    if (char.calendarEvents && char.calendarEvents[todayKey]) {
+        const eventName = char.calendarEvents[todayKey];
+        context += `\n[重要提醒]: 今天是 "${eventName}"。请务必在回复中主动提及这个日子，并根据你们的关系给予相应的祝福或庆祝（比如祝生日快乐、纪念日快乐）。\n`;
+    }
+
+    // 2. 检查生理期状态
+    if (char.periodLog && char.periodLog.length > 0) {
+        // 找到最近的一次经期开始日
+        // 简单的字符串排序即可，因为格式是 YYYY-MM-DD
+        const sortedLogs = [...char.periodLog].sort(); 
+        const lastStartStr = sortedLogs[sortedLogs.length - 1];
+        const lastStart = new Date(lastStartStr);
+        
+        // 计算距离今天过了多少天 (第1天就是开始那天)
+        const diffTime = now - lastStart;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+        if (diffDays >= 1 && diffDays <= 7) {
+            // 经期中
+            context += `\n[生理状态监测]: 用户目前处于生理期第 ${diffDays} 天。
+            [行为指令]: 她可能会感到身体不适（痛经、腰酸）或情绪低落。请在回复中展现极度的温柔、耐心和包容。避免争论，多给予安抚，适当建议休息或喝热水，不要讲大道理。\n`;
+        } else if (diffDays >= 25 && diffDays <= 30) {
+            // 经期前 (PMS 预测) - 假设周期 28-30 天
+            context += `\n[生理状态监测]: 用户即将迎来下一次生理期 (PMS阶段)。
+            [行为指令]: 她可能情绪不太稳定、易怒或焦虑。请无条件包容她的小脾气，不要回嘴，多哄哄她。\n`;
+        }
+    }
+
+    return context;
+}
 
     </script>
 </body>
 </html>
+
 
 
 
