@@ -2013,12 +2013,6 @@ async function processAutoReplyChain(charId) {
     let lastMsg = char.messages[char.messages.length - 1];
     let lastMsgTime = lastMsg ? (lastMsg.timestamp || char.lastActiveTime || now) : now;
 
-    // ===============================================
-    // ⚠️⚠️⚠️ 强制测试模式 (测试完记得删掉下面这一行) ⚠️⚠️⚠️
-    // 这行代码的意思是：强行把上次说话时间改成 3 小时前
-    // 这样你就不用改 iPad 系统时间了！
-    lastMsgTime = now - (3 * 60 * 60 * 1000); 
-    // ===============================================
 
     const intervalMs = interval * 60 * 60 * 1000; 
     const maxConsecutive = 5; 
@@ -2140,6 +2134,7 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
     </script>
 </body>
 </html>
+
 
 
 
