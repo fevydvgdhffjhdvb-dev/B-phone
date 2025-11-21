@@ -1686,7 +1686,36 @@ let pomoState = {
     intervalSeconds: 0, // 主动发言间隔
     pokes: 0,         // 用户戳了多少次
     lastSpeakTime: 0  // 上次AI说话的剩余时间点
+    lastReply: ""
 };
+        // --- 屏幕常亮控制 (新增) ---
+let wakeLock = null;
+
+async function setScreenKeepOn(status) {
+    if ('wakeLock' in navigator) {
+        try {
+            if (status) {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log("屏幕常亮已开启");
+            } else {
+                if (wakeLock) {
+                    await wakeLock.release();
+                    wakeLock = null;
+                    console.log("屏幕常亮已关闭");
+                }
+            }
+        } catch (err) {
+            console.log("屏幕常亮设置失败:", err);
+        }
+    }
+}
+
+// 监听页面切换：如果你切出去回消息，再切回来，需要重新申请常亮
+document.addEventListener('visibilitychange', async () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
+        await setScreenKeepOn(true);
+    }
+});
 
 // 1. 初始化页面：加载角色列表
 function initPomoPage() {
@@ -1737,6 +1766,8 @@ function startPomoTimer() {
 
     // 触发一次AI开场白
     triggerPomoAI("start");
+    // 开启屏幕常亮
+    setScreenKeepOn(true);
 }
 
 // 3. 计时器心跳 (每秒执行)
@@ -1791,19 +1822,63 @@ function quitPomo() {
         if(!confirm("专注还没结束，确定要放弃吗？")) return;
         clearInterval(pomoState.timerId);
         pomoState.timerId = null;
+        savePomoToChat(false);
     }
     // 恢复UI
     document.getElementById('pomo-setup').style.display = 'block';
     document.getElementById('pomo-running').style.display = 'none';
+    setScreenKeepOn(false); // 关闭屏幕常亮
     goHome(); // 或者返回上级
 }
 
 function finishPomo() {
     clearInterval(pomoState.timerId);
     pomoState.timerId = null;
+    savePomoToChat(true);
     triggerPomoAI("finish");
+    setScreenKeepOn(false); // 关闭屏幕常亮
     alert("专注时间到！你真棒！");
     // 可以在这里播放提示音
+}
+        // --- 新增：将专注结果写入聊天记忆 (温暖个性化版) ---
+function savePomoToChat(isSuccess) {
+    const char = contacts.find(c => c.id === pomoState.charId);
+    if (!char) return;
+
+    // 1. 获取名字
+    const myName = char.userName || "我"; // 你的昵称
+    const aiName = char.name || "Ta";     // 角色的名字
+
+    // 2. 计算数据
+    const timeSpent = Math.ceil((pomoState.totalTime - pomoState.timeLeft) / 60);
+    const totalDuration = Math.ceil(pomoState.totalTime / 60);
+
+    // 3. 生成更有温度的文案
+    let resultStr = isSuccess 
+        ? `🎉 ${myName} 成功坚持了全程！` 
+        : `⏹️ ${myName} 中途溜走了...`;
+
+    // 4. 构建“隐形提示”
+    const summary = `
+【🕒 专注模式记录】
+------------------
+👤 主角：${myName} & ${aiName}
+📝 任务：${pomoState.task}
+⏱️ 时长：${timeSpent} 分钟 (计划 ${totalDuration} 分钟)
+💡 状态：${resultStr}
+👈 互动：${myName} 戳了 ${aiName} ${pomoState.pokes} 次
+💬 ${aiName}最后的留言："${pomoState.lastReply || '...'}"
+------------------
+(系统提示：以上是刚才发生的真实情况。请${aiName}根据这个结果与${myName}继续对话。如果${myName}成功了就夸夸，失败了就调侃一下，如果戳得很多可以吐槽手太欠。)
+    `.trim();
+
+    // 5. 存入聊天记录
+    char.messages.push({ 
+        role: 'user', 
+        content: summary 
+    });
+    
+    saveData(); 
 }
 
 // 7. 核心：番茄钟专用的 AI 触发逻辑
@@ -1821,6 +1896,7 @@ async function triggerPomoAI(reason) {
         你正在“番茄钟专注模式”下陪伴用户。
         用户正在进行的任务：${pomoState.task}。
         剩余时间：${minsLeft}分钟。
+        【当前状态】：用户目前已经“戳一戳”骚扰了你 ${pomoState.pokes} 次。
         你的性格：${char.systemPrompt}。
         
         请根据当前的触发原因，说一句简短的话（不超过30字）：
@@ -1850,10 +1926,11 @@ async function triggerPomoAI(reason) {
         const reply = data.choices[0].message.content;
         
         bubble.innerText = reply;
+        pomoState.lastReply = reply;
 
         // 【可选】把这段话也存入聊天记录，这样回到聊天界面也能看到
-         char.messages.push({ role: 'assistant', content: `[专注模式]: ${reply}` });
-         saveData();
+        // char.messages.push({ role: 'assistant', content: `[专注模式]: ${reply}` });
+        // saveData();
 
     } catch(e) {
         bubble.innerText = originalText; // 失败回滚
@@ -1864,6 +1941,7 @@ async function triggerPomoAI(reason) {
     </script>
 </body>
 </html>
+
 
 
 
