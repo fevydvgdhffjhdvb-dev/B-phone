@@ -234,6 +234,33 @@
             -webkit-user-select: none !important;
             user-select: none !important;
         }
+        /* --- 番茄钟专属样式 --- */
+.pomo-bubble {
+    margin-top: 30px;
+    background: #fff;
+    padding: 15px 20px;
+    border-radius: 20px;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    max-width: 85%;
+    text-align: center;
+    font-size: 16px;
+    color: #333;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.3s;
+}
+/* 戳一戳动画类 */
+.anim-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes shake {
+  10%, 90% { transform: translate3d(-2px, 0, 0); }
+  20%, 80% { transform: translate3d(4px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
+  40%, 60% { transform: translate3d(8px, 0, 0); }
+}
     </style>
 </head>
 <body>
@@ -281,6 +308,11 @@
                     <div class="app-icon" id="app-icon-diary" style="background: linear-gradient(to bottom, #d4a373, #a98467);">📖</div>
                     <div class="app-name">日记本</div>
                 </div>
+                <!-- 6. 番茄钟 (新增) -->
+<div class="app-icon-container" onclick="navigateTo('page-pomodoro'); initPomoPage();">
+    <div class="app-icon" id="app-icon-pomo" style="background: linear-gradient(to bottom, #ff6b6b, #ee5253);">🍅</div>
+    <div class="app-name">番茄钟</div>
+</div>
             </div>
         </div>
 
@@ -441,6 +473,11 @@
                         <span class="ios-label">日记图标</span>
                         <input type="text" id="iconInput-diary" class="ios-input" placeholder="http://..." onchange="saveTheme()">
                     </div>
+                    <!-- 原有的日记图标代码在上面 -->
+                    <div class="ios-item">
+                        <span class="ios-label">番茄钟图标</span>
+                        <input type="text" id="iconInput-pomo" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+                    </div>
                 </div>
 
                 <div class="ios-group-title">全局 CSS 代码 (高级美化)</div>
@@ -472,6 +509,72 @@
         <div class="ios-group-title">角色内心独白</div>
         <!-- 日记列表容器 -->
         <div id="diaryListContainer"></div>
+    </div>
+</div>
+        <!-- ============ 8. 番茄钟 (Pomodoro) ============ -->
+<div class="page" id="page-pomodoro">
+    <div class="app-header">
+        <button class="btn-icon-text" onclick="quitPomo()">‹ 结束</button>
+        <span class="app-title">专注模式</span>
+        <span style="width:50px;"></span>
+    </div>
+    
+    <!-- 设置界面 -->
+    <div id="pomo-setup" class="content-scroll">
+        <div class="ios-group-title" style="margin-top:20px;">陪伴对象</div>
+        <div class="ios-list">
+            <div class="ios-item">
+                <span class="ios-label">选择角色</span>
+                <select id="pomoCharSelect" class="ios-input" style="direction: rtl;"></select>
+            </div>
+        </div>
+
+        <div class="ios-group-title">专注设置</div>
+        <div class="ios-list">
+            <div class="ios-item">
+                <span class="ios-label">时长 (分钟)</span>
+                <input type="number" id="pomoDuration" class="ios-input" value="25">
+            </div>
+            <div class="ios-item">
+                <span class="ios-label">专注内容</span>
+                <input type="text" id="pomoTask" class="ios-input" placeholder="例如: 背单词、写代码">
+            </div>
+        </div>
+
+        <div class="ios-group-title">AI 互动频率</div>
+        <div class="ios-list">
+            <div class="ios-item">
+                <span class="ios-label">主动发言间隔 (分钟)</span>
+                <input type="number" id="pomoInterval" class="ios-input" value="5" placeholder="0为不主动">
+            </div>
+        </div>
+        <div style="padding:20px; font-size:12px; color:#999; text-align:center;">
+            开始后，点击角色头像可以“戳一戳”，Ta会根据剩余时间回应你。
+        </div>
+        <div style="padding:0 20px;">
+            <button class="ios-btn" style="background:#ff3b30; color:#fff; border-radius:12px; font-weight:bold;" onclick="startPomoTimer()">开始专注</button>
+        </div>
+    </div>
+
+    <!-- 运行时界面 (默认隐藏) -->
+    <div id="pomo-running" style="display:none; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:20px; padding-bottom:100px;">
+        
+        <!-- 倒计时大字 -->
+        <div id="pomo-timer-display" style="font-size:64px; font-weight:200; font-variant-numeric: tabular-nums;">25:00</div>
+        <div id="pomo-task-display" style="font-size:18px; color:#666; margin-bottom:40px;">正在进行: ...</div>
+
+        <!-- 角色互动区 -->
+        <div style="position:relative;">
+            <img id="pomo-avatar" src="" style="width:120px; height:120px; border-radius:50%; border:4px solid #fff; box-shadow:0 10px 30px rgba(0,0,0,0.1); cursor:pointer; transition:transform 0.1s;" onclick="pokePomoChar()">
+            <!-- 戳一戳特效容器 -->
+            <div id="poke-effect" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); pointer-events:none; opacity:0; font-size:40px;">👈🏻</div>
+        </div>
+
+        <!-- AI 气泡 -->
+        <div class="pomo-bubble" id="pomo-ai-bubble">
+            点击头像戳一戳我，我会监督你哦！
+        </div>
+
     </div>
 </div>
 
@@ -1177,6 +1280,7 @@ const history = char.messages.slice(-limit);
         document.getElementById('iconInput-set').value = themeConfig.icons.set || "";
         document.getElementById('iconInput-theme').value = themeConfig.icons.theme || "";
         document.getElementById('iconInput-diary').value = themeConfig.icons.diary || "";
+        document.getElementById('iconInput-pomo').value = themeConfig.icons.pomo || "";
         // 2. 恢复CSS和字体输入框
         document.getElementById('customCssInput').value = themeConfig.customCss || "";
         const fontInput = document.getElementById('fontInput');
@@ -1195,6 +1299,7 @@ const history = char.messages.slice(-limit);
         themeConfig.icons.set = document.getElementById('iconInput-set').value;
         themeConfig.icons.theme = document.getElementById('iconInput-theme').value;
         themeConfig.icons.diary = document.getElementById('iconInput-diary').value;
+        themeConfig.icons.pomo = document.getElementById('iconInput-pomo').value;
         themeConfig.customCss = document.getElementById('customCssInput').value;
         
         const fontInput = document.getElementById('fontInput');
@@ -1215,6 +1320,7 @@ const history = char.messages.slice(-limit);
         updateAppIcon('app-icon-set', themeConfig.icons.set);
         updateAppIcon('app-icon-theme', themeConfig.icons.theme);
         updateAppIcon('app-icon-diary', themeConfig.icons.diary);
+        updateAppIcon('app-icon-pomo', themeConfig.icons.pomo);
 
         // B. 应用壁纸 (新逻辑)
         const homePage = document.getElementById('page-home');
@@ -1569,10 +1675,196 @@ const history = char.messages.slice(-limit);
             triggerAI();
         }
     }
+        // --- 番茄钟逻辑模块 ---
+
+let pomoState = {
+    timerId: null,
+    timeLeft: 0,      // 秒
+    totalTime: 0,     // 秒
+    charId: null,
+    task: "",
+    intervalSeconds: 0, // 主动发言间隔
+    pokes: 0,         // 用户戳了多少次
+    lastSpeakTime: 0  // 上次AI说话的剩余时间点
+};
+
+// 1. 初始化页面：加载角色列表
+function initPomoPage() {
+    const select = document.getElementById('pomoCharSelect');
+    select.innerHTML = '';
+    contacts.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.innerText = c.name;
+        select.appendChild(opt);
+    });
+    // 如果之前有记录，恢复默认值
+    if(activeContactId) select.value = activeContactId;
+}
+
+// 2. 开始专注
+function startPomoTimer() {
+    const charId = document.getElementById('pomoCharSelect').value;
+    const duration = parseInt(document.getElementById('pomoDuration').value);
+    const task = document.getElementById('pomoTask').value || "发呆";
+    const interval = parseInt(document.getElementById('pomoInterval').value);
+
+    if(!charId) return alert("请选择一个伴读角色");
+    if(duration < 1) return alert("时间太短啦");
+
+    // 初始化状态
+    pomoState.charId = charId;
+    pomoState.totalTime = duration * 60;
+    pomoState.timeLeft = pomoState.totalTime;
+    pomoState.task = task;
+    pomoState.intervalSeconds = interval > 0 ? interval * 60 : 999999;
+    pomoState.pokes = 0;
+    pomoState.lastSpeakTime = pomoState.timeLeft;
+
+    // 切换UI
+    document.getElementById('pomo-setup').style.display = 'none';
+    document.getElementById('pomo-running').style.display = 'flex';
+    
+    // 设置头像
+    const char = contacts.find(c => c.id === charId);
+    document.getElementById('pomo-avatar').src = char.avatar;
+    document.getElementById('pomo-task-display').innerText = `正在专注: ${task}`;
+    document.getElementById('pomo-ai-bubble').innerText = "计时开始！加油哦！(点击我可以戳一戳)";
+
+    // 启动计时器
+    updatePomoDisplay();
+    pomoState.timerId = setInterval(pomoTick, 1000);
+
+    // 触发一次AI开场白
+    triggerPomoAI("start");
+}
+
+// 3. 计时器心跳 (每秒执行)
+function pomoTick() {
+    if(pomoState.timeLeft <= 0) {
+        finishPomo();
+        return;
+    }
+
+    pomoState.timeLeft--;
+    updatePomoDisplay();
+
+    // 检查是否到了自动发言时间
+    const timeSinceLastSpeak = pomoState.lastSpeakTime - pomoState.timeLeft;
+    if(timeSinceLastSpeak >= pomoState.intervalSeconds) {
+        triggerPomoAI("auto_check");
+        pomoState.lastSpeakTime = pomoState.timeLeft;
+    }
+}
+
+// 4. 更新倒计时显示
+function updatePomoDisplay() {
+    const m = Math.floor(pomoState.timeLeft / 60).toString().padStart(2, '0');
+    const s = (pomoState.timeLeft % 60).toString().padStart(2, '0');
+    document.getElementById('pomo-timer-display').innerText = `${m}:${s}`;
+}
+
+// 5. 戳一戳交互
+function pokePomoChar() {
+    if(!pomoState.timerId) return; // 没开始不能戳
+
+    pomoState.pokes++;
+    
+    // 视觉特效
+    const img = document.getElementById('pomo-avatar');
+    img.classList.remove('anim-shake');
+    void img.offsetWidth; // 触发重绘
+    img.classList.add('anim-shake');
+
+    const effect = document.getElementById('poke-effect');
+    effect.style.opacity = 1;
+    effect.style.top = '40%';
+    setTimeout(() => { effect.style.opacity = 0; effect.style.top = '50%'; }, 500);
+
+    // 触发AI反应
+    triggerPomoAI("poke");
+}
+
+// 6. 结束/退出
+function quitPomo() {
+    if(pomoState.timerId) {
+        if(!confirm("专注还没结束，确定要放弃吗？")) return;
+        clearInterval(pomoState.timerId);
+        pomoState.timerId = null;
+    }
+    // 恢复UI
+    document.getElementById('pomo-setup').style.display = 'block';
+    document.getElementById('pomo-running').style.display = 'none';
+    goHome(); // 或者返回上级
+}
+
+function finishPomo() {
+    clearInterval(pomoState.timerId);
+    pomoState.timerId = null;
+    triggerPomoAI("finish");
+    alert("专注时间到！你真棒！");
+    // 可以在这里播放提示音
+}
+
+// 7. 核心：番茄钟专用的 AI 触发逻辑
+async function triggerPomoAI(reason) {
+    const char = contacts.find(c => c.id === pomoState.charId);
+    if(!char || !globalConfig.apiKey) return;
+
+    const bubble = document.getElementById('pomo-ai-bubble');
+    const originalText = bubble.innerText;
+    bubble.innerText = "💬 正在思考...";
+
+    // 构建针对专注模式的 Prompt
+    const minsLeft = Math.ceil(pomoState.timeLeft / 60);
+    let systemInstruction = `
+        你正在“番茄钟专注模式”下陪伴用户。
+        用户正在进行的任务：${pomoState.task}。
+        剩余时间：${minsLeft}分钟。
+        你的性格：${char.systemPrompt}。
+        
+        请根据当前的触发原因，说一句简短的话（不超过30字）：
+    `;
+
+    let userTrigger = "";
+    if(reason === "start") userTrigger = "我刚开始计时，鼓励我一下。";
+    if(reason === "auto_check") userTrigger = `时间过去了${pomoState.intervalSeconds/60}分钟，检查一下我的状态，提醒我保持专注。`;
+    if(reason === "poke") userTrigger = `我刚刚戳了你一下（这是第${pomoState.pokes}次戳你）。根据剩余时间${minsLeft}分钟，对我的骚扰做出反应（如果时间还多就陪我玩一下，如果快结束了就让我赶紧专心）。`;
+    if(reason === "finish") userTrigger = "计时结束了！夸奖我！";
+
+    try {
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [
+                    { role: "system", content: systemInstruction },
+                    { role: "user", content: userTrigger }
+                ],
+                temperature: 0.7
+            })
+        });
+        
+        const data = await res.json();
+        const reply = data.choices[0].message.content;
+        
+        bubble.innerText = reply;
+
+        // 【可选】把这段话也存入聊天记录，这样回到聊天界面也能看到
+         char.messages.push({ role: 'assistant', content: `[专注模式]: ${reply}` });
+         saveData();
+
+    } catch(e) {
+        bubble.innerText = originalText; // 失败回滚
+        console.error(e);
+    }
+}
 
     </script>
 </body>
 </html>
+
 
 
 
