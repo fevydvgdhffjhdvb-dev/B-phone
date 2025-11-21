@@ -261,6 +261,32 @@
   30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
   40%, 60% { transform: translate3d(8px, 0, 0); }
 }
+        /* --- Pop 风格时间戳样式 --- */
+.message {
+    position: relative; /* 为绝对定位的时间戳做参照 */
+    padding-bottom: 18px; /* 底部留出空间给时间戳，避免遮挡文字 */
+    min-width: 60px; /* 保证气泡不会太窄 */
+}
+
+.msg-time-stamp {
+    position: absolute;
+    bottom: 4px;
+    right: 8px;
+    font-size: 10px;
+    opacity: 0.6; /* 稍微透明，不抢眼 */
+    font-weight: 400;
+    user-select: none;
+}
+
+/* 针对深色气泡（右侧）的适配 */
+.msg-row.right .msg-time-stamp {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* 针对浅色气泡（左侧）的适配 */
+.msg-row.left .msg-time-stamp {
+    color: rgba(0, 0, 0, 0.5);
+}
     </style>
 </head>
 <body>
@@ -615,6 +641,18 @@
                             <span class="ios-label">姓名</span>
                             <input type="text" id="set-char-name" class="ios-input" onchange="saveCurrentCharSettings()">
                         </div>
+                        <!-- 新增：主动招呼设置 -->
+                        <div class="ios-item">
+                            <span class="ios-label">主动发消息</span>
+                            <select id="set-char-interval" class="ios-input" style="direction: rtl;" onchange="saveCurrentCharSettings()">
+                                <option value="0">从不</option>
+                                <option value="2">超过 2 小时</option>
+                                <option value="6">超过 6 小时</option>
+                                <option value="12">超过 12 小时 (半天)</option>
+                                <option value="24">超过 24 小时 (一天)</option>
+                                <option value="48">超过 48 小时 (两天)</option>
+                            </select>
+                        </div>
                         <div class="ios-item" style="flex-direction: column; align-items: flex-start;">
                             <span class="ios-label" style="margin-bottom:5px;">AI 设定 (System Prompt)</span>
                             <textarea id="set-char-prompt" class="ios-input" style="text-align:left; width:100%; height:80px; border:1px solid #eee; padding:5px; border-radius:5px;" onchange="saveCurrentCharSettings()"></textarea>
@@ -782,7 +820,10 @@
                 bgImage: "",     // 聊天背景
                 messages: [],
                 memories: [],
-                diaries: []
+                diaries: [],
+// --- 新增字段 ---
+autoReplyInterval: 0, // 默认不主动
+lastActiveTime: Date.now()
             };
             contacts.push(newChar);
             saveData();
@@ -849,6 +890,7 @@
         function enterChat(id) {
             activeContactId = id;
             navigateTo('page-chat');
+            processAutoReplyChain(id);
         }
 
         function addNewCharacter() {
@@ -886,53 +928,58 @@
             if(char.messages.length === 0) {
                 box.innerHTML = `<div style="text-align:center;font-size:12px;color:#999;margin:20px;">与 ${char.name} 开始新的对话</div>`;
             } else {
-                char.messages.forEach((m, index) => appendMsgUI(m.role, m.content, m.image, index + 1));
+                char.messages.forEach((m, index) => {
+    appendMsgUI(m.role, m.content, m.image, index + 1, false, m.timestamp);
+});
             }
             scrollToBottom();
         }
 
-        function appendMsgUI(role, text, img, index, isTemp=false) {
-            const char = getActiveChar();
-            const box = document.getElementById('chatBox');
-            const div = document.createElement('div');
-            div.className = `msg-row ${role==='user'?'right':'left'}`;
-            
-            const avatarUrl = role==='user' ? char.userAvatar : char.avatar;
-            
-            // 1. 用户消息：添加 oncontextmenu 实现长按编辑
-            // 2. AI消息：添加 重刷按钮
-            let extraHtml = '';
-            let eventAttr = '';
+        // --- 替换后的 appendMsgUI 函数 ---
+function appendMsgUI(role, text, img, index, isTemp=false, timestamp=null) {
+    const char = getActiveChar();
+    const box = document.getElementById('chatBox');
+    const div = document.createElement('div');
+    div.className = `msg-row ${role==='user'?'right':'left'}`;
+    
+    const avatarUrl = role==='user' ? char.userAvatar : char.avatar;
+    
+    // 处理右键/双击事件
+    let extraHtml = '';
+    let eventAttr = '';
+    if (role === 'user' && !isTemp) {
+        eventAttr = `ondblclick="handleUserEdit(event, ${index}); return false;"`;
+    } else if (role === 'assistant' && !isTemp) {
+        extraHtml = `<div class="msg-meta-row"><div class="btn-reroll" onclick="rerollMessage(${index})">🔄</div></div>`;
+    }
 
-            if (role === 'user' && !isTemp) {
-                // 也就是手机上的“长按”，电脑上的“右键”
-                eventAttr = `ondblclick="handleUserEdit(event, ${index}); return false;"`;
-            } else if (role === 'assistant' && !isTemp) {
-                extraHtml = `
-                    <div class="msg-meta-row">
-                        <div class="btn-reroll" onclick="rerollMessage(${index})" title="重新生成">
-                            🔄 
-                        </div>
-                    </div>
-                `;
-            }
+    // --- 时间戳处理逻辑 (新功能) ---
+    let timeStr = "";
+    if (timestamp) {
+        const date = new Date(timestamp);
+        // 格式化为 14:30 这种短时间
+        timeStr = date.toLocaleTimeString('zh-CN', {hour12: false, hour: '2-digit', minute: '2-digit'});
+    } else if (isTemp) {
+        timeStr = "发送中...";
+    }
 
-            let html = `
-                <span class="msg-index">#${index || '?'}</span>
-                <img src="${avatarUrl}" class="avatar">
-                <div class="message" ${eventAttr}>
-                    ${img ? `<img src="${img}" style="max-width:100%;border-radius:8px;display:block;margin-bottom:5px;">` : ''}
-                    <span class="txt-content">${isTemp ? text : formatText(text)}</span>
-                </div>
-            `;
+    let html = `
+        <span class="msg-index">#${index || '?'}</span>
+        <img src="${avatarUrl}" class="avatar">
+        <div class="message" ${eventAttr}>
+            ${img ? `<img src="${img}" style="max-width:100%;border-radius:8px;display:block;margin-bottom:5px;">` : ''}
+            <span class="txt-content">${isTemp ? text : formatText(text)}</span>
             
-            // 把按钮拼接到气泡外面
-            div.innerHTML = html + extraHtml;
-
-            box.appendChild(div);
-            scrollToBottom();
-            return div.querySelector('.txt-content'); 
-        }
+            <!-- 插入时间戳 -->
+            <span class="msg-time-stamp">${timeStr}</span>
+        </div>
+    `;
+    
+    div.innerHTML = html + extraHtml;
+    box.appendChild(div);
+    scrollToBottom();
+    return div.querySelector('.txt-content'); 
+}
 
         async function sendMsg(role) {
             const char = getActiveChar();
@@ -944,7 +991,7 @@
             if(!txt && !currentImg) return;
 
             // 用户消息
-            const newMsg = { role: 'user', content: txt, image: currentImg };
+            const newMsg = { role: 'user', content: txt, image: currentImg, timestamp: Date.now() };
             char.messages.push(newMsg);
             saveData(); // 保存数据
             
@@ -1142,6 +1189,7 @@ const history = char.messages.slice(-limit);
             document.getElementById('set-user-name').value = char.userName;
             document.getElementById('set-user-desc').value = char.userPersona || "";
             document.getElementById('set-user-avatar').src = char.userAvatar;
+            document.getElementById('set-char-interval').value = char.autoReplyInterval || 0;
             
             openModal('modal-chat-settings');
         }
@@ -1154,6 +1202,7 @@ const history = char.messages.slice(-limit);
         char.systemPrompt = document.getElementById('set-char-prompt').value;
         char.userName = document.getElementById('set-user-name').value;
         char.userPersona = document.getElementById('set-user-desc').value;
+        char.autoReplyInterval = parseInt(document.getElementById('set-char-interval').value) || 0;
         
         document.getElementById('chat-title-name').innerText = char.name;
         saveData();
@@ -1938,10 +1987,133 @@ async function triggerPomoAI(reason) {
         console.error(e);
     }
 }
+        // ==========================================
+// --- 核心功能：Pop 风格连环追问与时间回填系统 ---
+// ==========================================
+
+async function processAutoReplyChain(charId) {
+    const char = contacts.find(c => c.id === charId);
+    // 如果没有设置自动回复频率，或者频率为0，直接退出
+    if (!char || !char.autoReplyInterval || char.autoReplyInterval <= 0) return;
+
+    const now = Date.now();
+    // 获取最后一条消息的时间（无论是谁发的）
+    let lastMsg = char.messages[char.messages.length - 1];
+    // 兼容旧数据：如果没有 timestamp 字段，就用 lastActiveTime 或当前时间
+    let lastMsgTime = lastMsg ? (lastMsg.timestamp || char.lastActiveTime || now) : now;
+    
+    const intervalMs = char.autoReplyInterval * 60 * 60 * 1000; // 小时转毫秒
+    const maxConsecutive = 5; // 最多补发 5 条
+    let addedCount = 0;
+
+    // 获取标题元素用于显示加载状态
+    const titleDom = document.getElementById('chat-title-name');
+    const originalTitle = titleDom ? titleDom.innerText : char.name;
+
+    // --- 模拟循环：推算下一个应该发消息的时间点 ---
+    // 我们从最后一条消息的时间开始往后推
+    let virtualClock = lastMsgTime; 
+
+    while (addedCount < maxConsecutive) {
+        // 1. 计算下一个目标时间点
+        // 波动范围：-30分钟 到 +30分钟 (即 random * 1小时 - 0.5小时)
+        const jitter = (Math.random() * 60 * 60 * 1000) - (30 * 60 * 1000);
+        let nextTargetTime = virtualClock + intervalMs + jitter;
+
+        // 2. 如果下个时间点 还没到现在的现实时间，说明这条消息“漏发”了，得补上
+        if (nextTargetTime < now) {
+            // 确实漏发了，准备生成！
+            if(titleDom) titleDom.innerText = `正在接收离线消息 (${addedCount + 1})...`;
+            
+            // 锁定：更新虚拟时钟到这个点
+            virtualClock = nextTargetTime; 
+            
+            await generateBackfillMessage(char, nextTargetTime, addedCount + 1);
+            
+            addedCount++;
+        } else {
+            // 下个时间点是未来，不用补发了，退出循环
+            break;
+        }
+    }
+    
+    if(titleDom) titleDom.innerText = originalTitle;
+    if (addedCount > 0) {
+        saveData(); // 全部补完后保存
+    }
+}
+
+// 生成单条回填消息的函数
+async function generateBackfillMessage(char, simulatedTime, chainIndex) {
+    // 计算模拟时间点的日期描述
+    const simDate = new Date(simulatedTime);
+    const timeStr = simDate.toLocaleTimeString('zh-CN', {hour12:false, hour:'2-digit', minute:'2-digit'});
+    const dayStr = simDate.toLocaleDateString('zh-CN', {weekday: 'long'});
+    
+    // 计算这个模拟点距离用户最后一次说话（或互动）过了多久
+    const hoursSinceUser = Math.floor((simulatedTime - (char.lastActiveTime || simulatedTime)) / (1000 * 60 * 60));
+    
+    // 构建 Prompt
+    const backfillPrompt = `
+    【场景模拟：离线补发消息】
+    现在是虚拟时间：${dayStr} ${timeStr}。
+    现状：用户已经消失了约 ${hoursSinceUser} 小时。
+    这是你【连续第 ${chainIndex} 次】主动发消息寻找用户（用户之前的都没回）。
+    
+    请根据你的角色设定和当前的虚拟时间点，发送一条消息。
+    要求：
+    1. 如果是第1次追问：语气正常，开启新话题或问候。
+    2. 如果是第2-3次追问：语气开始疑惑、担忧或稍微有点小情绪。
+    3. 如果是第4-5次追问：语气可以是失落、自言自语或者假装生气（"好吧，看来你真的很忙"）。
+    4. 结合时间点（比如深夜、清晨）自然发挥。
+    5. 字数不要超过五十字。
+    `;
+
+    // 调用 API
+    try {
+        // 截取最近 15 条记录作为上下文
+        const history = char.messages.slice(-15).map(m => ({ 
+            role: m.role, 
+            content: m.content 
+        }));
+
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [
+                    { role: "system", content: char.systemPrompt },
+                    ...history,
+                    { role: "system", content: backfillPrompt }
+                ],
+                temperature: 0.85 
+            })
+        });
+        
+        const data = await res.json();
+        const reply = data.choices[0].message.content;
+
+        // 存入消息，注意：timestamp 使用模拟的那个过去的时间！
+        char.messages.push({ 
+            role: 'assistant', 
+            content: reply,
+            timestamp: simulatedTime 
+        });
+
+        // 立即渲染到界面上，让用户看到消息“弹”出来
+        // 注意：这里我们不播放打字动画，直接显示，因为是历史消息
+        appendMsgUI('assistant', reply, null, char.messages.length, false, simulatedTime);
+
+    } catch (e) {
+        console.error("补发生成失败", e);
+    }
+}
 
     </script>
 </body>
 </html>
+
 
 
 
