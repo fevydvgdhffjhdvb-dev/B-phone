@@ -511,6 +511,24 @@
                 <div class="ios-list" style="height: 200px;">
                     <textarea id="customCssInput" style="width:100%; height:100%; border:none; padding:15px; font-family:monospace; font-size:12px; resize:none; outline:none;" placeholder=".btn-back { ... }" onchange="saveTheme()"></textarea>
                 </div>
+                <!-- 气泡美化区域 (新增) -->
+                <div class="ios-group-title">气泡美化 (CSS)</div>
+                <div style="font-size:12px; color:#666; margin:0 15px 5px;">
+                    左边是AI(.left)，右边是用户(.right)。<br>
+                    例如: border-radius: 0;
+                </div>
+                <div class="ios-list" style="height: 150px;">
+                    <textarea id="bubbleCssInput" style="width:100%; height:100%; border:none; padding:15px; font-family:monospace; font-size:12px; resize:none; outline:none;" 
+                    placeholder="/* AI 气泡 */
+.msg-row.left .message { 
+  background: #fff; 
+}
+/* 用户气泡 */
+.msg-row.right .message { 
+  background: #007AFF; 
+}" 
+                    onchange="saveTheme()"></textarea>
+                </div>
                 <!-- 字体设置区域 -->
                 <div class="ios-group-title">全局字体 (输入 .ttf/.woff 链接)</div>
                 <div class="ios-list">
@@ -1313,8 +1331,9 @@ const history = char.messages.slice(-limit);
         }
         // --- 美化/主题系统 (终极版: 图标+字体+壁纸) ---
     let themeConfig = {
-        icons: { msg: "", mem: "", set: "", theme: "" },
+        icons: { msg: "", mem: "", set: "", theme: "", diary: "", pomo: "" },
         customCss: "",
+        bubbleCss: "",
         customFont: "",
         homeWallpaper: "" // <--- 新增: 存储壁纸链接
     };
@@ -1332,6 +1351,7 @@ const history = char.messages.slice(-limit);
         document.getElementById('iconInput-pomo').value = themeConfig.icons.pomo || "";
         // 2. 恢复CSS和字体输入框
         document.getElementById('customCssInput').value = themeConfig.customCss || "";
+        document.getElementById('bubbleCssInput').value = themeConfig.bubbleCss || "";
         const fontInput = document.getElementById('fontInput');
         if(fontInput) fontInput.value = themeConfig.customFont || "";
         
@@ -1350,6 +1370,7 @@ const history = char.messages.slice(-limit);
         themeConfig.icons.diary = document.getElementById('iconInput-diary').value;
         themeConfig.icons.pomo = document.getElementById('iconInput-pomo').value;
         themeConfig.customCss = document.getElementById('customCssInput').value;
+        themeConfig.bubbleCss = document.getElementById('bubbleCssInput').value;
         
         const fontInput = document.getElementById('fontInput');
         if(fontInput) themeConfig.customFont = fontInput.value;
@@ -1396,7 +1417,16 @@ const history = char.messages.slice(-limit);
                 body, button, input, textarea, select, .clock-time, .app-title, .chat-contact-name { font-family: 'UserCustomFont', -apple-system, sans-serif !important; }
             `;
             finalCss = fontRule + "\n" + finalCss;
+            // D. 应用气泡美化 (独立样式标签)
+        let bubbleStyleTag = document.getElementById('user-bubble-style');
+        if (!bubbleStyleTag) {
+            bubbleStyleTag = document.createElement('style');
+            bubbleStyleTag.id = 'user-bubble-style';
+            document.head.appendChild(bubbleStyleTag);
         }
+        bubbleStyleTag.innerHTML = themeConfig.bubbleCss || "";
+        }
+        
         styleTag.innerHTML = finalCss;
     }
 
@@ -2134,6 +2164,7 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
     </script>
 </body>
 </html>
+
 
 
 
