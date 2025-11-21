@@ -1991,55 +1991,81 @@ async function triggerPomoAI(reason) {
 // --- 核心功能：Pop 风格连环追问与时间回填系统 ---
 // ==========================================
 
+// ==========================================
+// --- 调试专用版：强制触发离线消息 ---
+// ==========================================
+
 async function processAutoReplyChain(charId) {
     const char = contacts.find(c => c.id === charId);
-    // 如果没有设置自动回复频率，或者频率为0，直接退出
-    if (!char || !char.autoReplyInterval || char.autoReplyInterval <= 0) return;
+    
+    // 1. 检查设置
+    if (!char) return;
+    const interval = char.autoReplyInterval || 0;
+    
+    // --- 调试弹窗 A ---
+    // alert(`调试信息:\n角色: ${char.name}\n设置间隔: ${interval}小时`);
+
+    if (interval <= 0) return;
 
     const now = Date.now();
-    // 获取最后一条消息的时间（无论是谁发的）
-    let lastMsg = char.messages[char.messages.length - 1];
-    // 兼容旧数据：如果没有 timestamp 字段，就用 lastActiveTime 或当前时间
-    let lastMsgTime = lastMsg ? (lastMsg.timestamp || char.lastActiveTime || now) : now;
     
-    const intervalMs = char.autoReplyInterval * 60 * 60 * 1000; // 小时转毫秒
-    const maxConsecutive = 5; // 最多补发 5 条
+    // 2. 获取最后一条消息的时间
+    let lastMsg = char.messages[char.messages.length - 1];
+    let lastMsgTime = lastMsg ? (lastMsg.timestamp || char.lastActiveTime || now) : now;
+
+    // ===============================================
+    // ⚠️⚠️⚠️ 强制测试模式 (测试完记得删掉下面这一行) ⚠️⚠️⚠️
+    // 这行代码的意思是：强行把上次说话时间改成 3 小时前
+    // 这样你就不用改 iPad 系统时间了！
+    lastMsgTime = now - (3 * 60 * 60 * 1000); 
+    // ===============================================
+
+    const intervalMs = interval * 60 * 60 * 1000; 
+    const maxConsecutive = 5; 
     let addedCount = 0;
 
-    // 获取标题元素用于显示加载状态
     const titleDom = document.getElementById('chat-title-name');
     const originalTitle = titleDom ? titleDom.innerText : char.name;
 
-    // --- 模拟循环：推算下一个应该发消息的时间点 ---
-    // 我们从最后一条消息的时间开始往后推
     let virtualClock = lastMsgTime; 
 
+    // --- 调试弹窗 B ---
+    // alert("准备开始计算时间差...");
+
     while (addedCount < maxConsecutive) {
-        // 1. 计算下一个目标时间点
-        // 波动范围：-30分钟 到 +30分钟 (即 random * 1小时 - 0.5小时)
+        // 波动范围
         const jitter = (Math.random() * 60 * 60 * 1000) - (30 * 60 * 1000);
         let nextTargetTime = virtualClock + intervalMs + jitter;
 
-        // 2. 如果下个时间点 还没到现在的现实时间，说明这条消息“漏发”了，得补上
+        // 检查是否需要补发
         if (nextTargetTime < now) {
-            // 确实漏发了，准备生成！
+            // --- 调试弹窗 C ---
+            // alert(`触发成功！\n正在补发第 ${addedCount+1} 条消息...`);
+
             if(titleDom) titleDom.innerText = `正在接收离线消息 (${addedCount + 1})...`;
             
-            // 锁定：更新虚拟时钟到这个点
             virtualClock = nextTargetTime; 
             
-            await generateBackfillMessage(char, nextTargetTime, addedCount + 1);
+            // 这里的 await 可能会因为网络慢而卡住，注意看效果
+            try {
+                await generateBackfillMessage(char, nextTargetTime, addedCount + 1);
+                addedCount++;
+            } catch (err) {
+                alert("API 请求失败：" + err.message);
+                break;
+            }
             
-            addedCount++;
         } else {
-            // 下个时间点是未来，不用补发了，退出循环
             break;
         }
     }
     
     if(titleDom) titleDom.innerText = originalTitle;
     if (addedCount > 0) {
-        saveData(); // 全部补完后保存
+        saveData(); 
+        // alert("离线消息接收完毕！");
+    } else {
+        // alert("没有检测到需要补发的消息 (时间还没到)");
     }
 }
 
@@ -2113,6 +2139,7 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
     </script>
 </body>
 </html>
+
 
 
 
