@@ -293,11 +293,7 @@
 
     <div class="phone-frame">
         
-        <!-- 状态栏 -->
-        <div class="status-bar" id="statusBar">
-            <span id="sb-time">12:00</span>
-            <span style="display:flex; gap:5px;"><span>📶</span><span>🔋</span></span>
-        </div>
+        
 
         <!-- 底部 Home Indicator -->
         <div class="home-indicator" onclick="goHome()"></div>
@@ -1509,7 +1505,6 @@ char.messages.push({ role: 'assistant', content: fullText, timestamp: Date.now()
                 const now = new Date();
                 const t = now.toLocaleTimeString('zh-CN', {hour12:false,hour:'2-digit',minute:'2-digit'});
                 document.getElementById('clockTime').innerText = t;
-                document.getElementById('sb-time').innerText = t;
                 document.getElementById('clockDate').innerText = now.toLocaleDateString('zh-CN', {month:'short', day:'numeric', weekday:'long'});
             }, 1000);
         }
@@ -2164,6 +2159,7 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
     </script>
 </body>
 </html>
+
 
 
 
