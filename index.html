@@ -1927,6 +1927,7 @@ async function triggerPomoAI(reason) {
         
         bubble.innerText = reply;
         pomoState.lastReply = reply;
+        pomoState.lastSpeakTime = pomoState.timeLeft;
 
         // 【可选】把这段话也存入聊天记录，这样回到聊天界面也能看到
         // char.messages.push({ role: 'assistant', content: `[专注模式]: ${reply}` });
@@ -1941,6 +1942,7 @@ async function triggerPomoAI(reason) {
     </script>
 </body>
 </html>
+
 
 
 
