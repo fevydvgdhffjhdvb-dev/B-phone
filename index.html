@@ -2090,9 +2090,10 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
     要求：
     1. 如果是第1次追问：语气正常，开启新话题或问候。
     2. 如果是第2-3次追问：语气开始疑惑、担忧或稍微有点小情绪。
-    3. 如果是第4-5次追问：语气可以是失落、自言自语或者假装生气（"好吧，看来你真的很忙"）。
+    3. 如果是第4-5次追问：语气可以是失落、自言自语或者假装生气。
     4. 结合时间点（比如深夜、清晨）自然发挥。
     5. 字数不要超过五十字。
+    6. 【重要】绝对不要重复你上一条发送的内容！必须换一种说法或换个角度。
     `;
 
     // 调用 API
@@ -2139,6 +2140,7 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
     </script>
 </body>
 </html>
+
 
 
 
