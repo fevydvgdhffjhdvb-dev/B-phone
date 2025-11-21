@@ -1107,8 +1107,8 @@ const history = char.messages.slice(-limit);
                     }
                 }
                 
-                // 保存 AI 回复
-                char.messages.push({ role: 'assistant', content: fullText });
+                // 保存 AI 回复 (加上时间戳)
+char.messages.push({ role: 'assistant', content: fullText, timestamp: Date.now() });
                 saveData();
                 // --- 在这里插入一行新代码！---
                 renderChat(activeContactId); 
@@ -2164,6 +2164,7 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
     </script>
 </body>
 </html>
+
 
 
 
