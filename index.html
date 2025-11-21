@@ -999,6 +999,8 @@
             activeContactId = id;
             navigateTo('page-chat');
             processAutoReplyChain(id);
+            const char = contacts.find(c => c.id === id);
+            if(char) checkAndSendHolidayGreeting(char);
         }
 
         function addNewCharacter() {
@@ -2505,10 +2507,91 @@ function getStatusContext(char) {
 
     return context;
 }
+        // --- 11. 节日零点祝福补发机制 ---
+
+async function checkAndSendHolidayGreeting(char) {
+    // 1. 基础检查
+    if (!char.calendarEvents) return;
+    
+    const now = new Date();
+    const todayKey = formatDateKey(now.getFullYear(), now.getMonth(), now.getDate());
+    const eventName = char.calendarEvents[todayKey];
+
+    // 如果今天不是节日，或者今天已经发过祝福了，就退出
+    if (!eventName) return;
+    if (char.lastHolidayGreeting === todayKey) return;
+
+    // 2. 准备“作弊”：构造今天的 00:00:01 时间戳
+    const midnightTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1).getTime();
+
+    // UI 上显示一个小提示（可选）
+    const titleDom = document.getElementById('chat-title-name');
+    const oldTitle = titleDom ? titleDom.innerText : "";
+    if(titleDom) titleDom.innerText = "正在接收节日祝福...";
+
+    // 3. 构造 Prompt
+    const greetingPrompt = `
+    [系统强制事件]
+    今天是 "${eventName}"。
+    假设现在时间刚好是凌晨 00:00。
+    你一直守在手机前，就是为了要在零点准时给用户发送祝福。
+    
+    请发送一条消息：
+    1. 表达节日/纪念日快乐。
+    2. 语气要惊喜、深情或温暖（符合你的人设）。
+    3. 提到你一直在等零点。
+    `;
+
+    try {
+        // 4. 调用 API
+        // 简单起见，这里不带太多历史记录，只带人设，防止上下文干扰
+        const msgs = [
+            { role: "system", content: char.systemPrompt },
+            { role: "system", content: greetingPrompt }
+        ];
+
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: msgs,
+                temperature: 0.85
+            })
+        });
+
+        const data = await res.json();
+        const reply = data.choices[0].message.content;
+
+        // 5. 插入消息 (关键：使用 midnightTime 而不是 Date.now())
+        // 为了保证消息顺序，我们需要把它插在正确的位置
+        // 简单做法：直接 push，然后按时间排序（或者简单 push 也行，因为是补发，通常显示在最下面也没问题，只要时间显示是 00:00 就很有感觉）
+        char.messages.push({
+            role: 'assistant',
+            content: reply,
+            timestamp: midnightTime
+        });
+
+        // 6. 标记今天已发送 (防止重复发)
+        char.lastHolidayGreeting = todayKey;
+        saveData();
+
+        // 7. 刷新界面
+        if (activeContactId === char.id) {
+            renderChat(char.id);
+        }
+
+    } catch (e) {
+        console.error("节日祝福生成失败", e);
+    } finally {
+        if(titleDom) titleDom.innerText = oldTitle;
+    }
+}
 
     </script>
 </body>
 </html>
+
 
 
 
