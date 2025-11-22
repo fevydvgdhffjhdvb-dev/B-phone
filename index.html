@@ -2904,35 +2904,50 @@ function deleteSchedule(index) {
     }
 }
 
-// 4. 核心：获取日程状态 (通用版 - 适配上课/工作/生活)
+// 4. 核心：获取日程状态 (侦探调试版)
 function getScheduleContext() {
+    // 如果没有日程，直接返回空
     if(mySchedule.length === 0) return "";
 
     const now = new Date();
-    const currentDay = now.getDay(); // 0-6
+    const currentDay = now.getDay(); // 0-6 (周日是0)
+    // 强制使用 24小时制 HH:mm 格式
     const currentTimeStr = now.toLocaleTimeString('zh-CN', {hour12:false, hour:'2-digit', minute:'2-digit'});
     
+    // --- 🕵️‍♂️ 侦探弹窗 (调试完可以删掉) ---
+    // 看看代码眼里现在是几点，以及它找到了几个日程
+    // Uncomment below line to debug
+    // alert(`【调试信息】\n系统时间: ${currentTimeStr}\n今天是周: ${currentDay}\n日程总数: ${mySchedule.length}`);
+    // ----------------------------------
+
     let context = "";
     
-    // A. 检查是否正在进行某个事项
-    const currentEvent = mySchedule.find(s => s.day === currentDay && currentTimeStr >= s.start && currentTimeStr <= s.end);
+    // A. 检查是否正在进行
+    const currentEvent = mySchedule.find(s => {
+        // 必须是同一天
+        if (s.day !== currentDay) return false;
+        // 时间比较 (字符串比较 "00:22" >= "00:00")
+        return currentTimeStr >= s.start && currentTimeStr <= s.end;
+    });
     
     if(currentEvent) {
+        // 找到了！弹个窗告诉你
+        alert(`✅ 抓到了！正在进行的日程：${currentEvent.name}`);
+        
         context += `\n[日程状态]: 用户当前时间段有安排："${currentEvent.name}" (${currentEvent.start}-${currentEvent.end})。
         [行为指令]: 此时用户可能正忙。如果他主动发消息，你可以调侃他“怎么在${currentEvent.name}的时候玩手机”，或者鼓励他专心完成手头的事。`;
     } else {
-        // B. 检查接下来的安排
+        // 没找到正在进行的
+        // console.log("没找到正在进行的日程");
+        
+        // B. 检查接下来的
         const todayEvents = mySchedule.filter(s => s.day === currentDay);
         todayEvents.sort((a,b) => a.start.localeCompare(b.start));
-        
         const nextEvent = todayEvents.find(s => s.start > currentTimeStr);
         
         if(nextEvent) {
             context += `\n[日程状态]: 用户今天接下来的日程安排："${nextEvent.name}" (开始时间: ${nextEvent.start})。
             [行为指令]: 如果时间快到了，可以提醒用户做准备。`;
-        } else if (todayEvents.length > 0) {
-            // 今天的都结束了
-            context += `\n[日程状态]: 用户今天的日程清单已全部完成。可以问问他今天过得怎么样，或者建议休息。`;
         }
     }
 
@@ -2942,6 +2957,7 @@ function getScheduleContext() {
     </script>
 </body>
 </html>
+
 
 
 
