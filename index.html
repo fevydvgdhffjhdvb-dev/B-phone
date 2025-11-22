@@ -349,6 +349,30 @@
     position: absolute; top: -10px; right: -10px;
     font-size: 120px; opacity: 0.1; pointer-events: none;
 }
+        /* --- 课程/日程表样式 --- */
+.schedule-list { padding: 15px; }
+.schedule-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.sched-time { font-size: 18px; font-weight: bold; color: #007AFF; }
+.sched-info { flex: 1; margin-left: 15px; }
+.sched-name { font-size: 16px; font-weight: 600; }
+.sched-day { font-size: 12px; color: #999; margin-top: 2px; }
+.btn-del-sched { color: #ff3b30; font-size: 20px; cursor: pointer; padding: 5px; }
+
+/* 添加日程的表单区域 */
+.sched-form {
+    background: #f9f9f9; padding: 15px; border-radius: 12px; margin: 15px;
+    display: flex; flex-direction: column; gap: 10px;
+}
+.sched-row { display: flex; gap: 10px; }
     </style>
 </head>
 <body>
@@ -416,6 +440,12 @@
     <div class="app-icon" id="app-icon-cal" style="background: #fff; color: #333;">📅</div>
     <div class="app-name">日历</div>
 </div>
+                <!-- 8. 日程表 (通用版) -->
+                <div class="app-icon-container" onclick="navigateTo('page-schedule'); renderScheduleList();">
+                    <!-- 换个更有商务感的颜色，比如紫色渐变，或者保持蓝色 -->
+                    <div class="app-icon" id="app-icon-sched" style="background: linear-gradient(to bottom, #5856d6, #af52de);">📅</div>
+                    <div class="app-name">日程</div>
+                </div>
             </div>
         </div>
 
@@ -586,6 +616,10 @@
                         <span class="ios-label">日历图标</span>
                         <input type="text" id="iconInput-cal" class="ios-input" placeholder="http://..." onchange="saveTheme()">
                     </div>
+                    <div class="ios-item">
+                        <span class="ios-label">日程图标</span>
+                        <input type="text" id="iconInput-sched" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+                    </div>
                 </div>
 
                 <div class="ios-group-title">全局 CSS 代码 (高级美化)</div>
@@ -752,6 +786,45 @@
                         2. 在特殊日子，AI 可能会在零点给你惊喜。<br>
                         3. 目前数据是跟随当前聊天角色的。
                     </div>
+                </div>
+            </div>
+        </div>
+        <!-- ============ 10. 日程表 (Schedule) ============ -->
+        <div class="page" id="page-schedule">
+            <div class="app-header">
+                <button class="btn-icon-text" onclick="goHome()">‹ 桌面</button>
+                <span class="app-title">我的日程</span>
+                <span style="width:50px;"></span>
+            </div>
+            <div class="content-scroll">
+                <!-- 添加区域 -->
+                <div class="sched-form">
+                    <div class="ios-group-title" style="margin:0 0 5px 0;">新建事项</div>
+                    <!-- 占位符改了，暗示用户可以填任何东西 -->
+                    <input type="text" id="schedName" class="ios-input" style="text-align:left; background:#fff; padding:10px; border-radius:8px;" placeholder="事项名称 (如: 高数课、部门例会、健身)">
+                    
+                    <div class="sched-row">
+                        <select id="schedDay" class="ios-input" style="background:#fff; borderRadius:8px; flex:1;">
+                            <option value="1">周一</option>
+                            <option value="2">周二</option>
+                            <option value="3">周三</option>
+                            <option value="4">周四</option>
+                            <option value="5">周五</option>
+                            <option value="6">周六</option>
+                            <option value="0">周日</option>
+                        </select>
+                        <!-- 时间输入框 -->
+                        <input type="time" id="schedStart" class="ios-input" value="09:00" style="background:#fff; borderRadius:8px; flex:1;">
+                        <span style="padding-top:10px">~</span>
+                        <input type="time" id="schedEnd" class="ios-input" value="10:00" style="background:#fff; borderRadius:8px; flex:1;">
+                    </div>
+                    <button class="ios-btn" onclick="addSchedule()" style="border-radius:8px; background:#5856d6; color:white; border:none;">添加日程</button>
+                </div>
+
+                <!-- 列表区域 -->
+                <div class="ios-group-title">本周计划</div>
+                <div id="schedule-list-container" class="schedule-list">
+                    <!-- 动态生成 -->
                 </div>
             </div>
         </div>
@@ -1537,6 +1610,9 @@
             const iconCal = document.getElementById('iconInput-cal');
         if(iconCal) iconCal.value = themeConfig.icons.cal || "";
 
+            const iconSched = document.getElementById('iconInput-sched');
+            if(iconSched) iconSched.value = themeConfig.icons.sched || "";
+
             // 2. 恢复CSS和字体
             const cssInput = document.getElementById('customCssInput');
             if(cssInput) cssInput.value = themeConfig.customCss || "";
@@ -1567,6 +1643,7 @@
         themeConfig.icons.diary = document.getElementById('iconInput-diary')?.value || "";
         themeConfig.icons.pomo = document.getElementById('iconInput-pomo')?.value || "";
         themeConfig.icons.cal = document.getElementById('iconInput-cal')?.value || "";
+        themeConfig.icons.sched = document.getElementById('iconInput-sched')?.value || "";
         
         themeConfig.customCss = document.getElementById('customCssInput')?.value || "";
         themeConfig.bubbleCss = document.getElementById('bubbleCssInput')?.value || ""; // 气泡美化
@@ -1590,6 +1667,7 @@
         updateAppIcon('app-icon-diary', themeConfig.icons.diary);
         updateAppIcon('app-icon-pomo', themeConfig.icons.pomo);
         updateAppIcon('app-icon-cal', themeConfig.icons.cal);
+        updateAppIcon('app-icon-sched', themeConfig.icons.sched);
 
         // B. 应用壁纸
         const homePage = document.getElementById('page-home');
@@ -2601,6 +2679,8 @@ function getStatusContext(char) {
         }
     }
     // === 插入结束 ===
+    // === ✨ 插入日程感知 ===
+    context += getScheduleContext();
 
     return context;
 }
@@ -2754,10 +2834,115 @@ function processWeatherData(data) {
 
 // 启动天气
 setTimeout(getWeather, 1500);
+        // ==========================================
+// --- 13. 日程表系统 (Universal Schedule) ---
+// ==========================================
+
+let mySchedule = []; // 存储格式: {id, name, day, start, end}
+
+// 1. 初始化加载
+try {
+    const savedSched = localStorage.getItem('ai_phone_schedule');
+    if(savedSched) mySchedule = JSON.parse(savedSched);
+} catch(e){}
+
+function saveSchedule() {
+    localStorage.setItem('ai_phone_schedule', JSON.stringify(mySchedule));
+}
+
+// 2. 渲染列表
+function renderScheduleList() {
+    const con = document.getElementById('schedule-list-container');
+    if(!con) return; // 防止报错
+    con.innerHTML = '';
+    
+    // 排序：按 周几 -> 开始时间
+    mySchedule.sort((a,b) => {
+        if(a.day !== b.day) return a.day - b.day;
+        return a.start.localeCompare(b.start);
+    });
+
+    const weekMap = ["周日","周一","周二","周三","周四","周五","周六"];
+
+    mySchedule.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'schedule-card';
+        div.innerHTML = `
+            <div class="sched-time">${item.start}<br><span style="font-size:12px;color:#999;">${item.end}</span></div>
+            <div class="sched-info">
+                <div class="sched-name">${item.name}</div>
+                <div class="sched-day">${weekMap[item.day]}</div>
+            </div>
+            <div class="btn-del-sched" onclick="deleteSchedule(${index})">×</div>
+        `;
+        con.appendChild(div);
+    });
+}
+
+// 3. 添加日程
+function addSchedule() {
+    const name = document.getElementById('schedName').value.trim();
+    const day = parseInt(document.getElementById('schedDay').value);
+    const start = document.getElementById('schedStart').value;
+    const end = document.getElementById('schedEnd').value;
+
+    if(!name) return alert("请输入事项名称");
+    
+    mySchedule.push({ id: Date.now(), name, day, start, end });
+    saveSchedule();
+    renderScheduleList();
+    
+    document.getElementById('schedName').value = '';
+    alert("日程添加成功！");
+}
+
+function deleteSchedule(index) {
+    if(confirm("确定删除这个日程吗？")) {
+        mySchedule.splice(index, 1);
+        saveSchedule();
+        renderScheduleList();
+    }
+}
+
+// 4. 核心：获取日程状态 (通用版 - 适配上课/工作/生活)
+function getScheduleContext() {
+    if(mySchedule.length === 0) return "";
+
+    const now = new Date();
+    const currentDay = now.getDay(); // 0-6
+    const currentTimeStr = now.toLocaleTimeString('zh-CN', {hour12:false, hour:'2-digit', minute:'2-digit'});
+    
+    let context = "";
+    
+    // A. 检查是否正在进行某个事项
+    const currentEvent = mySchedule.find(s => s.day === currentDay && currentTimeStr >= s.start && currentTimeStr <= s.end);
+    
+    if(currentEvent) {
+        context += `\n[日程状态]: 用户当前时间段有安排："${currentEvent.name}" (${currentEvent.start}-${currentEvent.end})。
+        [行为指令]: 此时用户可能正忙。如果他主动发消息，你可以调侃他“怎么在${currentEvent.name}的时候玩手机”，或者鼓励他专心完成手头的事。`;
+    } else {
+        // B. 检查接下来的安排
+        const todayEvents = mySchedule.filter(s => s.day === currentDay);
+        todayEvents.sort((a,b) => a.start.localeCompare(b.start));
+        
+        const nextEvent = todayEvents.find(s => s.start > currentTimeStr);
+        
+        if(nextEvent) {
+            context += `\n[日程状态]: 用户今天接下来的日程安排："${nextEvent.name}" (开始时间: ${nextEvent.start})。
+            [行为指令]: 如果时间快到了，可以提醒用户做准备。`;
+        } else if (todayEvents.length > 0) {
+            // 今天的都结束了
+            context += `\n[日程状态]: 用户今天的日程清单已全部完成。可以问问他今天过得怎么样，或者建议休息。`;
+        }
+    }
+
+    return context;
+}
 
     </script>
 </body>
 </html>
+
 
 
 
