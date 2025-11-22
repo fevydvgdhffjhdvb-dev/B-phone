@@ -373,6 +373,23 @@
     display: flex; flex-direction: column; gap: 10px;
 }
 .sched-row { display: flex; gap: 10px; }
+        /* --- 日记本专用样式 (添加到 style 标签里) --- */
+.diary-folder {
+    background: #fff; border-bottom: 1px solid #f0f0f0;
+    padding: 20px; display: flex; align-items: center; gap: 15px; cursor: pointer;
+}
+.diary-folder:active { background: #f9f9f9; }
+.diary-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.diary-info { flex: 1; }
+.diary-title { font-weight: 600; font-size: 17px; margin-bottom: 4px; }
+.diary-sub { font-size: 13px; color: #999; }
+.btn-float-write {
+    position: absolute; bottom: 30px; right: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #007AFF; color: white; font-size: 24px;
+    border: none; box-shadow: 0 4px 12px rgba(0,122,255,0.3);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100;
+}
     </style>
 </head>
 <body>
@@ -986,6 +1003,26 @@
         </div>
 
     </div>
+    <!-- ============ 新增：写日记弹窗 ============ -->
+<div class="modal-overlay" id="modal-write-diary">
+    <div class="modal-box" style="height: 60%;">
+        <div class="modal-header">
+            写日记
+            <!-- 用于临时存储当前是写给谁的 -->
+            <input type="hidden" id="diary-target-char-id">
+        </div>
+        <div class="modal-body" style="padding:15px; display:flex; flex-direction:column;">
+            <div style="margin-bottom:10px; font-size:14px; color:#666;">
+                收件人: <span id="diary-target-name" style="font-weight:bold; color:#000;"></span>
+            </div>
+            <textarea id="user-diary-input" style="flex:1; border:1px solid #eee; border-radius:10px; padding:10px; font-size:16px; resize:none; outline:none;" placeholder="今天发生了什么想告诉Ta的事？..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-write-diary')">取消</button>
+            <button class="modal-btn" onclick="submitUserDiary()">保存并同步</button>
+        </div>
+    </div>
+</div>
 
     <script>
         // --- 核心数据结构 ---
@@ -1046,6 +1083,7 @@
                 messages: [],
                 memories: [],
                 diaries: [],
+                userDiaries: [],
                 // --- 新增：日历与生理期数据 ---
                 calendarEvents: {}, // 格式: { "2025-11-21": "纪念日" }
                 periodLog: [],      // 格式: ["2025-10-01", "2025-11-28"] (记录经期开始的日子)
@@ -1876,51 +1914,254 @@
             } catch(e) { alert("连接失败: "+e.message); }
         }
         // --- 5. 日记本渲染逻辑 (新增) ---
-    function renderDiaries() {
-        const char = getActiveChar();
-        const container = document.getElementById('diaryListContainer');
-        container.innerHTML = '';
+    // ==========================================
+// --- 新版日记本逻辑 (交换日记系统) ---
+// ==========================================
 
-        if (!char) {
-            container.innerHTML = '<p style="text-align:center;color:#999;margin-top:50px;">请先从信息列表进入一个聊天</p>';
-            return;
+// 1. 日记本首页：显示文件夹列表
+function renderDiaries() {
+    const container = document.getElementById('diaryListContainer');
+    container.innerHTML = ''; // 清空
+
+    // --- A. “我的日记”入口 (固定在顶部) ---
+    // 为了逻辑简单，点击“我的日记”我们让用户选择查看哪个角色的往来，或者默认显示当前活跃角色的
+    // 这里我们设计为：首页显示所有“联系人日记本” + 一个“所有我的日记”合集(可选)，
+    // 按照你的需求，我们把“我的日记”作为一个总入口，进去后再看发给谁的，或者简单点：
+    // 界面变成：
+    // [ 📒 我的日记 (我写的所有内容) ]
+    // [ 🤖 角色A 的日记 ]
+    // [ 🤖 角色B 的日记 ]
+    
+    // 渲染 "我的日记" 文件夹
+    const myDiv = document.createElement('div');
+    myDiv.className = 'diary-folder';
+    myDiv.onclick = () => renderUserDiaryList(); // 进入我的日记列表
+    myDiv.innerHTML = `
+        <div class="diary-icon" style="background:#eef2ff; color:#5856d6;">✍️</div>
+        <div class="diary-info">
+            <div class="diary-title">我的日记本</div>
+            <div class="diary-sub">记录我的心情</div>
+        </div>
+        <div style="color:#ccc;">›</div>
+    `;
+    container.appendChild(myDiv);
+
+    // 渲染 分割线
+    const sep = document.createElement('div');
+    sep.innerText = "交换日记对象";
+    sep.className = "ios-group-title";
+    container.appendChild(sep);
+
+    // --- B. 角色日记入口列表 ---
+    contacts.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'diary-folder';
+        div.onclick = () => renderAiDiaryList(c.id); // 进入角色的日记列表
+        div.innerHTML = `
+            <img src="${c.avatar}" class="diary-icon" style="object-fit:cover;">
+            <div class="diary-info">
+                <div class="diary-title">${c.name} 的日记</div>
+                <div class="diary-sub">共 ${c.diaries ? c.diaries.length : 0} 篇</div>
+            </div>
+            <div style="color:#ccc;">›</div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// 2. 渲染“我的日记”列表 (显示我写给当前/所有角色的)
+function renderUserDiaryList() {
+    const container = document.getElementById('diaryListContainer');
+    // 头部导航变一下
+    const headerHtml = `
+        <div style="padding:10px 15px; border-bottom:1px solid #eee; display:flex; align-items:center;">
+            <button onclick="renderDiaries()" style="border:none;background:none;color:#007AFF;font-size:16px;">‹ 返回</button>
+            <span style="font-weight:bold; margin-left:15px; font-size:18px;">我的日记</span>
+        </div>
+    `;
+    
+    let listHtml = '<div style="padding-bottom:80px;">';
+    
+    // 收集所有角色里的 userDiaries
+    let allMyDiaries = [];
+    contacts.forEach(c => {
+        if(c.userDiaries && c.userDiaries.length > 0) {
+            c.userDiaries.forEach((content, idx) => {
+                allMyDiaries.push({
+                    content: content,
+                    charName: c.name,
+                    charId: c.id,
+                    time: Date.now() // 实际项目应该存时间戳，这里简化
+                });
+            });
         }
-        
-        if (!char.diaries || char.diaries.length === 0) {
-            container.innerHTML = '<p style="text-align:center;color:#999;margin-top:50px;">还没有写过日记哦<br>去聊天界面点击 ✨ 生成吧</p>';
-            return;
-        }
+    });
 
-        // 倒序显示，最新的日记在最上面
-        const reversedDiaries = [...char.diaries].reverse();
-
-        reversedDiaries.forEach((content, index) => {
-            // 计算原始索引 (用于删除)
-            const originalIndex = char.diaries.length - 1 - index;
-            
-            const card = document.createElement('div');
-            card.className = 'memory-card'; // 复用记忆卡的样式
-            // 把换行符转为br，稍微美化一下显示
-            const displayContent = content.replace(/\n/g, '<br>');
-            
-            card.innerHTML = `
-<div style="line-height:1.6; color:#333;">
-                    ${displayContent}
+    if (allMyDiaries.length === 0) {
+        listHtml += '<div style="text-align:center; color:#999; margin-top:50px;">你还没有写过日记<br>点击右下角笔头开始写吧</div>';
+    } else {
+        // 倒序显示
+        allMyDiaries.reverse().forEach(item => {
+            listHtml += `
+                <div class="memory-card" style="border-left: 4px solid #007AFF;">
+                    <div style="font-size:12px; color:#007AFF; margin-bottom:5px;">寄给: ${item.charName}</div>
+                    <div style="line-height:1.6; color:#333;">${item.content.replace(/\n/g, '<br>')}</div>
                 </div>
-                <div class="btn-del-mem" onclick="deleteDiary(${originalIndex})">×</div>
             `;
-            container.appendChild(card);
         });
     }
+    listHtml += '</div>';
 
-    function deleteDiary(index) {
-        const char = getActiveChar();
-        if (confirm('确定要撕掉这篇日记吗？')) {
-            char.diaries.splice(index, 1);
-            saveData();
-            renderDiaries();
-        }
+    // 添加悬浮写作按钮
+    listHtml += `<button class="btn-float-write" onclick="openDiaryWriter()">+</button>`;
+
+    container.innerHTML = headerHtml + listHtml;
+}
+
+// 3. 渲染“角色日记”列表 (查看AI写的)
+function renderAiDiaryList(charId) {
+    const char = contacts.find(c => c.id === charId);
+    if (!char) return;
+
+    const container = document.getElementById('diaryListContainer');
+    const headerHtml = `
+        <div style="padding:10px 15px; border-bottom:1px solid #eee; display:flex; align-items:center;">
+            <button onclick="renderDiaries()" style="border:none;background:none;color:#007AFF;font-size:16px;">‹ 返回</button>
+            <span style="font-weight:bold; margin-left:15px; font-size:18px;">${char.name} 的日记</span>
+        </div>
+    `;
+
+    let listHtml = '<div style="padding:15px;">';
+    
+    if (!char.diaries || char.diaries.length === 0) {
+        listHtml += '<div style="text-align:center; color:#999; margin-top:50px;">Ta 还没有写过日记</div>';
+    } else {
+        // 倒序
+        [...char.diaries].reverse().forEach((content, index) => {
+            // 计算原始索引用于删除
+            const originalIndex = char.diaries.length - 1 - index;
+            listHtml += `
+                <div class="memory-card" style="border-left: 4px solid #ff2d55;">
+                    <div style="line-height:1.6; color:#333;">${content.replace(/\n/g, '<br>')}</div>
+                    <div class="btn-del-mem" onclick="deleteDiary('${charId}', ${originalIndex})">×</div>
+                </div>
+            `;
+        });
     }
+    listHtml += '</div>';
+    container.innerHTML = headerHtml + listHtml;
+}
+
+// 4. 删除逻辑
+function deleteDiary(charId, index) {
+    const char = contacts.find(c => c.id === charId);
+    if (confirm('确定要撕掉这篇日记吗？')) {
+        char.diaries.splice(index, 1);
+        saveData();
+        renderAiDiaryList(charId); // 刷新当前列表
+    }
+}
+
+// =======================
+// --- 写日记与交互逻辑 ---
+// =======================
+
+// 打开写作弹窗
+function openDiaryWriter() {
+    // 默认发给当前活跃的角色，如果没有活跃角色，则提示选择或者默认第一个
+    let targetId = activeContactId; 
+    
+    if (!targetId && contacts.length > 0) {
+        targetId = contacts[0].id; // 默认第一个
+    }
+
+    if (!targetId) return alert("请先创建一个角色！");
+
+    const char = contacts.find(c => c.id === targetId);
+    
+    document.getElementById('diary-target-char-id').value = targetId;
+    document.getElementById('diary-target-name').innerText = char.name;
+    document.getElementById('user-diary-input').value = ''; // 清空
+    
+    openModal('modal-write-diary');
+}
+
+// 提交日记
+async function submitUserDiary() {
+    const targetId = document.getElementById('diary-target-char-id').value;
+    const content = document.getElementById('user-diary-input').value.trim();
+    const char = contacts.find(c => c.id === targetId);
+
+    if (!content) return alert("写点什么吧！");
+
+    // 1. 保存用户的日记
+    if (!char.userDiaries) char.userDiaries = [];
+    
+    const dateStr = new Date().toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const finalContent = `[${dateStr}]\n${content}`;
+    
+    char.userDiaries.push(finalContent);
+    saveData();
+    closeModal('modal-write-diary');
+    
+    // 刷新一下显示
+    renderUserDiaryList();
+
+    // 2. 触发 AI 回复 (交换日记核心)
+    alert(`日记已保存！正在同步给 ${char.name}，请稍等 Ta 的回信...`);
+    
+    await generateDiaryReply(char, finalContent);
+}
+
+// AI 生成回复日记
+async function generateDiaryReply(char, userDiaryContent) {
+    if (!globalConfig.apiKey) return alert("请先配置 API Key 才能收到回信哦");
+
+    const prompt = `
+    【交换日记模式】
+    用户（你的恋人）刚刚在你们的交换日记本里写下了一篇日记。
+    请你阅读这篇日记，然后以日记的形式写一篇“读后感”或“回信”。
+    
+    用户的日记内容：
+    "${userDiaryContent}"
+    
+    你的要求：
+    1. 格式必须是日记格式（例如：[日期] 今天读了XX的日记...）。
+    2. 语气要符合你的人设（${char.systemPrompt}）。
+    3. 内容要针对用户写的事情进行回应、安慰、吐槽或分享你的相关感受。
+    4. 要像真实的日记一样自然。
+    `;
+
+    try {
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [
+                    { role: "system", content: "你是一个正在写日记的角色。" },
+                    { role: "user", content: prompt }
+                ],
+                temperature: 0.8
+            })
+        });
+
+        const data = await res.json();
+        const reply = data.choices[0].message.content;
+
+        // 保存 AI 的日记
+        char.diaries.push(reply);
+        saveData();
+
+        alert(`收到 ${char.name} 的交换日记回信啦！快去 Ta 的日记本里看看吧！`);
+        
+        // 如果当前还在我的日记界面，可以不用跳，或者给个红点提示（这里简单处理，不做跳转）
+        
+    } catch (e) {
+        console.error(e);
+        alert("同步失败，Ta 好像没收到日记...");
+    }
+}
         // --- 6. 删除指定范围消息的逻辑 (新) ---
     function openDeleteMsgModal() {
         const char = getActiveChar();
@@ -2942,6 +3183,7 @@ function getScheduleContext() {
     </script>
 </body>
 </html>
+
 
 
 
