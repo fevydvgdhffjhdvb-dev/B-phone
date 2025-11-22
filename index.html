@@ -313,6 +313,42 @@
 
 /* 经期预测区间背景 (进阶效果) */
 .cal-cell.period-range { background-color: rgba(255, 45, 85, 0.1); }
+        /* --- 仿 iOS 天气组件 --- */
+.weather-widget {
+    width: 335px; /* 和手机宽度匹配 */
+    height: 100px; /* 扁长型组件 */
+    background: linear-gradient(135deg, #3b82f6, #2563eb); /* 经典的晴天蓝 */
+    border-radius: 20px;
+    margin: 0 auto 20px auto; /* 居中，下方留空 */
+    padding: 15px 20px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+.weather-widget:active { transform: scale(0.98); }
+
+/* 左侧：温度和描述 */
+.weather-left { display: flex; flex-direction: column; justify-content: center; }
+.weather-temp { font-size: 42px; font-weight: 300; line-height: 1; }
+.weather-desc { font-size: 14px; font-weight: 500; margin-top: 5px; opacity: 0.9; }
+.weather-range { font-size: 12px; margin-top: 2px; opacity: 0.7; }
+
+/* 右侧：位置和图标 */
+.weather-right { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; height: 100%; }
+.weather-loc { font-size: 14px; font-weight: 600; }
+.weather-icon { font-size: 36px; }
+
+/* 动态背景装饰 (云朵) */
+.weather-bg-deco {
+    position: absolute; top: -10px; right: -10px;
+    font-size: 120px; opacity: 0.1; pointer-events: none;
+}
     </style>
 </head>
 <body>
@@ -330,6 +366,20 @@
                 <div class="clock-time" id="clockTime">12:00</div>
                 <div class="clock-date" id="clockDate">1月1日 星期一</div>
             </div>
+            <!-- ✨ 新增：天气组件 (点击可以刷新) -->
+            <div class="weather-widget" onclick="getWeather()">
+                <div class="weather-bg-deco">🌤</div>
+                <div class="weather-left">
+                    <div class="weather-temp" id="w-temp">--°</div>
+                    <div class="weather-desc" id="w-desc">点击获取天气</div>
+                    <div class="weather-range" id="w-wind">无需安装App</div>
+                </div>
+                <div class="weather-right">
+                    <div class="weather-icon" id="w-icon">📍</div>
+                    <div class="weather-loc" id="w-city">未定位</div>
+                </div>
+            </div>
+            <!-- ✨ 新增结束 -->
             <div class="app-grid">
                 <!-- 1. 信息 (加了 id="app-icon-msg") -->
                 <div class="app-icon-container" onclick="navigateTo('page-msg-list')">
@@ -2525,6 +2575,32 @@ function getStatusContext(char) {
             [行为指令]: 她可能情绪不太稳定、易怒或焦虑。请无条件包容她的小脾气，不要回嘴，多哄哄她。\n`;
         }
     }
+    // === ✨ 这里是新插入的天气感知模块 ✨ ===
+    if (weatherState.lastUpdate > 0) {
+        context += `\n[实时环境数据]: 天气 ${weatherState.desc}, 气温 ${weatherState.temp}°C, 风速 ${weatherState.wind}km/h。`;
+        
+        // 下雨/雷雨
+        if (weatherState.isRainy) {
+            context += `\n[关怀指令]: 检测到正在下雨。请务必提醒用户带伞，或关心是否淋湿。`;
+        }
+        // 下雪
+        else if (weatherState.desc.includes("雪")) {
+            context += `\n[关怀指令]: ❄️ 正在下雪！请表现出惊喜感，提醒路滑小心摔倒，或者提议堆雪人。`;
+        }
+        // 大风
+        if (weatherState.wind > 25) {
+            context += `\n[关怀指令]: 💨 风很大。提醒用户别被吹跑了，或者注意高空坠物。`;
+        }
+        // 气温极端
+        if (weatherState.temp <= 5) {
+            context += `\n[关怀指令]: 🥶 气温极低。命令用户穿羽绒服或秋裤。`;
+        } else if (weatherState.temp > 32) {
+            context += `\n[关怀指令]: 🥵 气温很高。提醒防暑降温多喝水。`;
+        } else if (weatherState.code === 0 && weatherState.temp > 18 && weatherState.temp < 28) {
+             context += `\n[关怀指令]: ☀️ 天气绝佳。建议用户别宅家，可以提议出去散步。`;
+        }
+    }
+    // === 插入结束 ===
 
     return context;
 }
@@ -2626,10 +2702,63 @@ async function checkAndSendHolidayGreeting(char) {
         if(titleDom) titleDom.innerText = oldTitle;
     }
 }
+        // ==========================================
+// --- 12. 天气数据获取模块 (只负责拿数据) ---
+// ==========================================
+
+let weatherState = {
+    temp: null, code: null, desc: "", isRainy: false, isCold: false, wind: 0, lastUpdate: 0
+};
+
+function getWeather() {
+    const tempDom = document.getElementById('w-temp');
+    const descDom = document.getElementById('w-desc');
+    if(!tempDom) return; // 防止报错
+
+    descDom.innerText = "定位中...";
+    if (!navigator.geolocation) { descDom.innerText = "无定位权限"; return; }
+
+    navigator.geolocation.getCurrentPosition(async (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        descDom.innerText = "更新中...";
+        try {
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+            const data = await res.json();
+            processWeatherData(data.current_weather);
+            document.getElementById('w-city').innerText = "当前位置"; 
+        } catch (e) { descDom.innerText = "失败"; }
+    }, (err) => { descDom.innerText = "定位被拒"; });
+}
+
+function processWeatherData(data) {
+    const temp = Math.round(data.temperature);
+    const code = data.weathercode;
+    let desc = "晴", icon = "☀️", isRainy = false, bg = "linear-gradient(135deg, #3b82f6, #2563eb)";
+
+    if (code > 0 && code <= 3) { desc = "多云"; icon = "☁️"; bg = "linear-gradient(135deg, #64748b, #475569)"; }
+    else if (code >= 45 && code <= 48) { desc = "雾"; icon = "🌫️"; }
+    else if (code >= 51 && code <= 67) { desc = "雨"; icon = "🌧️"; isRainy = true; bg = "linear-gradient(135deg, #334155, #1e293b)"; }
+    else if (code >= 71 && code <= 77) { desc = "雪"; icon = "❄️"; bg = "linear-gradient(135deg, #93c5fd, #60a5fa)"; }
+    else if (code >= 95) { desc = "雷雨"; icon = "⛈️"; isRainy = true; bg = "linear-gradient(135deg, #4c1d95, #312e81)"; }
+
+    weatherState = { temp, code, desc, isRainy, isCold: temp < 12, wind: data.windspeed, lastUpdate: Date.now() };
+
+    document.getElementById('w-temp').innerText = `${temp}°`;
+    document.getElementById('w-desc').innerText = desc;
+    document.getElementById('w-icon').innerText = icon;
+    document.getElementById('w-wind').innerText = `风速 ${data.windspeed}`;
+    document.querySelector('.weather-widget').style.background = bg;
+    document.querySelector('.weather-bg-deco').innerText = icon;
+}
+
+// 启动天气
+setTimeout(getWeather, 1500);
 
     </script>
 </body>
 </html>
+
 
 
 
