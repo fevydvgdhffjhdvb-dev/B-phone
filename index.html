@@ -3718,7 +3718,7 @@ function getScheduleContext() {
     return context;
 }
         // ==========================================
-// --- X (Twitter) 核心逻辑 (LocalStorage + SVG版) ---
+// --- X (Twitter) 核心逻辑 (终极未删减版) ---
 // ==========================================
 
 // X 的数据结构
@@ -3728,492 +3728,428 @@ let xData = {
         name: "我",
         avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=User",
         bio: "AI Phone 用户",
-        following: [], // 关注的角色ID列表
+        badgeType: "none", // none, blue, gold, couple, married, vip
+        partnerId: "",     // 情侣/已婚绑定的角色ID
+        banner: "https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=1000&q=80",
+        location: "上海",
+        stats: { following: 120, followers: 45 },
+        following: [] 
     },
-    tweets: [], // 存储推文对象
+    tweets: [], 
     notifications: []
 };
 
-// 初始化 X 应用
+// 全局变量
+let currentDetailTweetId = null; 
+let currentRetweetId = null;     
+
+// ----------------------------
+// 1. 初始化与数据加载
+// ----------------------------
 function initXApp() {
     loadXData();
-    
-    // 如果没有推文，生成一些假数据作为初始状态
     if (xData.tweets.length === 0) {
-        generateInitialTweets();
+        generateInitialTweets(); // 仅首次使用假数据填充，之后全靠AI
     }
-    
     renderXFeed();
     updateXBadge();
     
-    // 绑定用户头像
-    const myChar = getActiveChar(); // 获取当前聊天的角色作为参考，或者默认
+    // 绑定顶部小头像
+    const myChar = getActiveChar();
     if(myChar) {
         const userAvatarEl = document.getElementById('x-current-user-avatar');
         if(userAvatarEl) userAvatarEl.src = xData.user.avatar;
     }
 }
 
-// 加载数据
 function loadXData() {
     const saved = localStorage.getItem('ai_phone_x_data');
     if (saved) {
         xData = JSON.parse(saved);
+        if(!xData.user.stats) xData.user.stats = { following: 120, followers: 45 };
     } else {
-        // 首次初始化：默认关注所有已存在的角色
         xData.user.following = contacts.map(c => c.id);
         saveXData();
     }
 }
 
-// 保存数据
 function saveXData() {
     localStorage.setItem('ai_phone_x_data', JSON.stringify(xData));
 }
 
-// 生成初始假推文 (用于演示)
+// 初始假数据 (仅用于第一次打开App不空白)
 function generateInitialTweets() {
-    // 1. 尝试让已有的角色发推
     contacts.forEach(char => {
         createTweet({
             authorId: char.id,
             isNPC: false,
-            content: `这是 ${char.name} 的第一条推文！欢迎来到 X！ #HelloX`,
-            timestamp: Date.now() - Math.random() * 10000000
+            content: `欢迎来到 X！ #HelloX`,
+            timestamp: Date.now() - Math.random() * 10000000,
+            // 初始数据也给点假评论装装样子
+            skipAutoComments: false 
         });
     });
-
-    // 2. 生成几个路人推文
     createTweet({
-        authorId: "npc_1",
-        isNPC: true,
-        npcName: "科技日报",
-        npcHandle: "@tech_daily",
-        npcAvatar: "https://api.dicebear.com/7.x/identicon/svg?seed=Tech",
-        content: "AI Phone Pro 更新了 X 功能，太酷了！大家更新了吗？ 📱✨",
-        timestamp: Date.now() - 1000 * 60 * 30
+        authorId: "npc_1", isNPC: true, npcName: "科技日报", npcHandle: "@tech_daily", npcAvatar: "https://api.dicebear.com/7.x/identicon/svg?seed=Tech",
+        content: "BJPhone更新了 X 功能，太酷了！大家更新了吗？ 📱✨", timestamp: Date.now() - 60000
     });
 }
 
-// 更新后的 createTweet
+// 创建推文核心函数
 function createTweet(data) {
     const tweet = {
         id: 'tweet_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         authorId: data.authorId, 
         isNPC: data.isNPC || false,
-        npcName: data.npcName,
-        npcHandle: data.npcHandle,
-        npcAvatar: data.npcAvatar,
-        
+        npcName: data.npcName, npcHandle: data.npcHandle, npcAvatar: data.npcAvatar,
         content: data.content,
         images: data.images || [],
         timestamp: data.timestamp || Date.now(),
         stats: {
-            likes: Math.floor(Math.random() * 100), // 随机一点初始点赞
+            likes: Math.floor(Math.random() * 100),
             retweets: Math.floor(Math.random() * 20),
             replies: 0
         },
         comments: [], 
-        likedByMe: false
+        likedByMe: false,
+        
+        isRepost: data.isRepost || false,
+        isQuote: data.isQuote || false,
+        sourceTweet: data.sourceTweet || null,
+        quoteContent: data.quoteContent || ""
     };
     
-    // 【核心修改】如果是 AI 生成的推文，直接使用 AI 生成的评论
+    // 【核心】优先使用 AI 生成的评论
     if (data.aiComments && data.aiComments.length > 0) {
         data.aiComments.forEach(cmt => {
             tweet.comments.push({
                 id: 'cmt_' + Math.random().toString(36),
-                name: cmt.name, // AI 生成的路人名
-                handle: "@user_" + Math.floor(Math.random()*9999),
-                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`, // 随机头像
-                content: cmt.content,
-                timestamp: Date.now() - Math.random() * 60000 // 假装是几分钟前发的
+                name: cmt.name, 
+                // 随机生成一个看起来真实的 handle
+                handle: "@User_" + Math.random().toString(36).substr(2, 5),
+                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`,
+                content: cmt.content, 
+                // 评论时间：推文发布后 1-30 分钟内
+                timestamp: tweet.timestamp + Math.random() * 1800000
             });
         });
     } 
-    // 否则如果是手动发推且未跳过，生成纯假数据(保留原有逻辑)
+    // 降级方案：如果没有AI评论且未跳过，使用本地库防止空虚 (仅限离线情况)
     else if (!data.skipAutoComments) {
         const commentCount = 3 + Math.floor(Math.random() * 3);
         for(let i=0; i<commentCount; i++) {
-            tweet.comments.push(generateFakeNPCComment());
+            const names = ["路人A", "吃瓜", "User888", "Momo", "纯爱战神"];
+            const contents = ["好活", "真实", "围观", "前排", "不懂就问，这是啥？"];
+            tweet.comments.push({
+                id: 'cmt_' + Math.random().toString(36),
+                name: names[Math.floor(Math.random()*names.length)],
+                handle: "@user_"+Math.floor(Math.random()*999),
+                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`,
+                content: contents[Math.floor(Math.random()*contents.length)],
+                timestamp: Date.now()
+            });
         }
     }
-
+    
     tweet.stats.replies = tweet.comments.length;
 
     xData.tweets.unshift(tweet); 
-    // 限制推文数量，只保留最近 50 条，防止卡顿
-    if(xData.tweets.length > 50) xData.tweets.pop();
-    
+    if(xData.tweets.length > 80) xData.tweets.pop(); // 保留稍微多一点
     saveXData();
     return tweet;
 }
 
-// 生成假的 NPC 评论 (占位符，下一步接 AI)
-function generateFakeNPCComment() {
-    const names = ["路人A", "嗑学家", "纯路人", "瓜皮", "User888", "Momo"];
-    const contents = ["好活当赏！", "太真实了", "前排围观", "哈哈哈哈", "确实", "不懂就问，这是什么？"];
-    return {
-        id: 'cmt_' + Math.random().toString(36),
-        name: names[Math.floor(Math.random() * names.length)],
-        handle: "@user_" + Math.floor(Math.random()*9999),
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`,
-        content: contents[Math.floor(Math.random() * contents.length)],
-        timestamp: Date.now() - Math.random() * 100000
-    };
-}
+// ----------------------------
+// 2. 渲染相关 (Feed & Element)
+// ----------------------------
 
-// 渲染信息流
 function renderXFeed() {
     const container = document.getElementById('x-feed-container');
     if(!container) return;
     container.innerHTML = '';
     
-    // 按时间倒序
     const sortedTweets = xData.tweets.sort((a, b) => b.timestamp - a.timestamp);
-    
     sortedTweets.forEach(tweet => {
         const tweetEl = buildTweetElement(tweet);
         container.appendChild(tweetEl);
     });
 }
 
-// 构建单条推文的 DOM (含 SVG 图标 + 认证标支持)
+function loadUserProfileTweets() {
+    const container = document.getElementById('x-profile-tweets-container');
+    if(!container) return; 
+    container.innerHTML = '';
+
+    const myTweets = xData.tweets.filter(t => t.authorId === 'user');
+
+    if (myTweets.length === 0) {
+        container.innerHTML = `<div style="padding:20px;text-align:center;color:#71767b">暂无推文</div>`;
+        return;
+    }
+    const sortedMyTweets = myTweets.sort((a, b) => b.timestamp - a.timestamp);
+
+    sortedMyTweets.forEach(tweet => {
+        const el = buildTweetElement(tweet);
+        container.appendChild(el);
+    });
+}
+
 function buildTweetElement(tweet) {
-    // 获取作者信息
-    let name, handle, avatar;
+    let displayTweet = tweet;
+    let repostLabel = "";
     
-    if (tweet.authorId === 'user') {
-        name = xData.user.name;
-        handle = xData.user.handle;
-        avatar = xData.user.avatar;
-    } else if (tweet.isNPC) {
-        name = tweet.npcName;
-        handle = tweet.npcHandle;
-        avatar = tweet.npcAvatar;
-    } else {
-        // 绑定的角色
-        const char = contacts.find(c => c.id === tweet.authorId);
-        if (char) {
-            name = char.name;
-            handle = "@" + char.id.substring(0, 8); // 简易 Handle
-            avatar = char.avatar;
-        } else {
-            name = "未知用户";
-            handle = "@unknown";
-            avatar = "";
-        }
+    if (tweet.isRepost) {
+        displayTweet = tweet.sourceTweet; 
+        const reposterName = (tweet.authorId === 'user') ? xData.user.name : "某人";
+        repostLabel = `
+            <div class="x-repost-header">
+                <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:#71767b"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></svg>
+                ${reposterName} 转帖了
+            </div>`;
     }
 
-    const div = document.createElement('div');
-    div.className = 'x-tweet';
-    
-    // 点击推文进入详情页（仅限非NPC或转发推文）
-    div.onclick = (e) => {
-        if (tweet.isNPC && !tweet.isRetweet) {
-            return; 
+    const getUserInfo = (tid, isNpc, npcInfo) => {
+        if (tid === 'user') return { ...xData.user, badge: xData.user.badgeType || 'none' };
+        if (isNpc) return { name: npcInfo.name, handle: npcInfo.handle, avatar: npcInfo.avatar, badge: 'none' };
+        const char = contacts.find(c => c.id === tid);
+        if (char) {
+            let b = 'none';
+            if(tweet.authorId === xData.user.partnerId && (xData.user.badgeType==='couple'||xData.user.badgeType==='married')) b = xData.user.badgeType;
+            return { name: char.name, handle: "@" + char.id.substring(0, 8), avatar: char.avatar, badge: b };
         }
+        return { name: "未知", handle: "@?", avatar: "", badge: 'none' };
+    };
+
+    const author = getUserInfo(displayTweet.authorId, displayTweet.isNPC, {name: displayTweet.npcName, handle: displayTweet.npcHandle, avatar: displayTweet.npcAvatar});
+    
+    let quoteHtml = "";
+    if (tweet.isQuote) {
+        const source = tweet.sourceTweet;
+        const sourceAuthor = getUserInfo(source.authorId, source.isNPC, {name: source.npcName, handle: source.npcHandle, avatar: source.npcAvatar});
+        quoteHtml = `
+            <div class="x-quote-box">
+                <div class="x-tweet-header">
+                    <img src="${sourceAuthor.avatar}" style="width:20px;height:20px;border-radius:50%;margin-right:5px;">
+                    <span class="x-name" style="font-size:14px">${sourceAuthor.name}</span>
+                    <span class="x-handle" style="font-size:13px">${sourceAuthor.handle}</span>
+                </div>
+                <div class="x-text" style="font-size:14px">${source.content}</div>
+            </div>`;
+    }
+
+    const timeDiff = Math.floor((Date.now() - displayTweet.timestamp) / 1000);
+    let timeStr = timeDiff < 60 ? "刚刚" : (timeDiff < 3600 ? Math.floor(timeDiff/60)+"分" : Math.floor(timeDiff/3600)+"时");
+
+    const div = document.createElement('div');
+    div.className = 'x-tweet-wrapper'; 
+    div.innerHTML = `
+        ${repostLabel}
+        <div class="x-tweet">
+            <img src="${author.avatar}" class="x-tweet-avatar">
+            <div class="x-tweet-content">
+                <div class="x-tweet-header">
+                    <span class="x-name">${author.name}</span>
+                    ${getBadgeSVG(author.badge)}
+                    <span class="x-handle">${author.handle}</span>
+                    <span class="x-time">· ${timeStr}</span>
+                </div>
+                <div class="x-text">
+                    ${tweet.isQuote ? tweet.quoteContent : displayTweet.content}
+                </div>
+                ${quoteHtml}
+                <div class="x-actions">
+                    <button class="x-action-btn reply" onclick="event.stopPropagation(); openReplyModal('${displayTweet.id}')">
+                        <svg class="x-action-icon" viewBox="0 0 24 24"><path d="M1.751 10c0-4.42 3.584-8.005 8.005-8.005h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.005zm8.005-6.005c-3.317 0-6.005 2.69-6.005 6.005 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path></svg>
+                        ${displayTweet.stats.replies || 0}
+                    </button>
+                    <button class="x-action-btn retweet" onclick="event.stopPropagation(); handleRetweet('${displayTweet.id}')">
+                        <svg class="x-action-icon" viewBox="0 0 24 24"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></svg>
+                        ${displayTweet.stats.retweets || 0}
+                    </button>
+                    <button class="x-action-btn like ${displayTweet.likedByMe?'liked':''}" onclick="event.stopPropagation(); handleLike('${displayTweet.id}')">
+                        <svg class="x-action-icon" viewBox="0 0 24 24"><path d="${displayTweet.likedByMe ? 'M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z' : 'M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z'}"></path></svg>
+                        <span class="like-count">${displayTweet.stats.likes || 0}</span>
+                    </button>
+                    <button class="x-action-btn share" onclick="event.stopPropagation(); shareToDM('${displayTweet.id}')">
+                        <svg class="x-action-icon" viewBox="0 0 24 24"><path d="M1.998 5.5c0-1.381 1.119-2.5 2.5-2.5h15c1.381 0 2.5 1.119 2.5 2.5v13c0 1.381-1.119 2.5-2.5 2.5h-15c-1.381 0-2.5-1.119-2.5-2.5v-13zm2.5-.5c-.276 0-.5.224-.5.5v2.764l8 3.638 8-3.636V5.5c0-.276-.224-.5-.5-.5h-15zm15.5 5.463l-8 3.636-8-3.638V18.5c0 .276.224.5.5.5h15c.276 0 .5-.224.5-.5v-8.037z"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>`;
+
+    div.onclick = (e) => {
+        // 你的要求：路人/粉丝推文不用点进评论区
+        // 但如果是转帖或引用，无论原帖是谁，都允许点进去，因为那是用户的行为
+        if (displayTweet.isNPC && !tweet.isRepost && !tweet.isQuote) return; 
         openTweetDetail(tweet.id);
     };
 
-    // 时间格式化
-    const timeDiff = Math.floor((Date.now() - tweet.timestamp) / 1000);
-    let timeStr = "";
-    if (timeDiff < 60) timeStr = "刚刚";
-    else if (timeDiff < 3600) timeStr = Math.floor(timeDiff/60) + "分";
-    else if (timeDiff < 86400) timeStr = Math.floor(timeDiff/3600) + "时";
-    else timeStr = Math.floor(timeDiff/86400) + "天";
-
-    // 1. 先确定这一条推文应该显示什么认证标
-    let badgeType = 'none';
-    if (tweet.authorId === 'user') {
-        badgeType = xData.user.badgeType || 'none';
-    } else if (tweet.authorId === xData.user.partnerId) {
-        // 如果发推的是绑定的情侣对象，且用户自己也是情侣/已婚，则对方也显示
-        if (xData.user.badgeType === 'couple' || xData.user.badgeType === 'married') {
-            badgeType = xData.user.badgeType;
-        }
-    }
-
-    // 2. 构建 HTML
-    div.innerHTML = `
-        <img src="${avatar}" class="x-tweet-avatar">
-        <div class="x-tweet-content">
-            <div class="x-tweet-header">
-                <span class="x-name">${name}</span>
-                ${getBadgeSVG(badgeType)} <!-- 插入认证标 -->
-                <span class="x-handle">${handle}</span>
-                <span class="x-time">· ${timeStr}</span>
-            </div>
-            <div class="x-text">${tweet.content}</div>
-            <div class="x-actions">
-                <button class="x-action-btn reply" onclick="event.stopPropagation(); openReplyModal('${tweet.id}')">
-                    <svg class="x-action-icon" viewBox="0 0 24 24"><path d="M1.751 10c0-4.42 3.584-8.005 8.005-8.005h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.005zm8.005-6.005c-3.317 0-6.005 2.69-6.005 6.005 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path></svg>
-                    ${tweet.stats.replies || 0}
-                </button>
-                <button class="x-action-btn retweet" onclick="event.stopPropagation(); handleRetweet('${tweet.id}')">
-                    <svg class="x-action-icon" viewBox="0 0 24 24"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></svg>
-                    ${tweet.stats.retweets || 0}
-                </button>
-                <button class="x-action-btn like ${tweet.likedByMe ? 'liked' : ''}" onclick="event.stopPropagation(); handleLike('${tweet.id}')">
-                    <svg class="x-action-icon" viewBox="0 0 24 24"><path d="${tweet.likedByMe ? 'M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z' : 'M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z'}"></path></svg>
-                    <span class="like-count">${tweet.stats.likes || 0}</span>
-                </button>
-                <button class="x-action-btn share" onclick="event.stopPropagation(); shareToDM('${tweet.id}')">
-                    <svg class="x-action-icon" viewBox="0 0 24 24"><path d="M1.998 5.5c0-1.381 1.119-2.5 2.5-2.5h15c1.381 0 2.5 1.119 2.5 2.5v13c0 1.381-1.119 2.5-2.5 2.5h-15c-1.381 0-2.5-1.119-2.5-2.5v-13zm2.5-.5c-.276 0-.5.224-.5.5v2.764l8 3.638 8-3.636V5.5c0-.276-.224-.5-.5-.5h-15zm15.5 5.463l-8 3.636-8-3.638V18.5c0 .276.224.5.5.5h15c.276 0 .5-.224.5-.5v-8.037z"></path></svg>
-                </button>
-            </div>
-        </div>
-    `;
     return div;
 }
 
-// === 交互逻辑 ===
+// ----------------------------
+// 3. 交互逻辑
+// ----------------------------
 
-// 点赞
+function handleRetweet(tweetId) {
+    currentRetweetId = tweetId;
+    openModal('modal-retweet-menu');
+}
+
+function confirmRetweet(type) {
+    closeModal('modal-retweet-menu');
+    if (!currentRetweetId) return;
+    
+    const sourceTweet = xData.tweets.find(t => t.id === currentRetweetId);
+    if (!sourceTweet) return;
+
+    if (type === 'repost') {
+        const newTweet = {
+            id: 'tweet_rt_' + Date.now(),
+            authorId: 'user',
+            isRepost: true,   
+            sourceTweet: sourceTweet, 
+            timestamp: Date.now(),
+            stats: { likes: 0, retweets: 0, replies: 0 },
+            comments: [],
+            likedByMe: false
+        };
+        xData.tweets.unshift(newTweet);
+        sourceTweet.stats.retweets++; 
+    } else if (type === 'quote') {
+        const content = prompt("添加评论:");
+        if (content) {
+            const newTweet = {
+                id: 'tweet_qt_' + Date.now(),
+                authorId: 'user',
+                isQuote: true, 
+                quoteContent: content, 
+                sourceTweet: sourceTweet,
+                timestamp: Date.now(),
+                stats: { likes: 0, retweets: 0, replies: 0 },
+                comments: [],
+                likedByMe: false
+            };
+            xData.tweets.unshift(newTweet);
+            sourceTweet.stats.retweets++;
+        }
+    }
+    saveXData();
+    renderXFeed();
+}
+
 function handleLike(tweetId) {
     const tweet = xData.tweets.find(t => t.id === tweetId);
     if (tweet) {
         tweet.likedByMe = !tweet.likedByMe;
         tweet.stats.likes += tweet.likedByMe ? 1 : -1;
         saveXData();
-        renderXFeed(); // 简单粗暴重绘，实际应该只更新 DOM
-    }
-}
-
-// 转发 (UI演示)
-function handleRetweet(tweetId) {
-    const tweet = xData.tweets.find(t => t.id === tweetId);
-    if(tweet) {
-        tweet.stats.retweets++;
-        saveXData();
         renderXFeed();
-        alert("已转发！");
     }
 }
 
-// 更新后的回复逻辑
 function openReplyModal(tweetId) {
-    const tweet = xData.tweets.find(t => t.id === tweetId);
-    // 显示回复谁
-    let replyToName = tweet.isNPC ? tweet.npcName : 'Ta';
-    if (!tweet.isNPC && tweet.authorId !== 'user') {
-        const char = contacts.find(c => c.id === tweet.authorId);
-        if(char) replyToName = char.name;
-    }
-
-    const replyContent = prompt(`回复给 ${replyToName}:`);
-    
-    if (replyContent) {
-        // 1. 立即显示你的评论
-        const myComment = {
-            id: 'cmt_' + Date.now(),
-            authorId: 'user',
-            name: xData.user.name,
-            handle: xData.user.handle,
-            avatar: xData.user.avatar,
-            content: replyContent,
-            timestamp: Date.now()
-        };
-        tweet.comments.push(myComment);
-        tweet.stats.replies++;
-        saveXData();
-        renderXFeed();
-        
-        // 2. 如果是角色发的推文，触发 AI 回复
-        if (!tweet.isNPC && tweet.authorId !== 'user') {
-            // 给个小提示
-            const btn = document.querySelector(`[onclick="event.stopPropagation(); openReplyModal('${tweet.id}')"]`);
-            if(btn) btn.innerHTML = `<span class="x-icon">⏳</span> ...`; // 把评论图标变成沙漏
-
-            generateXReplyAI(tweet, replyContent).then(() => {
-                // 回复完成，刷新
-                renderXFeed();
-            });
-        }
-    }
+    openTweetDetail(tweetId); 
 }
 
-// 发推文
 function openComposeTweet() {
     const content = prompt("有什么新鲜事？");
     if (content) {
-        createTweet({
+        const userTweet = createTweet({
             authorId: 'user',
             content: content,
-            skipAutoComments: true // 自己发的贴暂时不自动生成NPC评论，或者稍后生成
+            skipAutoComments: true // 这里虽然跳过，但下面马上接了AI生成
         });
         renderXFeed();
-    }
-}
 
-// 分享到私信 (核心功能：带上下文跳转)
-function shareToDM(tweetId) {
-    const tweet = xData.tweets.find(t => t.id === tweetId);
-    if (!tweet) return;
-    
-    // 如果是角色发的推，直接跳转到该角色的聊天
-    if (!tweet.isNPC && tweet.authorId !== 'user') {
-        const char = contacts.find(c => c.id === tweet.authorId);
-        if (char) {
-            // 构造一条隐形上下文消息
-            const contextMsg = `[系统提示: 用户通过 X App 分享了你的推文给我: "${tweet.content}"。请以此为话题开始聊天。]`;
-            
-            // 进入聊天页面
-            activeContactId = char.id;
-            navigateTo('page-chat');
-            
-            // 可以在输入框里预填一些话，或者直接让 AI 知道
-            // 这里我们选择把上下文存入 localStorage 的临时变量，聊天页面加载时读取
-            localStorage.setItem('ai_phone_context_trigger', JSON.stringify({
-                charId: char.id,
-                context: contextMsg
-            }));
-            
-            // 刷新聊天页以触发上下文处理
-            renderChat(char.id);
-            // 模拟触发 (可选)
+        // 【新增彩蛋】用户发推后，延迟触发路人/粉丝来评论！
+        if(globalConfig.apiKey) {
             setTimeout(() => {
-               document.getElementById('userInput').value = "我看你刚发的推特了！";
-            }, 300);
+                generateFanOrNPCCommentForUser(userTweet.id);
+            }, 3000 + Math.random() * 2000); // 延迟 3-5 秒
         }
-    } else {
-        alert("只能私信已绑定的角色哦（NPC暂不支持私信）");
     }
 }
 
-// 切换底部标签
 function switchXTab(tab) {
     document.querySelectorAll('.x-tab-btn').forEach(btn => btn.classList.remove('active'));
     event.currentTarget.classList.add('active');
     
     if (tab === 'home') {
-        // 滚动到顶部并刷新
         const feed = document.getElementById('x-feed-container');
-        if(feed) {
-            feed.scrollTop = 0;
-            triggerPullToRefresh(); 
-        }
+        if(feed) { feed.scrollTop = 0; triggerPullToRefresh(); }
     } else if (tab === 'dm') {
-        // 这里的 DM 直接跳转回 Message App 列表
         navigateTo('page-msg-list');
-    } else if (tab === 'search') {
-        // 模拟搜索页面：显示一些随机趋势
-        alert("🔍 正在浏览热搜趋势...\n1. #AIPhonePro\n2. #天气不错\n3. #赛博朋克");
-    } else if (tab === 'notif') {
-        alert("🔔 通知中心：暂无新通知");
+    } else {
+        // Search 和 Notif 暂时留空或显示提示
+        // alert("功能开发中..."); 
     }
 }
 
-// 更新后的下拉刷新逻辑
+// ----------------------------
+// 4. AI 驱动逻辑 (核心大整合)
+// ----------------------------
+
 function triggerPullToRefresh() {
     const spinner = document.getElementById('x-refresh-spinner');
     if(spinner) spinner.style.display = 'block';
     
-    // 1. 检查是否有角色
-    if (contacts.length === 0) {
-        alert("请先在【信息】App 中创建至少一个角色！");
-        if(spinner) spinner.style.display = 'none';
-        return;
-    }
-
-    // 2. 随机抽取一个角色来发推
-    const randomChar = contacts[Math.floor(Math.random() * contacts.length)];
-    
-    // 3. 调用 AI 生成 (异步)
-    // 这里我们不 await，而是让它在后台跑，稍微延迟一点转圈圈给用户反馈
-    generateXTweetAI(randomChar.id).then(() => {
-        // AI 生成完毕
-        if(spinner) spinner.style.display = 'none';
-        
-        // 播放一个简单的提示音效或者震动(可选)
-        if(navigator.vibrate) navigator.vibrate(50);
-        
-    }).catch(() => {
-        if(spinner) spinner.style.display = 'none';
-    });
-    
-    // 超时保护：如果 AI 15秒没反应，强制停止转圈
+    const roll = Math.random(); 
     setTimeout(() => {
-        if(spinner && spinner.style.display === 'block') {
-            spinner.style.display = 'none';
+        if (roll < 0.05) generateFanOrNPCTweetAI('passerby').then(finishRefresh);
+        else if (roll < 0.30) generateFanOrNPCTweetAI('fan').then(finishRefresh);
+        else {
+            if (contacts.length > 0) {
+                const randomChar = contacts[Math.floor(Math.random() * contacts.length)];
+                generateXTweetAI(randomChar.id).then(finishRefresh);
+            } else {
+                generateFanOrNPCTweetAI('passerby').then(finishRefresh);
+            }
         }
-    }, 15000);
-}
+    }, 800);
 
-function updateXBadge() {
-    // 简单的通知计数逻辑
-    const count = xData.notifications.filter(n => !n.read).length;
-    const badge = document.getElementById('x-notif-badge');
-    if(badge) {
-        if (count > 0) {
-            badge.textContent = count;
-            badge.style.display = 'block';
-        } else {
-            badge.style.display = 'none';
-        }
+    function finishRefresh() {
+        if(spinner) spinner.style.display = 'none';
+        renderXFeed();
+        if(navigator.vibrate) navigator.vibrate(50);
     }
 }
-        // ==========================================
-// --- 第二阶段：X App 的 AI 大脑 ---
-// ==========================================
 
-// 1. 核心生成器：让角色发推文 (包含路人评论)
-// 1. 核心生成器：让角色发推文 (包含路人评论 + 记忆读取)
+// AI: 角色发推 (满血版：读记忆 + 强制生成评论)
 async function generateXTweetAI(charId) {
-    // 找到角色数据
     const char = contacts.find(c => c.id === charId);
-    if (!char) return;
+    if (!char || !globalConfig.apiKey) return;
 
-    if (!globalConfig.apiKey) {
-        alert("请先在【设置】App 中配置 API Key！");
-        return;
-    }
-
-    // --- 核心升级：构建记忆上下文 ---
     let memoryContext = "";
-
-    // 1. 读取最近 10 条聊天记录
+    // 读取聊天
     if (char.messages && char.messages.length > 0) {
-        const recentMsgs = char.messages.slice(-10).map(m => 
-            `${m.role === 'user' ? '用户' : '我'}: ${m.content}`
-        ).join('\n');
-        memoryContext += `\n【最近的聊天上下文(仅供灵感参考)】:\n${recentMsgs}\n`;
+        const recentMsgs = char.messages.slice(-10).map(m => `${m.role==='user'?'用户':'我'}: ${m.content}`).join('\n');
+        memoryContext += `\n【最近聊天上下文(仅灵感)】:\n${recentMsgs}\n`;
     }
-
-    // 2. 读取最近 1 篇日记
+    // 读取日记
     if (char.diaries && char.diaries.length > 0) {
-        const lastDiary = char.diaries[char.diaries.length - 1];
-        memoryContext += `\n【最新的一篇日记(仅供灵感参考)】:\n${lastDiary}\n`;
+        memoryContext += `\n【最新日记(仅灵感)】:\n${char.diaries[char.diaries.length-1]}\n`;
     }
 
-    // 构造提示词 (Prompt)
-    const prompt = `
-    你现在扮演 "${char.name}"。
-    人设设定：${char.systemPrompt}
-    当前时间：${new Date().toLocaleString()}
-
+    // 满血 Prompt
+    const prompt = `你现在扮演 "${char.name}"。人设：${char.systemPrompt}
     ${memoryContext}
-
-    请根据你的人设和当前心情，发布一条推特 (X)。
     
-    【生成策略】：
-    1. 如果有【最近的聊天上下文】或【日记】，你可以隐晦地提及里面的内容（比如刚聊完很开心、或者日记里的感悟），让推文看起来像是在记录生活。
-    2. 如果没有上下文，就根据人设生成日常动态（吐槽、分享生活、照片描述等）。
-    3. 不要直接抄袭聊天记录，要转化为“推文风格”的感慨或记录。
-
-    同时，请伪造 6 到 8 条“路人/粉丝”对这条推文的评论。
-    评论要求：简短、真实、风格各异（有的膜拜，有的吐槽，有的玩梗，有的吃瓜）。
-
-    【必须返回纯 JSON 格式，不要包含 Markdown 代码块】：
+    任务：发布一条推特(X)。
+    要求：
+    1. 结合【最近聊天】或【日记】的心情（隐晦提及），或者发日常、吐槽。
+    2. 必须同时伪造 6-8 条“路人/粉丝”的评论。
+    3. 评论要求：风格各异（膜拜、吐槽、玩梗、吃瓜、CP粉），简短真实。
+    
+    【必须返回纯JSON】：
     {
         "content": "推文内容",
         "comments": [
-            {"name": "路人网名", "content": "评论内容"},
-            {"name": "粉丝ID", "content": "评论内容"},
+            {"name": "网名1", "content": "评论1"},
+            {"name": "网名2", "content": "评论2"},
             ...
         ]
-    }
-    `;
+    }`;
 
     try {
         const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
@@ -4221,55 +4157,72 @@ async function generateXTweetAI(charId) {
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
                 model: globalConfig.model,
-                messages: [
-                    { role: "system", content: "你是一个推特(X)模拟器后端，只负责输出 JSON 数据。" },
-                    { role: "user", content: prompt }
-                ],
-                temperature: 0.85 //稍微调高一点温度，让它更有创造力
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.9
             })
         });
-
         const data = await res.json();
-        let aiText = data.choices[0].message.content;
+        const result = JSON.parse(data.choices[0].message.content.replace(/```json|```/g, '').trim());
         
-        // 清理 Markdown 标记
-        aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
-        
-        const result = JSON.parse(aiText);
-        
-        // 创建推文
-        createTweet({
-            authorId: char.id,
-            content: result.content,
-            isNPC: false,
-            aiComments: result.comments
-        });
-
-        // 刷新界面
+        createTweet({ authorId: char.id, content: result.content, aiComments: result.comments });
         renderXFeed();
-        const feed = document.getElementById('x-feed-container');
-        if(feed) feed.scrollTop = 0;
-
-    } catch (e) {
-        console.error("AI 发推失败:", e);
-        // 不弹窗打扰用户，只在控制台报错
-    }
+    } catch (e) { console.error(e); }
 }
 
-// 2. 核心回复器：让 AI 回复你的评论
-async function generateXReplyAI(tweet, userComment) {
-    // 找到发推的角色
-    const char = contacts.find(c => c.id === tweet.authorId);
-    if (!char) return; // 如果是路人NPC发的推，暂时不回复，或者你可以写个通用回复逻辑
+// AI: 路人/粉丝发推 (满血版：分角色)
+async function generateFanOrNPCTweetAI(type) {
+    if (!globalConfig.apiKey) { generateNPCTweet(); return; }
 
-    const prompt = `
-    你现在扮演 "${char.name}"。
-    你发了一条推文："${tweet.content}"
-    用户 "${xData.user.name}" 在下面评论说："${userComment}"
-    
-    请以 "${char.name}" 的口吻回复该用户。
-    要求：简短、符合人设、像社交网络的真实回复。不要带引号。
-    `;
+    let sys = "";
+    if (type === 'fan') {
+        const targetIsUser = Math.random() > 0.5; 
+        let targetName = xData.user.name;
+        if (!targetIsUser && contacts.length > 0) targetName = contacts[Math.floor(Math.random()*contacts.length)].name;
+        
+        sys = `扮演X上的狂热粉丝。你的偶像是"${targetName}"。
+        生成一条推文：表白、催更、分享趣事、嗑CP、彩虹屁。
+        必须返回纯JSON：{"name": "网名", "handle": "handle", "content": "内容"}`;
+    } else {
+        sys = `扮演X上的普通路人。生成一条完全随机的生活吐槽/搞笑推文。
+        必须返回纯JSON：{"name": "网名", "handle": "handle", "content": "内容"}`;
+    }
+
+    try {
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [{ role: "user", content: sys }],
+                temperature: 0.95
+            })
+        });
+        const data = await res.json();
+        const result = JSON.parse(data.choices[0].message.content.replace(/```json|```/g, '').trim());
+        
+        const tweet = {
+            id: 'tweet_ai_npc_' + Date.now(), authorId: 'npc_' + Date.now(), isNPC: true,
+            npcName: result.name, npcHandle: result.handle.startsWith('@')?result.handle:'@'+result.handle, 
+            npcAvatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${result.handle}`,
+            content: result.content, timestamp: Date.now(),
+            stats: { likes: Math.floor(Math.random()*50), retweets: Math.floor(Math.random()*10), replies: 0 },
+            comments: [], likedByMe: false
+        };
+        xData.tweets.unshift(tweet);
+        if(xData.tweets.length > 50) xData.tweets.pop();
+        saveXData();
+    } catch (e) { console.error(e); }
+}
+
+// 【新增】为用户推文生成评论 (彩蛋功能)
+async function generateFanOrNPCCommentForUser(tweetId) {
+    const tweet = xData.tweets.find(t => t.id === tweetId);
+    if(!tweet) return;
+
+    const prompt = `用户 "${xData.user.name}" 发了一条推文："${tweet.content}"。
+    请生成 4-6 条路人或粉丝的评论。
+    风格：有的羡慕，有的好奇，有的纯路人。
+    必须返回纯JSON数组：[{"name": "网名", "content": "内容"}, ...]`;
 
     try {
         const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
@@ -4280,149 +4233,148 @@ async function generateXReplyAI(tweet, userComment) {
                 messages: [{ role: "user", content: prompt }]
             })
         });
-
         const data = await res.json();
-        const replyText = data.choices[0].message.content;
-
-        // 把 AI 的回复加进评论区
-        const aiReplyComment = {
-            id: 'cmt_ai_' + Date.now(),
-            authorId: char.id, // 标记为角色
-            name: char.name,
-            handle: "@" + char.id.substring(0,8),
-            avatar: char.avatar,
-            content: replyText,
-            timestamp: Date.now()
-        };
-
-        // 找到推文并插入回复
-        const targetTweet = xData.tweets.find(t => t.id === tweet.id);
-        if(targetTweet) {
-            targetTweet.comments.push(aiReplyComment);
-            targetTweet.stats.replies++;
-            saveXData();
-            renderXFeed();
-            // 这里可以加一个 Toast 提示 "收到新回复"
-        }
-
-    } catch (e) {
-        console.error("AI 回复失败:", e);
-    }
+        const comments = JSON.parse(data.choices[0].message.content.replace(/```json|```/g, '').trim());
+        
+        comments.forEach(cmt => {
+             tweet.comments.push({
+                id: 'cmt_ai_' + Math.random().toString(36),
+                name: cmt.name, handle: "@user_" + Math.floor(Math.random()*9999),
+                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`,
+                content: cmt.content, 
+                timestamp: Date.now()
+            });
+        });
+        tweet.stats.replies = tweet.comments.length;
+        saveXData();
+        renderXFeed();
+        
+    } catch(e) { console.error(e); }
 }
-        // ==========================================
-// --- X 详情页与楼中楼逻辑 ---
-// ==========================================
 
-let currentDetailTweetId = null; // 当前正在查看的推文ID
+// 本地兜底路人生成
+function generateNPCTweet() {
+    const tweet = {
+        id: 'tweet_npc_' + Date.now(), authorId: 'npc_' + Date.now(), isNPC: true,
+        npcName: "路人", npcHandle: "@user_"+Date.now(), npcAvatar: "",
+        content: "今天天气真不错！", timestamp: Date.now(),
+        stats: { likes: 0, retweets: 0, replies: 0 }, comments: [], likedByMe: false
+    };
+    xData.tweets.unshift(tweet);
+    saveXData();
+    return tweet;
+}
 
-// 1. 打开推文详情页
+// ----------------------------
+// 5. 详情页逻辑
+// ----------------------------
+
 function openTweetDetail(tweetId) {
     const tweet = xData.tweets.find(t => t.id === tweetId);
     if (!tweet) return;
 
     currentDetailTweetId = tweetId;
-    
-    // 切换页面
     document.getElementById('page-x-detail').classList.add('active');
     
-    // 渲染主推文
+    // 这里的逻辑：如果是转帖，我们通常是想看转帖的内容（比如“转发理由”），
+    // 但因为目前我们的转帖模型比较简单（没有转发理由），所以直接显示源推文比较合理。
+    // 引用贴则有自己的内容。
     renderDetailMainTweet(tweet);
-    
-    // 渲染评论区
     renderDetailComments(tweet);
 }
 
-// 2. 关闭详情页
 function closeTweetDetail() {
     document.getElementById('page-x-detail').classList.remove('active');
     currentDetailTweetId = null;
-    renderXFeed(); // 刷新一下主页的数据(比如评论数变化)
+    renderXFeed(); 
 }
-        // 3. 渲染详情页的主推文
+
 function renderDetailMainTweet(tweet) {
     const container = document.getElementById('x-detail-main-tweet');
     
-    // 获取作者信息 (复用之前的逻辑或简化)
-    let name, handle, avatar;
-    if (tweet.authorId === 'user') {
-        name = xData.user.name; handle = xData.user.handle; avatar = xData.user.avatar;
-    } else if (tweet.isNPC) {
-        name = tweet.npcName; handle = tweet.npcHandle; avatar = tweet.npcAvatar;
+    let displayTweet = tweet;
+    // 如果是转帖，展示原贴内容
+    if(tweet.isRepost) displayTweet = tweet.sourceTweet;
+
+    // 获取作者
+    let name, handle, avatar, badgeType = 'none';
+    if (displayTweet.authorId === 'user') {
+        name = xData.user.name; handle = xData.user.handle; avatar = xData.user.avatar; badgeType = xData.user.badgeType;
+    } else if (displayTweet.isNPC) {
+        name = displayTweet.npcName; handle = displayTweet.npcHandle; avatar = displayTweet.npcAvatar;
     } else {
-        const char = contacts.find(c => c.id === tweet.authorId);
-        if (char) { name = char.name; handle = "@" + char.id.substring(0, 8); avatar = char.avatar; }
+        const char = contacts.find(c => c.id === displayTweet.authorId);
+        if (char) { 
+            name = char.name; handle = "@" + char.id.substring(0, 8); avatar = char.avatar; 
+            if (displayTweet.authorId === xData.user.partnerId && (xData.user.badgeType==='couple'||xData.user.badgeType==='married')) badgeType = xData.user.badgeType;
+        }
     }
 
-    // 时间
-    const date = new Date(tweet.timestamp);
+    const date = new Date(displayTweet.timestamp);
     const timeStr = date.toLocaleTimeString() + ' · ' + date.toLocaleDateString();
+
+    let quoteHtml = "";
+    if(tweet.isQuote) {
+       const src = tweet.sourceTweet;
+       quoteHtml = `<div class="x-quote-box" style="margin-top:15px"><div class="x-text" style="font-size:14px">${src.content}</div></div>`;
+    }
 
     container.innerHTML = `
         <div class="x-detail-tweet">
             <div class="x-detail-user">
                 <img src="${avatar}" class="x-detail-avatar">
                 <div class="x-detail-info">
-                    <span class="x-detail-name">${name}</span>
+                    <div style="display:flex; align-items:center;">
+                        <span class="x-detail-name">${name}</span>
+                        ${getBadgeSVG(badgeType)}
+                    </div>
                     <span class="x-detail-handle">${handle}</span>
                 </div>
             </div>
-            <div class="x-detail-text">${tweet.content}</div>
+            <div class="x-detail-text">
+                ${tweet.isQuote ? tweet.quoteContent : displayTweet.content}
+            </div>
+            ${quoteHtml}
             <div class="x-detail-meta">${timeStr}</div>
-            
-            <!-- 详情页的大号互动栏 -->
-            <div class="x-actions" style="max-width: 100%; justify-content: space-around; border-bottom:1px solid #2f3336; padding-bottom:10px;">
+            <div class="x-actions" style="max-width:100%;justify-content:space-around;border-bottom:1px solid #2f3336;padding-bottom:10px">
                 <button class="x-action-btn"><svg class="x-action-icon" viewBox="0 0 24 24"><path d="M1.751 10c0-4.42 3.584-8.005 8.005-8.005h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.005zm8.005-6.005c-3.317 0-6.005 2.69-6.005 6.005 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path></svg></button>
-                <button class="x-action-btn"><svg class="x-action-icon" viewBox="0 0 24 24"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></svg></button>
-                <button class="x-action-btn ${tweet.likedByMe?'liked':''}"><svg class="x-action-icon" viewBox="0 0 24 24"><path d="${tweet.likedByMe ? 'M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z' : 'M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z'}"></path></svg></button>
+                <button class="x-action-btn" onclick="handleRetweet('${displayTweet.id}')"><svg class="x-action-icon" viewBox="0 0 24 24"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></svg></button>
+                <button class="x-action-btn ${displayTweet.likedByMe?'liked':''}" onclick="handleLike('${displayTweet.id}')"><svg class="x-action-icon" viewBox="0 0 24 24"><path d="${displayTweet.likedByMe ? 'M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z' : 'M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z'}"></path></svg></button>
             </div>
         </div>
     `;
 }
-// 4. 渲染评论列表
+
 function renderDetailComments(tweet) {
     const list = document.getElementById('x-detail-comments-list');
     list.innerHTML = '';
     
-    // 按时间顺序排列评论
     const comments = tweet.comments || [];
     
     comments.forEach(cmt => {
         const div = document.createElement('div');
         div.className = 'x-comment-item';
-        
-        // 楼中楼标识：如果是 AI 回复用户的，加个背景色或样式
-        const isReplyToMe = cmt.replyToUserId === 'user'; 
-        
         div.innerHTML = `
             <img src="${cmt.avatar}" class="x-tweet-avatar" style="width:36px;height:36px;">
             <div class="x-comment-content">
                 <div class="x-comment-header">
-                    <div>
-                        <span class="x-comment-name">${cmt.name}</span>
-                        <span class="x-comment-handle">${cmt.handle}</span>
-                    </div>
-                    <span style="color:#71767b">· 刚刚</span>
+                    <div><span class="x-comment-name">${cmt.name}</span><span class="x-comment-handle">${cmt.handle}</span></div>
                 </div>
                 ${cmt.replyToName ? `<div class="x-comment-reply-tag">回复 @${cmt.replyToName}</div>` : ''}
                 <div class="x-comment-text">${cmt.content}</div>
-            </div>
-        `;
+            </div>`;
         
-        // 点击评论，自动填充 "回复 @某人"
         div.onclick = () => {
             const input = document.getElementById('x-detail-input');
             input.value = `回复 @${cmt.name} : `;
             input.focus();
-            // 标记当前正在回复这条评论的ID，方便 AI 识别楼中楼
             input.dataset.replyToId = cmt.id;
             input.dataset.replyToName = cmt.name;
         };
-
         list.appendChild(div);
     });
 }
 
-// 5. 发送评论 (支持楼中楼)
 function sendDetailReply() {
     const input = document.getElementById('x-detail-input');
     const content = input.value.trim();
@@ -4431,76 +4383,66 @@ function sendDetailReply() {
     const tweet = xData.tweets.find(t => t.id === currentDetailTweetId);
     if (!tweet) return;
 
-    // 检查是不是回复某人 (楼中楼)
     const replyToId = input.dataset.replyToId;
     const replyToName = input.dataset.replyToName;
-    
-    // 清理输入框里的 "回复 @xxx :" 前缀，只留内容
     let cleanContent = content;
-    if(replyToName && content.startsWith(`回复 @${replyToName} :`)) {
-        cleanContent = content.replace(`回复 @${replyToName} :`, '').trim();
-    }
+    if(replyToName && content.startsWith(`回复 @${replyToName} :`)) cleanContent = content.replace(`回复 @${replyToName} :`, '').trim();
 
-    // 1. 创建用户评论对象
     const myComment = {
-        id: 'cmt_' + Date.now(),
-        authorId: 'user',
-        name: xData.user.name,
-        handle: xData.user.handle,
-        avatar: xData.user.avatar,
-        content: cleanContent,
-        timestamp: Date.now(),
-        replyToId: replyToId || null, // 记录回复了哪条评论
-        replyToName: replyToName || null
+        id: 'cmt_' + Date.now(), authorId: 'user',
+        name: xData.user.name, handle: xData.user.handle, avatar: xData.user.avatar,
+        content: cleanContent, timestamp: Date.now(),
+        replyToId: replyToId || null, replyToName: replyToName || null
     };
 
     tweet.comments.push(myComment);
     tweet.stats.replies++;
     saveXData();
 
-    // 2. 立即刷新界面
     renderDetailComments(tweet);
     input.value = '';
     delete input.dataset.replyToId;
     delete input.dataset.replyToName;
     
-    // 滚动到底部
     const feed = document.getElementById('x-detail-container');
     feed.scrollTop = feed.scrollHeight;
 
-    // 3. 触发 AI 回复 (如果推文是角色发的)
-    if (!tweet.isNPC && tweet.authorId !== 'user') {
-        // 如果是回复楼中楼，AI 也应该继续回复楼中楼
-        triggerDetailAiReply(tweet, myComment);
-    }
+    // 3. 触发 AI 回复 (支持楼中楼逻辑)
+    triggerDetailAiReply(tweet, myComment);
 }
 
-// 6. AI 在详情页的回复逻辑
 async function triggerDetailAiReply(tweet, userComment) {
-    const char = contacts.find(c => c.id === tweet.authorId);
-    if (!char) return;
-
-    // 模拟 AI 正在输入... (可以在界面加个 Loading 效果)
     const btn = document.querySelector('.x-detail-send-btn');
     btn.innerText = "对方正在输入...";
 
-    // 构造 Prompt：让 AI 知道这是楼中楼
-    let context = `你发了一条推文："${tweet.content}"\n`;
+    // 判断回复者身份
+    let systemPrompt = "";
+    let authorName = "";
     
-    if (userComment.replyToName) {
-        context += `用户 "${userComment.name}" 回复了评论区里的 "${userComment.replyToName}" 说："${userComment.content}"\n`;
-        context += `(这是一个楼中楼讨论)`;
+    if (tweet.isNPC && !tweet.isRepost && !tweet.isQuote) {
+        // 路人推：路人也要回你
+        authorName = tweet.npcName;
+        systemPrompt = `你现在扮演推特上的路人 "${authorName}"。
+        你发了推文："${tweet.content}"
+        有人回复你："${userComment.content}"
+        请回复他。语气随意、真实。不要带引号。`;
     } else {
-        context += `用户 "${userComment.name}" 评论了你的推文说："${userComment.content}"\n`;
+        // 角色推
+        let charId = tweet.authorId;
+        if(tweet.isRepost || tweet.isQuote) charId = tweet.sourceTweet.authorId;
+        
+        const char = contacts.find(c => c.id === charId);
+        if(char) {
+            authorName = char.name;
+            systemPrompt = `你现在扮演 "${char.name}"。人设：${char.systemPrompt}。
+            你发了条推文："${tweet.content}"。
+            ${userComment.replyToName ? `(这是一个楼中楼回复，回复给 ${userComment.replyToName})` : ""}
+            有人评论："${userComment.content}"。
+            请回复。`;
+        }
     }
-
-    const prompt = `
-    你现在扮演 "${char.name}"。
-    ${context}
     
-    请以 "${char.name}" 的口吻回复用户。
-    要求：简短、口语化、像推特互动。不要带引号。
-    `;
+    if(!systemPrompt) { btn.innerText="回复"; return; }
 
     try {
         const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
@@ -4508,95 +4450,78 @@ async function triggerDetailAiReply(tweet, userComment) {
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
                 model: globalConfig.model,
-                messages: [{ role: "user", content: prompt }]
+                messages: [{ role: "user", content: systemPrompt }]
             })
         });
-
         const data = await res.json();
         const replyText = data.choices[0].message.content;
 
-        // AI 回复对象
+        // 确定头像
+        let replyAvatar = "";
+        if(tweet.isNPC) replyAvatar = tweet.npcAvatar;
+        else {
+            const c = contacts.find(c => c.id === tweet.authorId);
+            replyAvatar = c ? c.avatar : "";
+        }
+
         const aiReply = {
             id: 'cmt_ai_' + Date.now(),
-            authorId: char.id,
-            name: char.name,
-            handle: "@" + char.id.substring(0,8),
-            avatar: char.avatar,
-            content: replyText,
-            timestamp: Date.now(),
-            replyToName: userComment.name, // AI 回复用户
-            replyToId: userComment.id
+            name: authorName, handle: "@" + authorName, avatar: replyAvatar,
+            content: replyText, timestamp: Date.now(),
+            replyToName: userComment.name, replyToId: userComment.id
         };
 
         tweet.comments.push(aiReply);
         tweet.stats.replies++;
         saveXData();
 
-        // 刷新界面
         if (currentDetailTweetId === tweet.id) {
             renderDetailComments(tweet);
             const feed = document.getElementById('x-detail-container');
             feed.scrollTop = feed.scrollHeight;
         }
-
-    } catch (e) {
-        console.error("AI 回复失败:", e);
-    } finally {
-        btn.innerText = "回复";
-    }
+    } catch (e) { console.error(e); } 
+    finally { btn.innerText = "回复"; }
 }
-        // ==========================================
-// --- X 个人资料与认证系统 ---
-// ==========================================
 
-// 1. 打开个人主页
+// ----------------------------
+// 6. 个人主页 & 认证
+// ----------------------------
 function openUserProfile() {
     const p = xData.user;
-    
-    // 填充数据
-    document.getElementById('x-profile-banner').style.backgroundImage = `url(${p.banner || 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=1000&q=80'})`;
+    document.getElementById('x-profile-banner').style.backgroundImage = `url(${p.banner})`;
     document.getElementById('x-profile-avatar').src = p.avatar;
     document.getElementById('x-profile-name').innerText = p.name;
     document.getElementById('x-profile-handle').innerText = p.handle;
-    document.getElementById('x-profile-bio').innerText = p.bio || "这个人很懒，什么都没写。";
-    document.getElementById('x-profile-following').innerText = p.stats?.following || "120";
-    document.getElementById('x-profile-followers').innerText = p.stats?.followers || "45";
+    document.getElementById('x-profile-bio').innerText = p.bio || "这个人很懒。";
+    document.getElementById('x-profile-following').innerText = p.stats.following;
+    document.getElementById('x-profile-followers').innerText = p.stats.followers;
     
-    // 填充自定义标签/位置
     if(p.location) {
         document.getElementById('x-profile-location-box').style.display = 'inline';
         document.getElementById('x-profile-location').innerText = p.location;
-    } else {
-        document.getElementById('x-profile-location-box').style.display = 'none';
-    }
+    } else document.getElementById('x-profile-location-box').style.display = 'none';
 
-    // 渲染认证标
-    const badgeContainer = document.getElementById('x-profile-badge');
-    badgeContainer.innerHTML = getBadgeSVG(p.badgeType);
-
-    // 显示页面
+    document.getElementById('x-profile-badge').innerHTML = getBadgeSVG(p.badgeType);
+    
+    loadUserProfileTweets(); 
     document.getElementById('page-x-profile').classList.add('active');
 }
 
-function closeUserProfile() {
-    document.getElementById('page-x-profile').classList.remove('active');
-}
+function closeUserProfile() { document.getElementById('page-x-profile').classList.remove('active'); }
 
-// 2. 打开编辑弹窗
 function openEditProfile() {
     const p = xData.user;
-    
     document.getElementById('edit-x-banner').value = p.banner || "";
     document.getElementById('edit-x-avatar').value = p.avatar || "";
     document.getElementById('edit-x-name').value = p.name;
     document.getElementById('edit-x-handle').value = p.handle;
     document.getElementById('edit-x-bio').value = p.bio || "";
     document.getElementById('edit-x-location').value = p.location || "";
-    document.getElementById('edit-x-following').value = p.stats?.following || 120;
-    document.getElementById('edit-x-followers').value = p.stats?.followers || 45;
+    document.getElementById('edit-x-following').value = p.stats.following;
+    document.getElementById('edit-x-followers').value = p.stats.followers;
     document.getElementById('edit-x-badge-type').value = p.badgeType || "none";
     
-    // 填充情侣选择下拉框
     const partnerSelect = document.getElementById('edit-x-partner');
     partnerSelect.innerHTML = '<option value="">-- 无 --</option>';
     contacts.forEach(c => {
@@ -4611,78 +4536,91 @@ function openEditProfile() {
     openModal('modal-x-edit');
 }
 
-// 3. 保存个人资料
 function saveUserProfile() {
     const p = xData.user;
-    
     p.banner = document.getElementById('edit-x-banner').value;
     p.avatar = document.getElementById('edit-x-avatar').value;
     p.name = document.getElementById('edit-x-name').value;
     p.handle = document.getElementById('edit-x-handle').value;
     p.bio = document.getElementById('edit-x-bio').value;
     p.location = document.getElementById('edit-x-location').value;
-    
-    // 确保 stats 对象存在
-    if(!p.stats) p.stats = {};
     p.stats.following = document.getElementById('edit-x-following').value;
     p.stats.followers = document.getElementById('edit-x-followers').value;
-    
     p.badgeType = document.getElementById('edit-x-badge-type').value;
     p.partnerId = document.getElementById('edit-x-partner').value;
 
     saveXData();
     closeModal('modal-x-edit');
-    
-    // 刷新显示
-    openUserProfile(); // 刷新个人页
-    
-    // 刷新首页推文里的头像和认证标
+    openUserProfile(); 
     document.getElementById('x-current-user-avatar').src = p.avatar;
     renderXFeed(); 
 }
 
-// 4. 切换情侣下拉框显示
 function togglePartnerSelect() {
     const type = document.getElementById('edit-x-badge-type').value;
     const group = document.getElementById('x-partner-select-group');
-    // 只有情侣、已婚才显示绑定对象
-    if(type === 'couple' || type === 'married') {
-        group.style.display = 'block';
-    } else {
+    if(type === 'couple' || type === 'married') group.style.display = 'block';
+    else {
         group.style.display = 'none';
-        document.getElementById('edit-x-partner').value = ""; // 清空
+        document.getElementById('edit-x-partner').value = "";
     }
 }
 
-// 5. 获取徽章 SVG 的辅助函数
 function getBadgeSVG(type) {
     if (!type || type === 'none') return '';
-    
-    let path = '';
-    let className = '';
-    
-    if (type === 'blue') { // 蓝勾
-        path = '<path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334l-4.334 6.5c-.145.217-.382.334-.625.334-.143 0-.288-.04-.416-.126l-2.5-1.668c-.326-.217-.413-.656-.196-.982.217-.326.656-.414.982-.196l1.875 1.25 3.75-5.625c.22-.33.66-.418.99-.196.33.22.418.66.196.99z"></path>';
-        className = 'badge-blue';
-    } else if (type === 'gold') { // 金勾
-        path = '<path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.27 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34zm-11.71 4.2L6.8 12.46l1.41-1.42 2.26 2.26 4.8-5.23 1.47 1.36-6.2 6.77z"></path>';
-        className = 'badge-gold';
-    } else if (type === 'couple') { // 情侣 (心形)
-        path = '<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>';
-        className = 'badge-white';
-    } else if (type === 'married') { // 已婚 (圆环)
-        path = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"></path>';
-        className = 'badge-white';
-    } else if (type === 'vip') { // VIP (菱形)
-        path = '<path d="M12 2L2 12l10 10 10-10L12 2z"></path>';
-        className = 'badge-white';
-    }
+    let path = '', className = '';
+    if (type === 'blue') { path = '<path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334l-4.334 6.5c-.145.217-.382.334-.625.334-.143 0-.288-.04-.416-.126l-2.5-1.668c-.326-.217-.413-.656-.196-.982.217-.326.656-.414.982-.196l1.875 1.25 3.75-5.625c.22-.33.66-.418.99-.196.33.22.418.66.196.99z"></path>'; className = 'badge-blue'; }
+    else if (type === 'gold') { path = '<path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.27 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34zm-11.71 4.2L6.8 12.46l1.41-1.42 2.26 2.26 4.8-5.23 1.47 1.36-6.2 6.77z"></path>'; className = 'badge-gold'; }
+    else if (type === 'couple') { path = '<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>'; className = 'badge-white'; }
+    else if (type === 'married') { path = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"></path>'; className = 'badge-white'; }
+    else if (type === 'vip') { path = '<path d="M12 2L2 12l10 10 10-10L12 2z"></path>'; className = 'badge-white'; }
     
     return `<svg viewBox="0 0 24 24" class="${className}" style="width:18px; height:18px; margin-left:4px;">${path}</svg>`;
+}
+
+function shareToDM(tweetId) {
+    const tweet = xData.tweets.find(t => t.id === tweetId);
+    if (!tweet) return;
+    
+    let targetCharId = null;
+    
+    if (!tweet.isNPC && tweet.authorId !== 'user') {
+        targetCharId = tweet.authorId;
+    } else if (tweet.isRepost || tweet.isQuote) {
+        if (!tweet.sourceTweet.isNPC && tweet.sourceTweet.authorId !== 'user') {
+            targetCharId = tweet.sourceTweet.authorId;
+        }
+    }
+
+    if (targetCharId) {
+        const char = contacts.find(c => c.id === targetCharId);
+        if (char) {
+            const contextMsg = `[系统提示: 用户通过 X App 分享了推文: "${tweet.isQuote ? tweet.quoteContent : tweet.content}"。]`;
+            activeContactId = char.id;
+            navigateTo('page-chat');
+            setTimeout(() => {
+               document.getElementById('userInput').value = `分享推文：${tweet.content.substring(0, 20)}...`;
+            }, 300);
+        }
+    } else {
+        alert("只能私信已绑定的角色哦（NPC暂不支持私信）");
+    }
+}
+
+function updateXBadge() {
+    const count = xData.notifications.length; 
+    const badge = document.getElementById('x-notif-badge');
+    if(badge && count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'block';
+    } else if(badge) {
+        badge.style.display = 'none';
+    }
 }
     </script>
 </body>
 </html>
+
 
 
 
