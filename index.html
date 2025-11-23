@@ -544,6 +544,52 @@
     padding: 8px 16px; font-weight: bold; cursor: pointer;
 }
 .x-detail-send-btn:active { opacity: 0.8; }
+        /* --- X 个人主页样式 --- */
+.x-profile-header { position: absolute; top: 0; left: 0; width: 100%; height: 50px; z-index: 10; }
+.x-header-back-circle {
+    margin: 10px; width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(0,0,0,0.6); border: none; color: #fff; font-size: 20px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.x-profile-banner {
+    width: 100%; height: 150px; background: #333; background-size: cover; background-position: center;
+}
+.x-profile-info { padding: 12px 16px; position: relative; }
+.x-profile-top-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: -45px; margin-bottom: 10px; }
+.x-profile-avatar {
+    width: 80px; height: 80px; border-radius: 50%; border: 4px solid #000; object-fit: cover;
+}
+.x-edit-profile-btn {
+    background: none; border: 1px solid #536471; color: #fff;
+    border-radius: 20px; padding: 6px 15px; font-weight: bold; font-size: 14px;
+}
+.x-profile-name-box { display: flex; align-items: center; gap: 4px; }
+.x-profile-name { font-size: 20px; font-weight: 800; color: #e7e9ea; }
+.x-profile-handle { color: #71767b; font-size: 15px; margin-bottom: 10px; }
+.x-profile-bio { font-size: 15px; color: #e7e9ea; margin-bottom: 10px; line-height: 1.4; }
+.x-profile-meta { display: flex; gap: 15px; color: #71767b; font-size: 14px; margin-bottom: 10px; }
+.x-profile-stats { display: flex; gap: 20px; font-size: 14px; }
+.x-stat-num { color: #e7e9ea; font-weight: 700; }
+.x-stat-label { color: #71767b; }
+
+/* 编辑弹窗样式 */
+.x-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px; border-bottom: 1px solid #2f3336; background: #000;
+}
+.x-input-group { margin-bottom: 15px; }
+.x-input-group label { display: block; color: #71767b; font-size: 13px; margin-bottom: 5px; }
+.x-input {
+    width: 100%; background: #202327; border: 1px solid #333; border-radius: 4px;
+    padding: 8px; color: #fff; font-size: 16px; outline: none;
+}
+.x-input:focus { border-color: #1d9bf0; }
+.x-flex-row { display: flex; gap: 10px; }
+
+/* 认证徽章颜色 */
+.badge-blue { fill: #1d9bf0; }
+.badge-gold { fill: #ffd700; }
+.badge-white { fill: #fff; } /* 心形、圆环、菱形 */
     </style>
 </head>
 <body>
@@ -1013,10 +1059,10 @@
         <button class="x-header-back" onclick="goHome()">‹</button>
         
         <!-- 中间：当前用户头像 -->
-        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" class="x-header-center-avatar" id="x-current-user-avatar">
+        <img src="" class="x-header-center-avatar" id="x-current-user-avatar" onclick="openUserProfile()" style="cursor:pointer;">
         
         <!-- 右边：星星图标 (保留装饰) -->
-        <svg viewBox="0 0 24 24" class="x-header-right"><path d="M22.7 10.75l-1 .05c.05-.33.08-.67.08-1 0-3.48-2.72-6.3-6.18-6.3-2.25 0-4.3 1.22-5.4 3.2-.36.66-.6 1.37-.7 2.1-1.1-.6-2.3-1-3.5-1-3.87 0-7 3.13-7 7s3.13 7 7 7c3.5 0 6.4-2.6 6.9-6 .5.6 1.2 1 2.1 1 1.66 0 3-1.34 3-3 0-.6-.2-1.13-.5-1.6.5-.5 1.3-.8 2.2-.8 1.66 0 3 1.34 3 3 0 1.07-.6 2-1.5 2.5v2.14c2 .6 3.5 2.4 3.5 4.6 0 2.5-2.24 4.5-5 4.5H1c-.55 0-1-.45-1-1s.45-1 1-1h16.5c1.66 0 3-1.1 3-2.5s-1.34-2.5-3-2.5H14v-2h.18c.55 0 1.07-.13 1.54-.36.8.5 1.7.8 2.8.8 2.76 0 5-2.24 5-5 0-1.5-.7-2.8-1.8-3.7z"></path></svg>
+        <svg viewBox="0 0 24 24" class="x-header-right" onclick="triggerPullToRefresh()" style="cursor:pointer;"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"></path></svg>
     </div>
 
     <div class="x-refresh-indicator" id="x-refresh-spinner">↻</div>
@@ -1078,6 +1124,114 @@
     <div class="x-detail-footer">
         <input type="text" id="x-detail-input" class="x-detail-input" placeholder="发布你的回复">
         <button class="x-detail-send-btn" onclick="sendDetailReply()">回复</button>
+    </div>
+</div>
+        <!-- ============ 13. X 个人主页 (Profile) ============ -->
+<div class="page" id="page-x-profile" style="background:#000; z-index: 55;">
+    <!-- 顶部透明导航 -->
+    <div class="x-profile-header">
+        <button class="x-header-back-circle" onclick="closeUserProfile()">‹</button>
+    </div>
+
+    <!-- 封面图 -->
+    <div class="x-profile-banner" id="x-profile-banner"></div>
+
+    <!-- 资料区域 -->
+    <div class="x-profile-info">
+        <div class="x-profile-top-row">
+            <img src="" class="x-profile-avatar" id="x-profile-avatar">
+            <button class="x-edit-profile-btn" onclick="openEditProfile()">编辑个人资料</button>
+        </div>
+        
+        <div class="x-profile-name-box">
+            <span class="x-profile-name" id="x-profile-name">名称</span>
+            <span id="x-profile-badge"></span> <!-- 认证标 -->
+        </div>
+        <div class="x-profile-handle" id="x-profile-handle">@username</div>
+        
+        <div class="x-profile-bio" id="x-profile-bio">简介...</div>
+        
+        <div class="x-profile-meta">
+            <span class="x-meta-item">📅 <span id="x-profile-join">2023年 加入</span></span>
+            <span class="x-meta-item" id="x-profile-location-box" style="display:none">📍 <span id="x-profile-location"></span></span>
+        </div>
+
+        <div class="x-profile-stats">
+            <span class="x-stat-num" id="x-profile-following">0</span> <span class="x-stat-label">正在关注</span>
+            <span class="x-stat-num" id="x-profile-followers">0</span> <span class="x-stat-label">关注者</span>
+        </div>
+    </div>
+    
+    <!-- 简单的推文列表占位 -->
+    <div style="border-top:1px solid #2f3336; padding:20px; color:#71767b; text-align:center;">
+        推文
+    </div>
+</div>
+
+<!-- ============ 14. 编辑资料弹窗 ============ -->
+<div class="modal-overlay" id="modal-x-edit">
+    <div class="modal-box" style="height:80%; top:10%; background:#000; border:1px solid #2f3336;">
+        <div class="x-modal-header">
+            <button onclick="closeModal('modal-x-edit')">取消</button>
+            <span style="font-weight:bold; color:#fff;">编辑资料</span>
+            <button style="color:#fff;" onclick="saveUserProfile()">保存</button>
+        </div>
+        <div class="modal-body" style="background:#000; padding:15px;">
+            <div class="x-input-group">
+                <label>背景图 URL</label>
+                <input type="text" id="edit-x-banner" class="x-input">
+            </div>
+            <div class="x-input-group">
+                <label>头像 URL</label>
+                <input type="text" id="edit-x-avatar" class="x-input">
+            </div>
+            <div class="x-input-group">
+                <label>名称</label>
+                <input type="text" id="edit-x-name" class="x-input">
+            </div>
+            <div class="x-input-group">
+                <label>用户名 (@)</label>
+                <input type="text" id="edit-x-handle" class="x-input">
+            </div>
+            <div class="x-input-group">
+                <label>简介 (Bio)</label>
+                <textarea id="edit-x-bio" class="x-input" rows="3"></textarea>
+            </div>
+            <div class="x-input-group">
+                <label>位置/标签</label>
+                <input type="text" id="edit-x-location" class="x-input">
+            </div>
+            <div class="x-flex-row">
+                <div class="x-input-group" style="flex:1">
+                    <label>正在关注</label>
+                    <input type="number" id="edit-x-following" class="x-input">
+                </div>
+                <div class="x-input-group" style="flex:1">
+                    <label>关注者</label>
+                    <input type="number" id="edit-x-followers" class="x-input">
+                </div>
+            </div>
+            
+            <div class="x-input-group">
+                <label>认证类型</label>
+                <select id="edit-x-badge-type" class="x-input" onchange="togglePartnerSelect()">
+                    <option value="none">无认证</option>
+                    <option value="blue">已认证 (蓝勾)</option>
+                    <option value="gold">官方认证 (金勾)</option>
+                    <option value="couple">情侣认证 (心形)</option>
+                    <option value="married">已婚认证 (圆环)</option>
+                    <option value="vip">VIP (菱形)</option>
+                </select>
+            </div>
+
+            <!-- 只有选情侣/已婚时显示 -->
+            <div class="x-input-group" id="x-partner-select-group" style="display:none;">
+                <label>绑定对象 (只有选中的角色会有标记)</label>
+                <select id="edit-x-partner" class="x-input">
+                    <option value="">-- 无 --</option>
+                </select>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -3574,7 +3728,7 @@ function renderXFeed() {
     });
 }
 
-// 构建单条推文的 DOM (含 SVG 图标)
+// 构建单条推文的 DOM (含 SVG 图标 + 认证标支持)
 function buildTweetElement(tweet) {
     // 获取作者信息
     let name, handle, avatar;
@@ -3603,16 +3757,12 @@ function buildTweetElement(tweet) {
 
     const div = document.createElement('div');
     div.className = 'x-tweet';
-    // 【修改了这里】点击逻辑
+    
+    // 点击推文进入详情页（仅限非NPC或转发推文）
     div.onclick = (e) => {
-        // 如果是纯路人NPC发的推(且不是被引用转发的)，不支持点进去(偷懒)，或者你可以允许点进去看空评论区
-        // 你的需求是：路人/粉丝的推文不用点进评论区
         if (tweet.isNPC && !tweet.isRetweet) {
-            // 也可以选择 return; 什么都不做
-            // 或者加个抖动动画提示不可点
             return; 
         }
-        // 角色或用户发的，或者是转发的，进入详情页
         openTweetDetail(tweet.id);
     };
 
@@ -3624,12 +3774,24 @@ function buildTweetElement(tweet) {
     else if (timeDiff < 86400) timeStr = Math.floor(timeDiff/3600) + "时";
     else timeStr = Math.floor(timeDiff/86400) + "天";
 
-    // 这里的 SVG 图标和 CSS 对应
+    // 1. 先确定这一条推文应该显示什么认证标
+    let badgeType = 'none';
+    if (tweet.authorId === 'user') {
+        badgeType = xData.user.badgeType || 'none';
+    } else if (tweet.authorId === xData.user.partnerId) {
+        // 如果发推的是绑定的情侣对象，且用户自己也是情侣/已婚，则对方也显示
+        if (xData.user.badgeType === 'couple' || xData.user.badgeType === 'married') {
+            badgeType = xData.user.badgeType;
+        }
+    }
+
+    // 2. 构建 HTML
     div.innerHTML = `
         <img src="${avatar}" class="x-tweet-avatar">
         <div class="x-tweet-content">
             <div class="x-tweet-header">
                 <span class="x-name">${name}</span>
+                ${getBadgeSVG(badgeType)} <!-- 插入认证标 -->
                 <span class="x-handle">${handle}</span>
                 <span class="x-time">· ${timeStr}</span>
             </div>
@@ -4027,8 +4189,7 @@ function closeTweetDetail() {
     currentDetailTweetId = null;
     renderXFeed(); // 刷新一下主页的数据(比如评论数变化)
 }
-
-// 3. 渲染详情页的主推文
+        // 3. 渲染详情页的主推文
 function renderDetailMainTweet(tweet) {
     const container = document.getElementById('x-detail-main-tweet');
     
@@ -4068,7 +4229,6 @@ function renderDetailMainTweet(tweet) {
         </div>
     `;
 }
-
 // 4. 渲染评论列表
 function renderDetailComments(tweet) {
     const list = document.getElementById('x-detail-comments-list');
@@ -4236,9 +4396,145 @@ async function triggerDetailAiReply(tweet, userComment) {
         btn.innerText = "回复";
     }
 }
+        // ==========================================
+// --- X 个人资料与认证系统 ---
+// ==========================================
+
+// 1. 打开个人主页
+function openUserProfile() {
+    const p = xData.user;
+    
+    // 填充数据
+    document.getElementById('x-profile-banner').style.backgroundImage = `url(${p.banner || 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?auto=format&fit=crop&w=1000&q=80'})`;
+    document.getElementById('x-profile-avatar').src = p.avatar;
+    document.getElementById('x-profile-name').innerText = p.name;
+    document.getElementById('x-profile-handle').innerText = p.handle;
+    document.getElementById('x-profile-bio').innerText = p.bio || "这个人很懒，什么都没写。";
+    document.getElementById('x-profile-following').innerText = p.stats?.following || "120";
+    document.getElementById('x-profile-followers').innerText = p.stats?.followers || "45";
+    
+    // 填充自定义标签/位置
+    if(p.location) {
+        document.getElementById('x-profile-location-box').style.display = 'inline';
+        document.getElementById('x-profile-location').innerText = p.location;
+    } else {
+        document.getElementById('x-profile-location-box').style.display = 'none';
+    }
+
+    // 渲染认证标
+    const badgeContainer = document.getElementById('x-profile-badge');
+    badgeContainer.innerHTML = getBadgeSVG(p.badgeType);
+
+    // 显示页面
+    document.getElementById('page-x-profile').classList.add('active');
+}
+
+function closeUserProfile() {
+    document.getElementById('page-x-profile').classList.remove('active');
+}
+
+// 2. 打开编辑弹窗
+function openEditProfile() {
+    const p = xData.user;
+    
+    document.getElementById('edit-x-banner').value = p.banner || "";
+    document.getElementById('edit-x-avatar').value = p.avatar || "";
+    document.getElementById('edit-x-name').value = p.name;
+    document.getElementById('edit-x-handle').value = p.handle;
+    document.getElementById('edit-x-bio').value = p.bio || "";
+    document.getElementById('edit-x-location').value = p.location || "";
+    document.getElementById('edit-x-following').value = p.stats?.following || 120;
+    document.getElementById('edit-x-followers').value = p.stats?.followers || 45;
+    document.getElementById('edit-x-badge-type').value = p.badgeType || "none";
+    
+    // 填充情侣选择下拉框
+    const partnerSelect = document.getElementById('edit-x-partner');
+    partnerSelect.innerHTML = '<option value="">-- 无 --</option>';
+    contacts.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c.id;
+        option.text = c.name;
+        if(p.partnerId === c.id) option.selected = true;
+        partnerSelect.appendChild(option);
+    });
+
+    togglePartnerSelect();
+    openModal('modal-x-edit');
+}
+
+// 3. 保存个人资料
+function saveUserProfile() {
+    const p = xData.user;
+    
+    p.banner = document.getElementById('edit-x-banner').value;
+    p.avatar = document.getElementById('edit-x-avatar').value;
+    p.name = document.getElementById('edit-x-name').value;
+    p.handle = document.getElementById('edit-x-handle').value;
+    p.bio = document.getElementById('edit-x-bio').value;
+    p.location = document.getElementById('edit-x-location').value;
+    
+    // 确保 stats 对象存在
+    if(!p.stats) p.stats = {};
+    p.stats.following = document.getElementById('edit-x-following').value;
+    p.stats.followers = document.getElementById('edit-x-followers').value;
+    
+    p.badgeType = document.getElementById('edit-x-badge-type').value;
+    p.partnerId = document.getElementById('edit-x-partner').value;
+
+    saveXData();
+    closeModal('modal-x-edit');
+    
+    // 刷新显示
+    openUserProfile(); // 刷新个人页
+    
+    // 刷新首页推文里的头像和认证标
+    document.getElementById('x-current-user-avatar').src = p.avatar;
+    renderXFeed(); 
+}
+
+// 4. 切换情侣下拉框显示
+function togglePartnerSelect() {
+    const type = document.getElementById('edit-x-badge-type').value;
+    const group = document.getElementById('x-partner-select-group');
+    // 只有情侣、已婚才显示绑定对象
+    if(type === 'couple' || type === 'married') {
+        group.style.display = 'block';
+    } else {
+        group.style.display = 'none';
+        document.getElementById('edit-x-partner').value = ""; // 清空
+    }
+}
+
+// 5. 获取徽章 SVG 的辅助函数
+function getBadgeSVG(type) {
+    if (!type || type === 'none') return '';
+    
+    let path = '';
+    let className = '';
+    
+    if (type === 'blue') { // 蓝勾
+        path = '<path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334l-4.334 6.5c-.145.217-.382.334-.625.334-.143 0-.288-.04-.416-.126l-2.5-1.668c-.326-.217-.413-.656-.196-.982.217-.326.656-.414.982-.196l1.875 1.25 3.75-5.625c.22-.33.66-.418.99-.196.33.22.418.66.196.99z"></path>';
+        className = 'badge-blue';
+    } else if (type === 'gold') { // 金勾
+        path = '<path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.27 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34zm-11.71 4.2L6.8 12.46l1.41-1.42 2.26 2.26 4.8-5.23 1.47 1.36-6.2 6.77z"></path>';
+        className = 'badge-gold';
+    } else if (type === 'couple') { // 情侣 (心形)
+        path = '<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>';
+        className = 'badge-white';
+    } else if (type === 'married') { // 已婚 (圆环)
+        path = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"></path>';
+        className = 'badge-white';
+    } else if (type === 'vip') { // VIP (菱形)
+        path = '<path d="M12 2L2 12l10 10 10-10L12 2z"></path>';
+        className = 'badge-white';
+    }
+    
+    return `<svg viewBox="0 0 24 24" class="${className}" style="width:18px; height:18px; margin-left:4px;">${path}</svg>`;
+}
     </script>
 </body>
 </html>
+
 
 
 
