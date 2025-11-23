@@ -590,6 +590,42 @@
 .badge-blue { fill: #1d9bf0; }
 .badge-gold { fill: #ffd700; }
 .badge-white { fill: #fff; } /* 心形、圆环、菱形 */
+        /* --- 强制修正 X 个人主页背景为纯黑 --- */
+#page-x-profile {
+    background-color: #000000 !important; /* 强制覆盖默认白色背景 */
+    color: #e7e9ea;
+}
+
+/* 修正编辑弹窗的背景 */
+#modal-x-edit .modal-box {
+    background-color: #000000 !important;
+    border: 1px solid #2f3336; /* 加个深灰色边框，更有质感 */
+}
+
+/* 修正弹窗头部和内容区 */
+.x-modal-header {
+    background-color: #000000 !important;
+    border-bottom: 1px solid #2f3336;
+}
+.modal-body {
+    background-color: #000000 !important;
+}
+
+/* 确保输入框也是黑底白字 */
+.x-input {
+    background-color: #202327 !important;
+    color: #ffffff !important;
+    border: 1px solid #333 !important;
+}
+.x-input:focus {
+    border-color: #1d9bf0 !important;
+}
+
+/* 下拉选择框的选项背景 */
+select.x-input option {
+    background-color: #000;
+    color: #fff;
+}
     </style>
 </head>
 <body>
@@ -4534,6 +4570,7 @@ function getBadgeSVG(type) {
     </script>
 </body>
 </html>
+
 
 
 
