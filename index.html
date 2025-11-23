@@ -503,6 +503,47 @@
 .x-fab:active { transform: scale(0.9); }
 /* 调整图标大小和位置，让它看起来更像原版 */
 .x-fab-icon { width: 26px; height: 26px; fill: white; margin-left: -2px; margin-top: 2px; }
+        /* --- X 详情页专属样式 --- */
+#page-x-detail { z-index: 60; } /* 盖在主页上面 */
+
+/* 详情页的主推文样式 (比列表页更大) */
+.x-detail-tweet { padding: 16px; border-bottom: 1px solid #2f3336; }
+.x-detail-user { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+.x-detail-avatar { width: 50px; height: 50px; border-radius: 50%; }
+.x-detail-info { display: flex; flex-direction: column; }
+.x-detail-name { font-size: 16px; font-weight: 800; color: #e7e9ea; }
+.x-detail-handle { font-size: 15px; color: #71767b; }
+.x-detail-text { font-size: 20px; line-height: 1.4; color: #e7e9ea; margin-bottom: 15px; }
+.x-detail-meta { color: #71767b; font-size: 15px; padding: 15px 0; border-top: 1px solid #2f3336; border-bottom: 1px solid #2f3336; }
+
+/* 评论列表样式 */
+.x-comment-item { 
+    padding: 12px 16px; border-bottom: 1px solid #2f3336; display: flex; gap: 12px; 
+}
+.x-comment-content { flex: 1; }
+.x-comment-header { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;}
+.x-comment-name { font-weight: 700; color: #e7e9ea; margin-right: 5px; }
+.x-comment-handle { color: #71767b; }
+.x-comment-text { font-size: 15px; color: #e7e9ea; line-height: 1.4; }
+.x-comment-reply-tag { color: #1d9bf0; font-size: 13px; margin-bottom: 2px; }
+
+/* 底部回复栏 */
+.x-detail-footer {
+    position: absolute; bottom: 0; left: 0; width: 100%;
+    height: 60px; background: #000; border-top: 1px solid #2f3336;
+    display: flex; align-items: center; padding: 0 15px; gap: 10px;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 100;
+}
+.x-detail-input {
+    flex: 1; background: #202327; border: none; border-radius: 20px;
+    padding: 10px 15px; color: #fff; font-size: 16px; outline: none;
+}
+.x-detail-send-btn {
+    background: #1d9bf0; color: #fff; border: none; border-radius: 20px;
+    padding: 8px 16px; font-weight: bold; cursor: pointer;
+}
+.x-detail-send-btn:active { opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -1008,6 +1049,35 @@
         <button class="x-tab-btn" onclick="switchXTab('dm')">
             <svg viewBox="0 0 24 24" class="x-tab-icon"><path d="M1.998 5.5c0-1.381 1.119-2.5 2.5-2.5h15c1.381 0 2.5 1.119 2.5 2.5v13c0 1.381-1.119 2.5-2.5 2.5h-15c-1.381 0-2.5-1.119-2.5-2.5v-13zm2.5-.5c-.276 0-.5.224-.5.5v2.764l8 3.638 8-3.636V5.5c0-.276-.224-.5-.5-.5h-15zm15.5 5.463l-8 3.636-8-3.638V18.5c0 .276.224.5.5.5h15c.276 0 .5-.224.5-.5v-8.037z"></path></svg>
         </button>
+    </div>
+</div>
+        <!-- ============ 12. X 推文详情页 (评论区) ============ -->
+<div class="page" id="page-x-detail" style="background:#000;">
+    <!-- 详情页顶部 -->
+    <div class="x-header">
+        <button class="x-header-back" onclick="closeTweetDetail()">‹</button>
+        <div style="color:#fff; font-weight:700; font-size:17px;">帖子</div>
+        <div style="width:32px;"></div> <!-- 占位 -->
+    </div>
+
+    <!-- 滚动区域：正文 + 评论列表 -->
+    <div class="x-feed" id="x-detail-container" style="margin-bottom: 60px;">
+        <!-- 1. 主推文 (JS动态插入) -->
+        <div id="x-detail-main-tweet"></div>
+        
+        <!-- 分割线 -->
+        <div style="border-bottom: 1px solid #2f3336; padding: 10px 16px; color:#e7e9ea; font-weight:bold; font-size:18px;">
+            回复
+        </div>
+
+        <!-- 2. 评论列表 (JS动态插入) -->
+        <div id="x-detail-comments-list"></div>
+    </div>
+
+    <!-- 底部固定回复栏 -->
+    <div class="x-detail-footer">
+        <input type="text" id="x-detail-input" class="x-detail-input" placeholder="发布你的回复">
+        <button class="x-detail-send-btn" onclick="sendDetailReply()">回复</button>
     </div>
 </div>
 
@@ -3422,13 +3492,12 @@ function generateInitialTweets() {
     });
 }
 
-// 创建一条推文并保存
+// 更新后的 createTweet
 function createTweet(data) {
     const tweet = {
         id: 'tweet_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-        authorId: data.authorId, // 角色ID 或 "user" 或 "npc_id"
+        authorId: data.authorId, 
         isNPC: data.isNPC || false,
-        // 如果是 NPC，需要存储额外信息
         npcName: data.npcName,
         npcHandle: data.npcHandle,
         npcAvatar: data.npcAvatar,
@@ -3437,24 +3506,41 @@ function createTweet(data) {
         images: data.images || [],
         timestamp: data.timestamp || Date.now(),
         stats: {
-            likes: Math.floor(Math.random() * 50),
-            retweets: Math.floor(Math.random() * 10),
+            likes: Math.floor(Math.random() * 100), // 随机一点初始点赞
+            retweets: Math.floor(Math.random() * 20),
             replies: 0
         },
-        comments: [], // 评论数组
+        comments: [], 
         likedByMe: false
     };
     
-    // 如果要求生成路人评论 (6-8条) - 这里先生成假数据，下一步接 AI
-    if (!data.skipAutoComments) {
-        const commentCount = 6 + Math.floor(Math.random() * 3); // 6-8条
+    // 【核心修改】如果是 AI 生成的推文，直接使用 AI 生成的评论
+    if (data.aiComments && data.aiComments.length > 0) {
+        data.aiComments.forEach(cmt => {
+            tweet.comments.push({
+                id: 'cmt_' + Math.random().toString(36),
+                name: cmt.name, // AI 生成的路人名
+                handle: "@user_" + Math.floor(Math.random()*9999),
+                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`, // 随机头像
+                content: cmt.content,
+                timestamp: Date.now() - Math.random() * 60000 // 假装是几分钟前发的
+            });
+        });
+    } 
+    // 否则如果是手动发推且未跳过，生成纯假数据(保留原有逻辑)
+    else if (!data.skipAutoComments) {
+        const commentCount = 3 + Math.floor(Math.random() * 3);
         for(let i=0; i<commentCount; i++) {
             tweet.comments.push(generateFakeNPCComment());
         }
-        tweet.stats.replies = tweet.comments.length;
     }
 
-    xData.tweets.unshift(tweet); // 加到最前面
+    tweet.stats.replies = tweet.comments.length;
+
+    xData.tweets.unshift(tweet); 
+    // 限制推文数量，只保留最近 50 条，防止卡顿
+    if(xData.tweets.length > 50) xData.tweets.pop();
+    
     saveXData();
     return tweet;
 }
@@ -3517,11 +3603,18 @@ function buildTweetElement(tweet) {
 
     const div = document.createElement('div');
     div.className = 'x-tweet';
-    // 暂时逻辑：点击推文直接打开回复框，方便互动
+    // 【修改了这里】点击逻辑
     div.onclick = (e) => {
-        openReplyModal(tweet.id);
+        // 如果是纯路人NPC发的推(且不是被引用转发的)，不支持点进去(偷懒)，或者你可以允许点进去看空评论区
+        // 你的需求是：路人/粉丝的推文不用点进评论区
+        if (tweet.isNPC && !tweet.isRetweet) {
+            // 也可以选择 return; 什么都不做
+            // 或者加个抖动动画提示不可点
+            return; 
+        }
+        // 角色或用户发的，或者是转发的，进入详情页
+        openTweetDetail(tweet.id);
     };
-    // 注意：这只是为了现在能玩，等下一阶段接入AI后，我们会把这里改成进入真正的详情页
 
     // 时间格式化
     const timeDiff = Math.floor((Date.now() - tweet.timestamp) / 1000);
@@ -3587,12 +3680,20 @@ function handleRetweet(tweetId) {
     }
 }
 
-// 打开回复窗口（简单版）
+// 更新后的回复逻辑
 function openReplyModal(tweetId) {
     const tweet = xData.tweets.find(t => t.id === tweetId);
-    const replyContent = prompt(`回复给 ${tweet.isNPC ? tweet.npcName : 'Ta'}:`);
+    // 显示回复谁
+    let replyToName = tweet.isNPC ? tweet.npcName : 'Ta';
+    if (!tweet.isNPC && tweet.authorId !== 'user') {
+        const char = contacts.find(c => c.id === tweet.authorId);
+        if(char) replyToName = char.name;
+    }
+
+    const replyContent = prompt(`回复给 ${replyToName}:`);
+    
     if (replyContent) {
-        // 1. 添加用户的评论
+        // 1. 立即显示你的评论
         const myComment = {
             id: 'cmt_' + Date.now(),
             authorId: 'user',
@@ -3604,15 +3705,20 @@ function openReplyModal(tweetId) {
         };
         tweet.comments.push(myComment);
         tweet.stats.replies++;
-        
-        // 2. 触发 AI 回复 (模拟，下一步接 API)
-        setTimeout(() => {
-            alert("AI 正在思考如何回复你的评论..."); 
-            // 这里后续会调用 generateReply()
-        }, 1000);
-
         saveXData();
         renderXFeed();
+        
+        // 2. 如果是角色发的推文，触发 AI 回复
+        if (!tweet.isNPC && tweet.authorId !== 'user') {
+            // 给个小提示
+            const btn = document.querySelector(`[onclick="event.stopPropagation(); openReplyModal('${tweet.id}')"]`);
+            if(btn) btn.innerHTML = `<span class="x-icon">⏳</span> ...`; // 把评论图标变成沙漏
+
+            generateXReplyAI(tweet, replyContent).then(() => {
+                // 回复完成，刷新
+                renderXFeed();
+            });
+        }
     }
 }
 
@@ -3687,28 +3793,40 @@ function switchXTab(tab) {
     }
 }
 
-// 模拟下拉刷新 (触发 AI 生成)
+// 更新后的下拉刷新逻辑
 function triggerPullToRefresh() {
     const spinner = document.getElementById('x-refresh-spinner');
     if(spinner) spinner.style.display = 'block';
     
-    setTimeout(() => {
-        // 这里后续接 AI 生成逻辑
-        // generateAiTweetsBatch(); 
-        
-        // 暂时用假数据模拟
-        const randomChar = contacts[Math.floor(Math.random() * contacts.length)];
-        if(randomChar) {
-             createTweet({
-                authorId: randomChar.id,
-                content: `这是刷新出来的新推文！时间: ${new Date().toLocaleTimeString()}`,
-                isNPC: false
-            });
-        }
-        
+    // 1. 检查是否有角色
+    if (contacts.length === 0) {
+        alert("请先在【信息】App 中创建至少一个角色！");
         if(spinner) spinner.style.display = 'none';
-        renderXFeed();
-    }, 1500);
+        return;
+    }
+
+    // 2. 随机抽取一个角色来发推
+    const randomChar = contacts[Math.floor(Math.random() * contacts.length)];
+    
+    // 3. 调用 AI 生成 (异步)
+    // 这里我们不 await，而是让它在后台跑，稍微延迟一点转圈圈给用户反馈
+    generateXTweetAI(randomChar.id).then(() => {
+        // AI 生成完毕
+        if(spinner) spinner.style.display = 'none';
+        
+        // 播放一个简单的提示音效或者震动(可选)
+        if(navigator.vibrate) navigator.vibrate(50);
+        
+    }).catch(() => {
+        if(spinner) spinner.style.display = 'none';
+    });
+    
+    // 超时保护：如果 AI 15秒没反应，强制停止转圈
+    setTimeout(() => {
+        if(spinner && spinner.style.display === 'block') {
+            spinner.style.display = 'none';
+        }
+    }, 15000);
 }
 
 function updateXBadge() {
@@ -3724,9 +3842,404 @@ function updateXBadge() {
         }
     }
 }
+        // ==========================================
+// --- 第二阶段：X App 的 AI 大脑 ---
+// ==========================================
+
+// 1. 核心生成器：让角色发推文 (包含路人评论)
+// 1. 核心生成器：让角色发推文 (包含路人评论 + 记忆读取)
+async function generateXTweetAI(charId) {
+    // 找到角色数据
+    const char = contacts.find(c => c.id === charId);
+    if (!char) return;
+
+    if (!globalConfig.apiKey) {
+        alert("请先在【设置】App 中配置 API Key！");
+        return;
+    }
+
+    // --- 核心升级：构建记忆上下文 ---
+    let memoryContext = "";
+
+    // 1. 读取最近 10 条聊天记录
+    if (char.messages && char.messages.length > 0) {
+        const recentMsgs = char.messages.slice(-10).map(m => 
+            `${m.role === 'user' ? '用户' : '我'}: ${m.content}`
+        ).join('\n');
+        memoryContext += `\n【最近的聊天上下文(仅供灵感参考)】:\n${recentMsgs}\n`;
+    }
+
+    // 2. 读取最近 1 篇日记
+    if (char.diaries && char.diaries.length > 0) {
+        const lastDiary = char.diaries[char.diaries.length - 1];
+        memoryContext += `\n【最新的一篇日记(仅供灵感参考)】:\n${lastDiary}\n`;
+    }
+
+    // 构造提示词 (Prompt)
+    const prompt = `
+    你现在扮演 "${char.name}"。
+    人设设定：${char.systemPrompt}
+    当前时间：${new Date().toLocaleString()}
+
+    ${memoryContext}
+
+    请根据你的人设和当前心情，发布一条推特 (X)。
+    
+    【生成策略】：
+    1. 如果有【最近的聊天上下文】或【日记】，你可以隐晦地提及里面的内容（比如刚聊完很开心、或者日记里的感悟），让推文看起来像是在记录生活。
+    2. 如果没有上下文，就根据人设生成日常动态（吐槽、分享生活、照片描述等）。
+    3. 不要直接抄袭聊天记录，要转化为“推文风格”的感慨或记录。
+
+    同时，请伪造 6 到 8 条“路人/粉丝”对这条推文的评论。
+    评论要求：简短、真实、风格各异（有的膜拜，有的吐槽，有的玩梗，有的吃瓜）。
+
+    【必须返回纯 JSON 格式，不要包含 Markdown 代码块】：
+    {
+        "content": "推文内容",
+        "comments": [
+            {"name": "路人网名", "content": "评论内容"},
+            {"name": "粉丝ID", "content": "评论内容"},
+            ...
+        ]
+    }
+    `;
+
+    try {
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [
+                    { role: "system", content: "你是一个推特(X)模拟器后端，只负责输出 JSON 数据。" },
+                    { role: "user", content: prompt }
+                ],
+                temperature: 0.85 //稍微调高一点温度，让它更有创造力
+            })
+        });
+
+        const data = await res.json();
+        let aiText = data.choices[0].message.content;
+        
+        // 清理 Markdown 标记
+        aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        const result = JSON.parse(aiText);
+        
+        // 创建推文
+        createTweet({
+            authorId: char.id,
+            content: result.content,
+            isNPC: false,
+            aiComments: result.comments
+        });
+
+        // 刷新界面
+        renderXFeed();
+        const feed = document.getElementById('x-feed-container');
+        if(feed) feed.scrollTop = 0;
+
+    } catch (e) {
+        console.error("AI 发推失败:", e);
+        // 不弹窗打扰用户，只在控制台报错
+    }
+}
+
+// 2. 核心回复器：让 AI 回复你的评论
+async function generateXReplyAI(tweet, userComment) {
+    // 找到发推的角色
+    const char = contacts.find(c => c.id === tweet.authorId);
+    if (!char) return; // 如果是路人NPC发的推，暂时不回复，或者你可以写个通用回复逻辑
+
+    const prompt = `
+    你现在扮演 "${char.name}"。
+    你发了一条推文："${tweet.content}"
+    用户 "${xData.user.name}" 在下面评论说："${userComment}"
+    
+    请以 "${char.name}" 的口吻回复该用户。
+    要求：简短、符合人设、像社交网络的真实回复。不要带引号。
+    `;
+
+    try {
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
+
+        const data = await res.json();
+        const replyText = data.choices[0].message.content;
+
+        // 把 AI 的回复加进评论区
+        const aiReplyComment = {
+            id: 'cmt_ai_' + Date.now(),
+            authorId: char.id, // 标记为角色
+            name: char.name,
+            handle: "@" + char.id.substring(0,8),
+            avatar: char.avatar,
+            content: replyText,
+            timestamp: Date.now()
+        };
+
+        // 找到推文并插入回复
+        const targetTweet = xData.tweets.find(t => t.id === tweet.id);
+        if(targetTweet) {
+            targetTweet.comments.push(aiReplyComment);
+            targetTweet.stats.replies++;
+            saveXData();
+            renderXFeed();
+            // 这里可以加一个 Toast 提示 "收到新回复"
+        }
+
+    } catch (e) {
+        console.error("AI 回复失败:", e);
+    }
+}
+        // ==========================================
+// --- X 详情页与楼中楼逻辑 ---
+// ==========================================
+
+let currentDetailTweetId = null; // 当前正在查看的推文ID
+
+// 1. 打开推文详情页
+function openTweetDetail(tweetId) {
+    const tweet = xData.tweets.find(t => t.id === tweetId);
+    if (!tweet) return;
+
+    currentDetailTweetId = tweetId;
+    
+    // 切换页面
+    document.getElementById('page-x-detail').classList.add('active');
+    
+    // 渲染主推文
+    renderDetailMainTweet(tweet);
+    
+    // 渲染评论区
+    renderDetailComments(tweet);
+}
+
+// 2. 关闭详情页
+function closeTweetDetail() {
+    document.getElementById('page-x-detail').classList.remove('active');
+    currentDetailTweetId = null;
+    renderXFeed(); // 刷新一下主页的数据(比如评论数变化)
+}
+
+// 3. 渲染详情页的主推文
+function renderDetailMainTweet(tweet) {
+    const container = document.getElementById('x-detail-main-tweet');
+    
+    // 获取作者信息 (复用之前的逻辑或简化)
+    let name, handle, avatar;
+    if (tweet.authorId === 'user') {
+        name = xData.user.name; handle = xData.user.handle; avatar = xData.user.avatar;
+    } else if (tweet.isNPC) {
+        name = tweet.npcName; handle = tweet.npcHandle; avatar = tweet.npcAvatar;
+    } else {
+        const char = contacts.find(c => c.id === tweet.authorId);
+        if (char) { name = char.name; handle = "@" + char.id.substring(0, 8); avatar = char.avatar; }
+    }
+
+    // 时间
+    const date = new Date(tweet.timestamp);
+    const timeStr = date.toLocaleTimeString() + ' · ' + date.toLocaleDateString();
+
+    container.innerHTML = `
+        <div class="x-detail-tweet">
+            <div class="x-detail-user">
+                <img src="${avatar}" class="x-detail-avatar">
+                <div class="x-detail-info">
+                    <span class="x-detail-name">${name}</span>
+                    <span class="x-detail-handle">${handle}</span>
+                </div>
+            </div>
+            <div class="x-detail-text">${tweet.content}</div>
+            <div class="x-detail-meta">${timeStr}</div>
+            
+            <!-- 详情页的大号互动栏 -->
+            <div class="x-actions" style="max-width: 100%; justify-content: space-around; border-bottom:1px solid #2f3336; padding-bottom:10px;">
+                <button class="x-action-btn"><svg class="x-action-icon" viewBox="0 0 24 24"><path d="M1.751 10c0-4.42 3.584-8.005 8.005-8.005h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.005zm8.005-6.005c-3.317 0-6.005 2.69-6.005 6.005 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path></svg></button>
+                <button class="x-action-btn"><svg class="x-action-icon" viewBox="0 0 24 24"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></svg></button>
+                <button class="x-action-btn ${tweet.likedByMe?'liked':''}"><svg class="x-action-icon" viewBox="0 0 24 24"><path d="${tweet.likedByMe ? 'M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z' : 'M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z'}"></path></svg></button>
+            </div>
+        </div>
+    `;
+}
+
+// 4. 渲染评论列表
+function renderDetailComments(tweet) {
+    const list = document.getElementById('x-detail-comments-list');
+    list.innerHTML = '';
+    
+    // 按时间顺序排列评论
+    const comments = tweet.comments || [];
+    
+    comments.forEach(cmt => {
+        const div = document.createElement('div');
+        div.className = 'x-comment-item';
+        
+        // 楼中楼标识：如果是 AI 回复用户的，加个背景色或样式
+        const isReplyToMe = cmt.replyToUserId === 'user'; 
+        
+        div.innerHTML = `
+            <img src="${cmt.avatar}" class="x-tweet-avatar" style="width:36px;height:36px;">
+            <div class="x-comment-content">
+                <div class="x-comment-header">
+                    <div>
+                        <span class="x-comment-name">${cmt.name}</span>
+                        <span class="x-comment-handle">${cmt.handle}</span>
+                    </div>
+                    <span style="color:#71767b">· 刚刚</span>
+                </div>
+                ${cmt.replyToName ? `<div class="x-comment-reply-tag">回复 @${cmt.replyToName}</div>` : ''}
+                <div class="x-comment-text">${cmt.content}</div>
+            </div>
+        `;
+        
+        // 点击评论，自动填充 "回复 @某人"
+        div.onclick = () => {
+            const input = document.getElementById('x-detail-input');
+            input.value = `回复 @${cmt.name} : `;
+            input.focus();
+            // 标记当前正在回复这条评论的ID，方便 AI 识别楼中楼
+            input.dataset.replyToId = cmt.id;
+            input.dataset.replyToName = cmt.name;
+        };
+
+        list.appendChild(div);
+    });
+}
+
+// 5. 发送评论 (支持楼中楼)
+function sendDetailReply() {
+    const input = document.getElementById('x-detail-input');
+    const content = input.value.trim();
+    if (!content || !currentDetailTweetId) return;
+
+    const tweet = xData.tweets.find(t => t.id === currentDetailTweetId);
+    if (!tweet) return;
+
+    // 检查是不是回复某人 (楼中楼)
+    const replyToId = input.dataset.replyToId;
+    const replyToName = input.dataset.replyToName;
+    
+    // 清理输入框里的 "回复 @xxx :" 前缀，只留内容
+    let cleanContent = content;
+    if(replyToName && content.startsWith(`回复 @${replyToName} :`)) {
+        cleanContent = content.replace(`回复 @${replyToName} :`, '').trim();
+    }
+
+    // 1. 创建用户评论对象
+    const myComment = {
+        id: 'cmt_' + Date.now(),
+        authorId: 'user',
+        name: xData.user.name,
+        handle: xData.user.handle,
+        avatar: xData.user.avatar,
+        content: cleanContent,
+        timestamp: Date.now(),
+        replyToId: replyToId || null, // 记录回复了哪条评论
+        replyToName: replyToName || null
+    };
+
+    tweet.comments.push(myComment);
+    tweet.stats.replies++;
+    saveXData();
+
+    // 2. 立即刷新界面
+    renderDetailComments(tweet);
+    input.value = '';
+    delete input.dataset.replyToId;
+    delete input.dataset.replyToName;
+    
+    // 滚动到底部
+    const feed = document.getElementById('x-detail-container');
+    feed.scrollTop = feed.scrollHeight;
+
+    // 3. 触发 AI 回复 (如果推文是角色发的)
+    if (!tweet.isNPC && tweet.authorId !== 'user') {
+        // 如果是回复楼中楼，AI 也应该继续回复楼中楼
+        triggerDetailAiReply(tweet, myComment);
+    }
+}
+
+// 6. AI 在详情页的回复逻辑
+async function triggerDetailAiReply(tweet, userComment) {
+    const char = contacts.find(c => c.id === tweet.authorId);
+    if (!char) return;
+
+    // 模拟 AI 正在输入... (可以在界面加个 Loading 效果)
+    const btn = document.querySelector('.x-detail-send-btn');
+    btn.innerText = "对方正在输入...";
+
+    // 构造 Prompt：让 AI 知道这是楼中楼
+    let context = `你发了一条推文："${tweet.content}"\n`;
+    
+    if (userComment.replyToName) {
+        context += `用户 "${userComment.name}" 回复了评论区里的 "${userComment.replyToName}" 说："${userComment.content}"\n`;
+        context += `(这是一个楼中楼讨论)`;
+    } else {
+        context += `用户 "${userComment.name}" 评论了你的推文说："${userComment.content}"\n`;
+    }
+
+    const prompt = `
+    你现在扮演 "${char.name}"。
+    ${context}
+    
+    请以 "${char.name}" 的口吻回复用户。
+    要求：简短、口语化、像推特互动。不要带引号。
+    `;
+
+    try {
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
+
+        const data = await res.json();
+        const replyText = data.choices[0].message.content;
+
+        // AI 回复对象
+        const aiReply = {
+            id: 'cmt_ai_' + Date.now(),
+            authorId: char.id,
+            name: char.name,
+            handle: "@" + char.id.substring(0,8),
+            avatar: char.avatar,
+            content: replyText,
+            timestamp: Date.now(),
+            replyToName: userComment.name, // AI 回复用户
+            replyToId: userComment.id
+        };
+
+        tweet.comments.push(aiReply);
+        tweet.stats.replies++;
+        saveXData();
+
+        // 刷新界面
+        if (currentDetailTweetId === tweet.id) {
+            renderDetailComments(tweet);
+            const feed = document.getElementById('x-detail-container');
+            feed.scrollTop = feed.scrollHeight;
+        }
+
+    } catch (e) {
+        console.error("AI 回复失败:", e);
+    } finally {
+        btn.innerText = "回复";
+    }
+}
     </script>
 </body>
 </html>
+
 
 
 
