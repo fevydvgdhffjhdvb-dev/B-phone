@@ -3953,9 +3953,7 @@ function buildTweetElement(tweet) {
                     <span class="x-handle">${author.handle}</span>
                     <span class="x-time">· ${timeStr}</span>
                 </div>
-                <div class="x-text">
-                    ${tweet.isQuote ? tweet.quoteContent : displayTweet.content}
-                </div>
+                <div class="x-text">${tweet.isQuote ? tweet.quoteContent : displayTweet.content}</div>
                 ${quoteHtml}
                 <div class="x-actions">
                     <button class="x-action-btn reply" onclick="event.stopPropagation(); openReplyModal('${displayTweet.id}')">
@@ -4620,6 +4618,7 @@ function updateXBadge() {
     </script>
 </body>
 </html>
+
 
 
 
