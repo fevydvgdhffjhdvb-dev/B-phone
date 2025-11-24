@@ -4233,22 +4233,48 @@ async function generateXTweetAI(charId) {
     } catch (e) { console.error(e); }
 }
 
-// AI: 路人/粉丝发推 (满血版：分角色)
+// 修复版：生成 路人(passerby) 或 粉丝(fan) 的推文 (已去油去韩团)
 async function generateFanOrNPCTweetAI(type) {
-    if (!globalConfig.apiKey) { generateNPCTweet(); return; }
+    if (!globalConfig.apiKey) {
+        generateNPCTweet(); 
+        return;
+    }
 
-    let sys = "";
+    let systemInstruction = "";
+    
     if (type === 'fan') {
+        // --- 粉丝模式 ---
         const targetIsUser = Math.random() > 0.5; 
         let targetName = xData.user.name;
-        if (!targetIsUser && contacts.length > 0) targetName = contacts[Math.floor(Math.random()*contacts.length)].name;
+        let targetContext = "普通的博主"; // 默认身份
+
+        if (!targetIsUser && contacts.length > 0) {
+            const randomChar = contacts[Math.floor(Math.random() * contacts.length)];
+            targetName = randomChar.name;
+            // 关键修复：把角色人设读出来！
+            targetContext = `该角色的人设是：${randomChar.systemPrompt}`;
+        }
+
+        // 💀 注入强效防韩团补丁
+        systemInstruction = `你现在要扮演 X (Twitter) 上的一个【狂热粉丝】。
+        你的偶像/关注对象是: "${targetName}"。
         
-        sys = `扮演X上的狂热粉丝。你的偶像是"${targetName}"。
-        生成一条推文：表白、催更、嗑CP。
-        必须返回纯JSON：{"name": "网名", "handle": "handle", "content": "内容"}`;
+        【重要设定】：
+        1. ${targetContext}
+        2. ⚠️ 绝对禁止关联现实世界的明星！如果名字叫 Jin/Tom/Jerry 等，这只是重名，**绝对不是** BTS、韩团爱豆或动画片角色！
+        3. 禁止出现“打歌”、“回归”、“舞台”、“欧巴”、“撒浪嘿”等饭圈特有韩系词汇。
+        4. 请把他当成一个生活中的普通人来喜欢。
+
+        请生成一条推文。内容方向：表白、分享关于"${targetName}"的趣事、嗑CP（博主x${targetName}）。
+        语气：真实社交网络风格，多用 emoji。
+        请随机生成一个网名和Handle。`;
+        
     } else {
-        sys = `扮演X上的普通路人。生成一条完全随机的生活吐槽/搞笑推文。
-        必须返回纯JSON：{"name": "网名", "handle": "handle", "content": "内容"}`;
+        // --- 路人模式 ---
+        systemInstruction = `你现在扮演 X (Twitter) 上的一个【普通路人】。
+        请生成一条推文。内容完全随机：生活吐槽、工作抱怨、天气、美食、emo时刻。
+        语气：真实、随意、生活化。
+        请随机生成一个网名和Handle。`;
     }
 
     try {
@@ -4257,33 +4283,43 @@ async function generateFanOrNPCTweetAI(type) {
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
                 model: globalConfig.model,
-                messages: [{ role: "user", content: sys }],
+                messages: [
+                    { role: "system", content: "你是一个推特模拟生成器。请只返回纯 JSON 格式: {name, handle, content}。" },
+                    { role: "user", content: systemInstruction }
+                ],
                 temperature: 0.95
             })
         });
+
         const data = await res.json();
-        const result = JSON.parse(data.choices[0].message.content.replace(/```json|```/g, '').trim());
-        
+        let aiText = data.choices[0].message.content;
+        aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const result = JSON.parse(aiText);
+
         const tweet = {
-            id: 'tweet_ai_npc_' + Date.now(), authorId: 'npc_' + Date.now(), isNPC: true,
-            npcName: result.name, npcHandle: result.handle.startsWith('@')?result.handle:'@'+result.handle, 
+            id: 'tweet_ai_npc_' + Date.now(),
+            authorId: 'npc_' + Date.now(),
+            isNPC: true,
+            npcName: result.name,
+            npcHandle: result.handle.startsWith('@') ? result.handle : '@'+result.handle,
             npcAvatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${result.handle}`,
-            content: result.content, timestamp: Date.now(),
+            content: result.content,
+            timestamp: Date.now(),
             stats: { likes: Math.floor(Math.random()*50), retweets: Math.floor(Math.random()*10), replies: 0 },
-            comments: [], likedByMe: false
+            comments: [],
+            likedByMe: false
         };
         xData.tweets.unshift(tweet);
         if(xData.tweets.length > 50) xData.tweets.pop();
         saveXData();
+
     } catch (e) { console.error(e); }
 }
-
-// 【更新】为用户推文(含引用)生成评论
+// 修复版：为用户推文(含引用)生成评论 (防爱豆补丁)
 async function generateFanOrNPCCommentForUser(tweetId) {
     const tweet = xData.tweets.find(t => t.id === tweetId);
     if(!tweet) return;
 
-    // 如果是引用推文，把引用内容和原推文内容都告诉 AI，让评论更精准
     let contentContext = `推文内容："${tweet.content}"`;
     if (tweet.isQuote) {
         contentContext = `用户转发并评论了别人的推文。
@@ -4291,16 +4327,16 @@ async function generateFanOrNPCCommentForUser(tweetId) {
         被转发的原推文："${tweet.sourceTweet.content}"`;
     }
 
-    // 修改 Prompt：要求 6-8 条评论
     const prompt = `用户 "${xData.user.name}" 发了一条推文（或者引用转发）。
     ${contentContext}
     
     请生成 6-8 条路人或粉丝的评论。
-    风格要求：
-    - 有的关注用户的评论观点。
-    - 有的关注原推文内容。
-    - 风格要多样：吃瓜、膜拜、反对、哈哈党。
     
+    【严格限制】：
+    1. 如果内容里提到了 Jin、JK 等名字，这**仅仅是用户的普通朋友/恋人**，绝对不是韩国男团偶像！
+    2. 禁止出现任何韩饭圈用语（如：内娱、韩娱、爱豆、打榜）。
+    3. 把他们当成普通网友/网红博主互动。
+
     必须返回纯JSON数组：[{"name": "网名", "content": "内容"}, ...]`;
 
     try {
@@ -4328,11 +4364,9 @@ async function generateFanOrNPCCommentForUser(tweetId) {
         tweet.stats.replies = tweet.comments.length;
         saveXData();
         
-        // 如果当前正好在看这条推文的详情页，刷新一下
         if(currentDetailTweetId === tweet.id) {
             renderDetailComments(tweet);
         } else {
-            // 否则刷新列表页的数字
             renderXFeed();
         }
         
@@ -4758,6 +4792,7 @@ async function generateCharacterCommentForUser(tweetId) {
     </script>
 </body>
 </html>
+
 
 
 
