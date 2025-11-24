@@ -1312,9 +1312,8 @@ select.x-input option {
     </div>
     
     <!-- 简单的推文列表占位 -->
-    <div style="border-top:1px solid #2f3336; padding:20px; color:#71767b; text-align:center;">
-        推文
-    </div>
+    <!-- 下面这个 div 是专门用来放推文列表的，必须要有 id -->
+    <div id="x-profile-tweets-container" style="border-top:1px solid #2f3336; min-height: 200px; padding-bottom: 50px;"></div>
 </div>
 
 <!-- ============ 14. 编辑资料弹窗 ============ -->
@@ -4008,6 +4007,7 @@ function handleRetweet(tweetId) {
     openModal('modal-retweet-menu');
 }
 
+// 2. 确认操作 (修复版：引用推文也会触发 AI 互动)
 function confirmRetweet(type) {
     closeModal('modal-retweet-menu');
     if (!currentRetweetId) return;
@@ -4016,6 +4016,7 @@ function confirmRetweet(type) {
     if (!sourceTweet) return;
 
     if (type === 'repost') {
+        // --- 转帖 (保持不变) ---
         const newTweet = {
             id: 'tweet_rt_' + Date.now(),
             authorId: 'user',
@@ -4028,7 +4029,9 @@ function confirmRetweet(type) {
         };
         xData.tweets.unshift(newTweet);
         sourceTweet.stats.retweets++; 
+        
     } else if (type === 'quote') {
+        // --- 引用 (修改了这里) ---
         const content = prompt("添加评论:");
         if (content) {
             const newTweet = {
@@ -4042,8 +4045,22 @@ function confirmRetweet(type) {
                 comments: [],
                 likedByMe: false
             };
+            
             xData.tweets.unshift(newTweet);
             sourceTweet.stats.retweets++;
+
+            // ✨✨✨ 新增：触发 AI 互动流 ✨✨✨
+            if(globalConfig.apiKey) {
+                // 1. 3秒后，路人/粉丝来评论你的引用
+                setTimeout(() => {
+                    generateFanOrNPCCommentForUser(newTweet.id);
+                }, 3000);
+
+                // 2. 6秒后，角色来评论你的引用
+                setTimeout(() => {
+                    generateCharacterCommentForUser(newTweet.id);
+                }, 6000);
+            }
         }
     }
     saveXData();
@@ -4184,7 +4201,7 @@ async function generateXTweetAI(charId) {
     
     任务：发布一条推特(X)。
     要求：
-    1. 结合【最近聊天】或【日记】的心情（隐晦提及），或者发日常、吐槽。
+    1. 结合【最近聊天】或【日记】的心情（隐晦提及），或者发日常、吐槽。使用中文。
     2. 必须同时伪造 6-8 条“路人/粉丝”的评论。
     3. 评论要求：风格各异（膜拜、吐槽、玩梗、吃瓜、CP粉），简短真实。
     
@@ -4227,7 +4244,7 @@ async function generateFanOrNPCTweetAI(type) {
         if (!targetIsUser && contacts.length > 0) targetName = contacts[Math.floor(Math.random()*contacts.length)].name;
         
         sys = `扮演X上的狂热粉丝。你的偶像是"${targetName}"。
-        生成一条推文：表白、催更、分享趣事、嗑CP、彩虹屁。
+        生成一条推文：表白、催更、嗑CP。
         必须返回纯JSON：{"name": "网名", "handle": "handle", "content": "内容"}`;
     } else {
         sys = `扮演X上的普通路人。生成一条完全随机的生活吐槽/搞笑推文。
@@ -4261,14 +4278,29 @@ async function generateFanOrNPCTweetAI(type) {
     } catch (e) { console.error(e); }
 }
 
-// 【新增】为用户推文生成评论 (彩蛋功能)
+// 【更新】为用户推文(含引用)生成评论
 async function generateFanOrNPCCommentForUser(tweetId) {
     const tweet = xData.tweets.find(t => t.id === tweetId);
     if(!tweet) return;
 
-    const prompt = `用户 "${xData.user.name}" 发了一条推文："${tweet.content}"。
-    请生成 4-6 条路人或粉丝的评论。
-    风格：有的羡慕，有的好奇，有的纯路人。
+    // 如果是引用推文，把引用内容和原推文内容都告诉 AI，让评论更精准
+    let contentContext = `推文内容："${tweet.content}"`;
+    if (tweet.isQuote) {
+        contentContext = `用户转发并评论了别人的推文。
+        用户的评论："${tweet.quoteContent}"
+        被转发的原推文："${tweet.sourceTweet.content}"`;
+    }
+
+    // 修改 Prompt：要求 6-8 条评论
+    const prompt = `用户 "${xData.user.name}" 发了一条推文（或者引用转发）。
+    ${contentContext}
+    
+    请生成 6-8 条路人或粉丝的评论。
+    风格要求：
+    - 有的关注用户的评论观点。
+    - 有的关注原推文内容。
+    - 风格要多样：吃瓜、膜拜、反对、哈哈党。
+    
     必须返回纯JSON数组：[{"name": "网名", "content": "内容"}, ...]`;
 
     try {
@@ -4277,7 +4309,8 @@ async function generateFanOrNPCCommentForUser(tweetId) {
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
                 model: globalConfig.model,
-                messages: [{ role: "user", content: prompt }]
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.9
             })
         });
         const data = await res.json();
@@ -4294,7 +4327,14 @@ async function generateFanOrNPCCommentForUser(tweetId) {
         });
         tweet.stats.replies = tweet.comments.length;
         saveXData();
-        renderXFeed();
+        
+        // 如果当前正好在看这条推文的详情页，刷新一下
+        if(currentDetailTweetId === tweet.id) {
+            renderDetailComments(tweet);
+        } else {
+            // 否则刷新列表页的数字
+            renderXFeed();
+        }
         
     } catch(e) { console.error(e); }
 }
@@ -4681,7 +4721,7 @@ async function generateCharacterCommentForUser(tweetId) {
     "${tweet.content}"
     
     请你在底下评论。
-    要求：符合你的人设，简短，像真实的推特回复。
+    要求：符合你的人设，简短，使用中文，像真实的推特回复。
     `;
 
     try {
@@ -4718,6 +4758,7 @@ async function generateCharacterCommentForUser(tweetId) {
     </script>
 </body>
 </html>
+
 
 
 
