@@ -725,6 +725,22 @@ select.x-input option {
     display: flex; align-items: center; gap: 5px; 
     margin-bottom: 5px; margin-left: 30px; /* 跟头像错开 */
 }
+        /* 书架样式 */
+.book-cover {
+    width: 100%; aspect-ratio: 2/3; background: #eee; border-radius: 8px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); position: relative; overflow: hidden;
+    cursor: pointer; text-align: center; padding: 10px; transition: transform 0.2s;
+}
+.book-cover:active { transform: scale(0.95); }
+.book-title { font-size: 12px; font-weight: bold; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.book-author { font-size: 10px; color: #999; }
+
+/* 阅读器特定 */
+#page-reader * { transition: background 0.3s, color 0.3s; }
+.reader-btn-chap { border:none; background:rgba(91, 70, 54, 0.1); color:#5b4636; font-size:13px; padding: 8px 12px; border-radius: 8px; font-weight: bold; }
+.reader-btn-page { border:none; background:none; color:#5b4636; font-size:16px; padding: 5px 10px; }
+.reader-btn-chap:active, .reader-btn-page:active { opacity: 0.6; transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -916,12 +932,19 @@ select.x-input option {
                 </div>
 
                 <div class="ios-group-title">数据管理</div>
-                <div class="ios-list">
-                    <button class="ios-btn" onclick="exportData()">备份所有数据 (JSON)</button>
-                    <button class="ios-btn" onclick="document.getElementById('importFile').click()">恢复数据</button>
-                    <input type="file" id="importFile" hidden onchange="importData(event)">
-                    <button class="ios-btn danger" onclick="resetAll()">重置应用 (清除所有)</button>
-                </div>
+<div class="ios-list">
+    <!-- 🔴 修改点 1：函数改成 exportDataV2()，文字也可以改一下提示用户 -->
+    <button class="ios-btn" onclick="exportDataV2()">备份所有数据</button>
+    
+    <!-- 🔴 修改点 2：ID 改成 importFileV2 -->
+    <button class="ios-btn" onclick="document.getElementById('importFileV2').click()">恢复数据</button>
+    
+    <!-- 🔴 修改点 3：ID 改成 importFileV2，函数改成 importDataV2(event) -->
+    <input type="file" id="importFileV2" hidden onchange="importDataV2(event)">
+    
+    <!-- 这个不用动 -->
+    <button class="ios-btn danger" onclick="resetAll()">重置应用 (清除所有)</button>
+</div>
             </div>
         </div>
         <!-- ============ 6. 美化中心 (Theme) ============ -->
@@ -1378,6 +1401,81 @@ select.x-input option {
                 <select id="edit-x-partner" class="x-input">
                     <option value="">-- 无 --</option>
                 </select>
+            </div>
+        </div>
+    </div>
+</div>
+        <!-- ============ 15. 书架 (Bookshelf) ============ -->
+<div class="page" id="page-bookshelf">
+    <div class="app-header">
+        <button class="btn-icon-text" onclick="goHome()">‹ 桌面</button>
+        <span class="app-title">共读空间</span>
+        <button class="btn-icon-only" onclick="document.getElementById('bookFileInput').click()">+</button>
+        <input type="file" id="bookFileInput" accept=".txt" hidden onchange="handleBookImport(event)">
+    </div>
+    <div class="content-scroll">
+        <div class="ios-group-title">我的书架</div>
+        <div id="bookshelf-container" class="app-grid" style="grid-template-columns: repeat(3, 1fr); gap: 20px;">
+            <!-- 书籍列表动态生成 -->
+        </div>
+        <div style="padding:20px; text-align:center; color:#999; font-size:12px;">
+            点击右上角 + 号导入 TXT<br>
+            书籍正文存储于 IndexedDB，不占 LocalStorage
+        </div>
+    </div>
+</div>
+
+<!-- ============ 16. 阅读器 (Reader) - 升级版 ============ -->
+<div class="page" id="page-reader" style="background: #f8f1e5;"> <!-- 羊皮纸背景 -->
+    <!-- 顶部工具栏 -->
+    <div class="reader-header" style="height:50px; display:flex; align-items:center; justify-content:space-between; padding:0 15px; position:absolute; top:40px; width:100%; z-index:100; color:#5b4636;">
+        <button onclick="exitReader()" style="background:none; border:none; font-size:16px; color:#5b4636; font-weight:bold;">‹ 书架</button>
+        <span id="reader-title" style="font-weight:bold; font-size:14px; max-width:150px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">书名</span>
+        <button onclick="toggleReaderSettings()" style="background:none; border:none; font-size:18px;">Aa</button>
+    </div>
+
+    <!-- 文本内容区 -->
+    <div id="reader-content" style="position:absolute; top:90px; bottom:70px; left:0; right:0; padding:20px 25px; overflow-y:auto; font-size:19px; line-height:1.8; color:#333; font-family:'Songti SC', serif; text-align:justify; scroll-behavior: smooth;">
+        <!-- 章节正文 -->
+    </div>
+
+    <!-- 底部导航 (双层控制) -->
+    <div class="reader-footer" style="position:absolute; bottom:0; width:100%; height:70px; background:rgba(248,241,229,0.98); border-top:1px solid rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:space-between; padding:0 15px; padding-bottom:15px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05);">
+        
+        <!-- 上一章 (跳文件) -->
+        <button onclick="prevChapter()" class="reader-btn-chap" title="上一章">⏮ 章</button>
+        
+        <!-- 上一页 (滚屏) -->
+        <button onclick="scrollReader(-1)" class="reader-btn-page" title="上一页">‹ 页</button>
+        
+        <!-- 进度 -->
+        <span id="reader-progress" style="font-size:12px; color:#999; font-variant-numeric: tabular-nums;">1/10</span>
+        
+        <!-- 下一页 (滚屏) -->
+        <button onclick="scrollReader(1)" class="reader-btn-page" title="下一页">页 ›</button>
+        
+        <!-- 下一章 (跳文件 + 触发总结) -->
+        <button onclick="nextChapter()" class="reader-btn-chap" title="下一章">章 ⏭</button>
+    </div>
+
+    <!-- AI 伴读悬浮球 -->
+    <div class="reader-ai-bubble" onclick="openReaderChat()" style="position:absolute; bottom:90px; right:20px; width:50px; height:50px; border-radius:50%; background:#fff; box-shadow:0 4px 15px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; border:2px solid #5856d6; z-index:200; cursor:pointer;">
+        <img id="reader-ai-avatar" src="" style="width:42px; height:42px; border-radius:50%; object-fit:cover;">
+    </div>
+</div>
+
+<!-- 阅读器聊天弹窗 -->
+<div class="modal-overlay" id="modal-reader-chat" style="justify-content:flex-end;">
+    <div class="modal-box" style="width:100%; height:70%; border-bottom-left-radius:0; border-bottom-right-radius:0;">
+        <div class="modal-header" style="display:flex; justify-content:space-between; background:#f2f2f7;">
+            <span>与 <span id="reader-chat-partner">AI</span> 共读</span>
+            <button onclick="closeModal('modal-reader-chat')" style="border:none; background:none; font-size:20px;">↓</button>
+        </div>
+        <div id="reader-chat-history" style="flex:1; overflow-y:auto; padding:15px; background:#fff;"></div>
+        <div class="input-area" style="padding-bottom:max(20px, env(safe-area-inset-bottom));">
+            <div class="input-toolbar">
+                <input type="text" id="readerChatInput" placeholder="聊聊这段剧情..." style="flex:1; padding:10px; border-radius:20px; border:1px solid #ddd;">
+                <button class="btn-send" onclick="sendReaderMsg()">⬆</button>
             </div>
         </div>
     </div>
@@ -4789,9 +4887,474 @@ async function generateCharacterCommentForUser(tweetId) {
         
     } catch(e) { console.error(e); }
 }
+        // ==========================================
+// --- 14. 共读系统 (Co-Reading) 完整版 ---
+// ==========================================
+
+// --- A. IndexedDB 数据库工具 (存大文件) ---
+const dbName = "AIPhoneDB";
+const storeName = "books";
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, 1);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(storeName)) {
+                db.createObjectStore(storeName, { keyPath: "id" });
+            }
+        };
+        request.onsuccess = (event) => resolve(event.target.result);
+        request.onerror = (event) => reject(event.target.error);
+    });
+}
+
+async function saveBookToDB(bookObj) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        store.put(bookObj);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+async function getBookFromDB(id) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readonly");
+        const store = tx.objectStore(storeName);
+        const request = store.get(id);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function getAllBooksFromDB() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readonly");
+        const store = tx.objectStore(storeName);
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// --- B. 数据结构与变量 ---
+// LocalStorage 存 metadata: { id, title, author, progressIndex, summaries: [] }
+// IndexedDB 存 fullContent: { id, content, chapters: [] }
+let libraryMeta = []; 
+let currentBookData = null; 
+let currentBookMeta = null; 
+
+// 加载书架
+function loadLibrary() {
+    const saved = localStorage.getItem('ai_phone_library');
+    if(saved) libraryMeta = JSON.parse(saved);
+    renderBookshelf();
+}
+
+// 渲染书架
+function renderBookshelf() {
+    const container = document.getElementById('bookshelf-container');
+    container.innerHTML = '';
+    
+    libraryMeta.forEach(book => {
+        const div = document.createElement('div');
+        div.className = 'app-icon-container';
+        div.style.width = '100%';
+        div.onclick = () => openBook(book.id);
+        
+        // 随机封面色
+        const hue = parseInt(book.id) % 360;
+        div.innerHTML = `
+            <div class="book-cover" style="background: hsl(${hue}, 70%, 90%); color: hsl(${hue}, 60%, 30%);">
+                <div style="font-size:24px; margin-bottom:5px;">📖</div>
+                <div class="book-title">${book.title}</div>
+                <div class="book-author" style="margin-top:auto;">读至: ${book.progressIndex + 1}章</div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// --- C. 导入书籍 ---
+async function handleBookImport(event) {
+    const file = event.target.files[0];
+    if(!file) return;
+
+    const btn = event.target.previousElementSibling;
+    const oldText = btn.innerHTML;
+    btn.innerHTML = "⏳";
+
+    const text = await file.text();
+    const bookId = Date.now().toString();
+    
+    // 智能分章 (正则匹配)
+    const chapterRegex = /(^\s*第[零一二三四五六七八九十百千0-9]+[章回卷].*|^\s*Chapter\s+[0-9]+.*)/gm;
+    let chapters = [];
+    
+    const matches = [...text.matchAll(chapterRegex)];
+    
+    if (matches.length > 0) {
+        for (let i = 0; i < matches.length; i++) {
+            const currentMatch = matches[i];
+            const nextMatch = matches[i+1];
+            
+            const title = currentMatch[0].trim();
+            const startIndex = currentMatch.index;
+            const endIndex = nextMatch ? nextMatch.index : text.length;
+            
+            const body = text.substring(startIndex, endIndex);
+            chapters.push({ title, body });
+        }
+        if (matches[0].index > 0) {
+            chapters.unshift({ title: "序言/前言", body: text.substring(0, matches[0].index) });
+        }
+    } else {
+        // 兜底：按字数切分
+        const chunkSize = 3000;
+        for (let i = 0; i < text.length; i += chunkSize) {
+            chapters.push({ 
+                title: `第 ${Math.floor(i/chunkSize)+1} 部分`, 
+                body: text.substring(i, i + chunkSize) 
+            });
+        }
+    }
+
+    // 存入 DB (大文件)
+    await saveBookToDB({ id: bookId, chapters: chapters });
+
+    // 存入 Local (索引)
+    const newBook = {
+        id: bookId,
+        title: file.name.replace('.txt',''),
+        progressIndex: 0,
+        summaries: []
+    };
+    libraryMeta.push(newBook);
+    localStorage.setItem('ai_phone_library', JSON.stringify(libraryMeta));
+    
+    renderBookshelf();
+    btn.innerHTML = oldText;
+    alert(`导入成功！共识别出 ${chapters.length} 个章节。`);
+}
+
+// --- D. 阅读逻辑 ---
+async function openBook(id) {
+    if (!activeContactId) {
+        alert("请先在【信息】列表里选择一个角色作为伴读对象！");
+        return;
+    }
+    
+    currentBookMeta = libraryMeta.find(b => b.id === id);
+    currentBookData = await getBookFromDB(id); 
+    
+    if(!currentBookData || !currentBookMeta) return alert("书籍数据丢失，请重新导入");
+
+    navigateTo('page-reader');
+    
+    // 设置头像
+    const char = contacts.find(c => c.id === activeContactId);
+    if(char) {
+        document.getElementById('reader-ai-avatar').src = char.avatar;
+        document.getElementById('reader-chat-partner').innerText = char.name;
+    }
+
+    renderReaderPage();
+}
+
+function renderReaderPage() {
+    const idx = currentBookMeta.progressIndex;
+    const chapter = currentBookData.chapters[idx];
+    
+    document.getElementById('reader-title').innerText = chapter.title;
+    
+    const contentBox = document.getElementById('reader-content');
+    contentBox.innerText = chapter.body; 
+    contentBox.scrollTop = 0; // 每次换章都回到顶部
+    
+    document.getElementById('reader-progress').innerText = `${idx + 1}/${currentBookData.chapters.length}`;
+}
+
+function exitReader() {
+    currentBookData = null; // 释放内存
+    navigateTo('page-bookshelf');
+}
+
+// === ✨ 核心交互逻辑 ✨ ===
+
+// 1. 翻页 (只滚屏，不触发总结)
+function scrollReader(direction) {
+    const el = document.getElementById('reader-content');
+    // 滚动高度 = 屏幕高度的 80% (保留一点上下文)
+    const scrollAmount = el.clientHeight * 0.8; 
+    
+    el.scrollBy({
+        top: scrollAmount * direction,
+        behavior: 'smooth'
+    });
+}
+
+// 2. 翻章 (触发总结逻辑)
+async function nextChapter() {
+    if(currentBookMeta.progressIndex >= currentBookData.chapters.length - 1) {
+        return alert("已经是最后一章了");
+    }
+
+    // --- 智能检测：是否需要总结 ---
+    // 逻辑：如果当前章节还没有生成过总结 (summaries[当前索引] 为空)
+    const currentIdx = currentBookMeta.progressIndex;
+    const hasSummary = currentBookMeta.summaries && currentBookMeta.summaries[currentIdx];
+    
+    if (!hasSummary) {
+        const chapterTitle = currentBookData.chapters[currentIdx].title;
+        const char = contacts.find(c => c.id === activeContactId);
+        
+        // 弹窗询问
+        if(confirm(`"${chapterTitle}" 读完了。\n\n是否让 ${char ? char.name : 'AI'} 总结本章剧情并存入记忆？\n(这有助于下一章的连贯性)`)) {
+            await generateChapterSummary();
+        }
+    }
+
+    // 只有在用户处理完总结(或取消)后，才真正跳转
+    currentBookMeta.progressIndex++;
+    saveBookProgress();
+    renderReaderPage();
+}
+
+function prevChapter() {
+    if(currentBookMeta.progressIndex <= 0) return;
+    currentBookMeta.progressIndex--;
+    saveBookProgress();
+    renderReaderPage();
+}
+
+function saveBookProgress() {
+    localStorage.setItem('ai_phone_library', JSON.stringify(libraryMeta));
+}
+
+// --- E. AI 总结与互动 (修正版：支持全文总结) ---
+
+// 生成当前章节的总结
+async function generateChapterSummary() {
+    const char = contacts.find(c => c.id === activeContactId);
+    if(!char || !globalConfig.apiKey) return alert("请先在设置中配置 API Key");
+
+    const idx = currentBookMeta.progressIndex;
+    const content = currentBookData.chapters[idx].body;
+    
+    // 【修改点】：取消“掐头去尾”。
+    // 现在的模型通常支持 16k context，足够读完一章（通常3000-5000字）。
+    // 这里设置一个 20000 字的安全上限，防止极端情况卡死。
+    let textToSend = content;
+    if (content.length >20000) {
+        textToSend = content.substring(0,20000) + "\n...(本章太长，截断)...";
+        console.warn("章节过长，已截断发送");
+    }
+
+    const btn = document.querySelector('.reader-btn-chap:last-child');
+    // 如果找不到按钮（比如是弹窗触发的），就不改文字了，避免报错
+    let oldText = "";
+    if(btn) {
+        oldText = btn.innerText;
+        btn.innerText = "正在阅读..."; // 提示用户 AI 正在读全文
+    }
+
+    try {
+        const prompt = `请阅读以下小说章节，并总结核心剧情。
+        要求：
+        1. 控制在 300 字以内。
+        2. 风格为记叙文，类似“剧情梗概”或“前情提要”，客观陈述发生了什么。
+        3. 重点记录：新出场的人物、关键转折、主角获得的信息。
+        4. 这段总结将用于让 AI 记住剧情，以便在下一章保持连贯。
+        
+        【章节正文】：
+        ${textToSend}`;
+
+        // 注意：这里 model 用的是你设置里的全局 model。
+        // 建议在设置里填支持长文本的模型，如 gpt-3.5-turbo-16k 或 gpt-4o
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model, // 确保这个模型能吃得下几千字
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
+        
+        if (!res.ok) {
+            const errData = await res.json();
+            // 如果报错包含 context_length_exceeded，说明模型太旧了
+            if (JSON.stringify(errData).includes("context_length_exceeded")) {
+                throw new Error("模型上下文不足，请在设置里更换支持长文本的模型（如 gpt-3.5-turbo-16k）");
+            }
+            throw new Error(res.statusText);
+        }
+
+        const data = await res.json();
+        const summary = data.choices[0].message.content;
+
+        // 初始化 summaries 数组
+        if(!currentBookMeta.summaries) currentBookMeta.summaries = [];
+        
+        // 存入总结
+        currentBookMeta.summaries[idx] = summary;
+        saveBookProgress();
+        
+        alert(`✅ 本章总结完毕！\nAI 已经记住了 ${summary.length} 个字的剧情要点。`);
+
+    } catch(e) {
+        alert("总结失败: " + e.message);
+    } finally {
+        if(btn) btn.innerText = oldText;
+    }
+}
+
+// 聊天
+function openReaderChat() {
+    openModal('modal-reader-chat');
+}
+
+async function sendReaderMsg() {
+    const input = document.getElementById('readerChatInput');
+    const txt = input.value.trim();
+    if(!txt) return;
+
+    const char = contacts.find(c => c.id === activeContactId);
+    if(!char) return;
+
+    // 显示用户消息
+    const historyBox = document.getElementById('reader-chat-history');
+    historyBox.innerHTML += `<div style="text-align:right; margin:10px 0;"><span style="background:#007AFF; color:white; padding:8px 12px; border-radius:15px; display:inline-block;">${txt}</span></div>`;
+    input.value = '';
+
+    // 上下文构建
+    const idx = currentBookMeta.progressIndex;
+    // 取当前可视区域附近的文本比较难，简化为取本章前2000字
+    const currentText = currentBookData.chapters[idx].body.substring(0, 2000); 
+    
+    // 取最近 6 章的总结作为“记忆”
+    const recentSummaries = (currentBookMeta.summaries || [])
+        .slice(Math.max(0, idx-6), idx)
+        .map((s, i) => `[第${idx-6+i+1}章总结]: ${s}`)
+        .join("\n");
+
+    const systemPrompt = `你正在和用户一起读一本书。
+    你扮演角色：${char.name}。人设：${char.systemPrompt}。
+    
+    【前情提要】：${recentSummaries || "无 (刚开始读)"}
+    【用户正在阅读的章节开头】：${currentText}...
+    
+    用户对你说："${txt}"
+    
+    请结合书本内容回复。根据你的人设，像朋友/恋人共读一样讨论剧情。`;
+
+    try {
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [{ role: "user", content: systemPrompt }]
+            })
+        });
+        const data = await res.json();
+        const reply = data.choices[0].message.content;
+
+        historyBox.innerHTML += `<div style="text-align:left; margin:10px 0;"><img src="${char.avatar}" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;"> <span style="background:#f2f2f7; color:black; padding:8px 12px; border-radius:15px; display:inline-block;">${reply}</span></div>`;
+        historyBox.scrollTop = historyBox.scrollHeight;
+
+    } catch(e) {
+        historyBox.innerHTML += `<div style="color:red; font-size:12px;">Error: ${e.message}</div>`;
+    }
+}
+
+// --- F. V2 备份/恢复 (导出书本内容) ---
+async function exportDataV2() {
+    const btn = event.target;
+    const oldText = btn.innerText;
+    btn.innerText = "正在打包...";
+    
+    try {
+        // 从 IndexedDB 拉取所有书
+        const allBooks = await getAllBooksFromDB();
+        
+        const backupPayload = {
+            version: 2,
+            globalConfig: globalConfig,
+            contacts: contacts,
+            themeConfig: themeConfig,
+            libraryMeta: libraryMeta,
+            schedule: mySchedule,
+            xData: xData,
+            bookContents: allBooks 
+        };
+
+        const blob = new Blob([JSON.stringify(backupPayload)], {type:'application/json'});
+        const a = document.createElement('a'); 
+        a.href = URL.createObjectURL(blob); 
+        a.download = 'ai_phone_full_backup_v2.json';
+        a.click();
+    } catch(e) {
+        alert("备份失败: " + e.message);
+    } finally {
+        btn.innerText = oldText;
+    }
+}
+
+async function importDataV2(e) {
+    const f = e.target.files[0]; 
+    if(!f) return;
+    
+    const r = new FileReader();
+    r.onload = async ev => {
+        try {
+            const d = JSON.parse(ev.target.result);
+            
+            if(d.globalConfig) {
+                globalConfig = d.globalConfig;
+                localStorage.setItem('ai_phone_config', JSON.stringify(globalConfig));
+            }
+            if(d.contacts) {
+                contacts = d.contacts;
+                localStorage.setItem('ai_phone_contacts', JSON.stringify(contacts));
+            }
+            if(d.themeConfig) {
+                themeConfig = d.themeConfig;
+                localStorage.setItem('ai_phone_theme', JSON.stringify(themeConfig));
+            }
+            if(d.libraryMeta) {
+                libraryMeta = d.libraryMeta;
+                localStorage.setItem('ai_phone_library', JSON.stringify(libraryMeta));
+            }
+            
+            // 恢复 IndexedDB
+            if(d.bookContents && Array.isArray(d.bookContents)) {
+                for (const book of d.bookContents) {
+                    await saveBookToDB(book);
+                }
+            }
+
+            alert("数据恢复成功！");
+            location.reload();
+            
+        } catch(e) {
+            alert("恢复失败: " + e.message);
+        }
+    }; 
+    r.readAsText(f);
+    e.target.value = ''; 
+}
+
+// 启动加载
+loadLibrary();
     </script>
 </body>
 </html>
+
 
 
 
