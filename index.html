@@ -741,6 +741,33 @@ select.x-input option {
 .reader-btn-chap { border:none; background:rgba(91, 70, 54, 0.1); color:#5b4636; font-size:13px; padding: 8px 12px; border-radius: 8px; font-weight: bold; }
 .reader-btn-page { border:none; background:none; color:#5b4636; font-size:16px; padding: 5px 10px; }
 .reader-btn-chap:active, .reader-btn-page:active { opacity: 0.6; transform: scale(0.95); }
+        /* 阅读笔记卡片 */
+.summary-card {
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border-left: 4px solid #ffcc00; /* 笔记本风格的左边框 */
+}
+.sum-chap-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+}
+.sum-text {
+    font-size: 14px;
+    color: #555;
+    line-height: 1.5;
+    white-space: pre-wrap; /* 保留换行 */
+}
+.sum-empty {
+    font-size: 12px;
+    color: #ccc;
+    font-style: italic;
+}
     </style>
 </head>
 <body>
@@ -1441,7 +1468,10 @@ select.x-input option {
     <div class="reader-header" style="height:50px; display:flex; align-items:center; justify-content:space-between; padding:0 15px; position:absolute; top:40px; width:100%; z-index:100; color:#5b4636;">
         <button onclick="exitReader()" style="background:none; border:none; font-size:16px; color:#5b4636; font-weight:bold;">‹ 书架</button>
         <span id="reader-title" style="font-weight:bold; font-size:14px; max-width:150px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">书名</span>
-        <button onclick="toggleReaderSettings()" style="background:none; border:none; font-size:18px;">Aa</button>
+        <div style="display:flex; gap:15px;">
+    <button onclick="openSummaryList()" style="background:none; border:none; font-size:20px;" title="查看阅读笔记">📝</button>
+    <button onclick="toggleReaderSettings()" style="background:none; border:none; font-size:18px;">Aa</button>
+</div>
     </div>
 
     <!-- 文本内容区 -->
@@ -1665,6 +1695,23 @@ select.x-input option {
         <div class="modal-footer">
             <button class="modal-btn" onclick="closeModal('modal-write-diary')">取消</button>
             <button class="modal-btn" onclick="submitUserDiary()">保存并同步</button>
+        </div>
+    </div>
+</div>
+    <!-- ============ 阅读笔记弹窗 ============ -->
+<div class="modal-overlay" id="modal-book-summary">
+    <div class="modal-box">
+        <div class="modal-header">
+            剧情回顾 (AI 笔记)
+        </div>
+        <div class="modal-body" style="padding:15px; background:#f9f9f9;">
+            <!-- 列表容器 -->
+            <div id="summary-list-content" style="display:flex; flex-direction:column; gap:15px;">
+                <!-- 动态生成的内容 -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-book-summary')" style="color:#007AFF; font-weight:bold;">关闭</button>
         </div>
     </div>
 </div>
@@ -5233,6 +5280,7 @@ function openReaderChat() {
     openModal('modal-reader-chat');
 }
 
+// --- 精准定位版聊天发送 ---
 async function sendReaderMsg() {
     const input = document.getElementById('readerChatInput');
     const txt = input.value.trim();
@@ -5241,17 +5289,35 @@ async function sendReaderMsg() {
     const char = contacts.find(c => c.id === activeContactId);
     if(!char) return;
 
-    // 显示用户消息
+    // 1. UI 显示用户消息
     const historyBox = document.getElementById('reader-chat-history');
     historyBox.innerHTML += `<div style="text-align:right; margin:10px 0;"><span style="background:#007AFF; color:white; padding:8px 12px; border-radius:15px; display:inline-block;">${txt}</span></div>`;
     input.value = '';
 
-    // 上下文构建
+    // === 🔍 核心修改开始：计算当前阅读位置 ===
     const idx = currentBookMeta.progressIndex;
-    // 取当前可视区域附近的文本比较难，简化为取本章前2000字
-    const currentText = currentBookData.chapters[idx].body.substring(0, 2000); 
+    const fullBody = currentBookData.chapters[idx].body;
+    const contentBox = document.getElementById('reader-content');
     
-    // 取最近 6 章的总结作为“记忆”
+    // 计算滚动百分比 (0.0 到 1.0)
+    // 防止分母为0 (如果内容很少没滚动条)
+    let scrollPercent = 0;
+    if (contentBox.scrollHeight > contentBox.clientHeight) {
+        scrollPercent = contentBox.scrollTop / (contentBox.scrollHeight - contentBox.clientHeight);
+    }
+
+    // 映射到字符位置
+    const charIndex = Math.floor(fullBody.length * scrollPercent);
+
+    // 截取“视窗上下文”：
+    // 取当前位置 之前 1200 字 (让AI知道前因) + 之后 500 字 (防止截断半句话)
+    const start = Math.max(0, charIndex - 1200);
+    const end = Math.min(fullBody.length, charIndex + 500);
+    
+    const currentContext = fullBody.substring(start, end);
+    // === 核心修改结束 ===
+
+    // 获取最近 6 章的总结作为“长期记忆”
     const recentSummaries = (currentBookMeta.summaries || [])
         .slice(Math.max(0, idx-6), idx)
         .map((s, i) => `[第${idx-6+i+1}章总结]: ${s}`)
@@ -5260,12 +5326,18 @@ async function sendReaderMsg() {
     const systemPrompt = `你正在和用户一起读一本书。
     你扮演角色：${char.name}。人设：${char.systemPrompt}。
     
-    【前情提要】：${recentSummaries || "无 (刚开始读)"}
-    【用户正在阅读的章节开头】：${currentText}...
+    【长期记忆(前情提要)】：${recentSummaries || "无"}
+    
+    【用户当前正在阅读的片段(可能有截断)】：
+    "...${currentContext}..."
     
     用户对你说："${txt}"
     
-    请结合书本内容回复。根据你的人设，像朋友/恋人共读一样讨论剧情。`;
+    请结合用户当前看到的片段进行回复。如果片段没头没尾，请根据上下文推测。不要剧透后面还没读到的内容。`;
+
+    const btn = document.querySelector('.input-toolbar .btn-send');
+    const oldBtnText = btn.innerText;
+    btn.innerText = "⏳";
 
     try {
         const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
@@ -5284,6 +5356,8 @@ async function sendReaderMsg() {
 
     } catch(e) {
         historyBox.innerHTML += `<div style="color:red; font-size:12px;">Error: ${e.message}</div>`;
+    } finally {
+        btn.innerText = oldBtnText;
     }
 }
 
@@ -5366,9 +5440,72 @@ async function importDataV2(e) {
 
 // 启动加载
 loadLibrary();
+        // --- G. 查看阅读笔记 (UI) ---
+
+function openSummaryList() {
+    const listContainer = document.getElementById('summary-list-content');
+    listContainer.innerHTML = ''; // 清空旧数据
+
+    if (!currentBookMeta || !currentBookData) return;
+
+    const summaries = currentBookMeta.summaries || [];
+    const chapters = currentBookData.chapters || [];
+    
+    // 遍历所有章节
+    // 注意：我们要显示所有章节，哪怕没有总结的也要显示标题，方便知道进度
+    chapters.forEach((chap, index) => {
+        // 如果这一章有总结
+        const summaryText = summaries[index];
+        
+        // 只显示“有总结”的章节，或者“当前阅读进度之前”的章节
+        // 如果你希望显示所有章节（包括没读的），去掉下面这个 if 判断即可
+        // 这里我设计为：只显示到当前阅读进度的章节
+        if (index > currentBookMeta.progressIndex) return;
+
+        const div = document.createElement('div');
+        div.className = 'summary-card';
+        
+        // 标记当前正在读的章节
+        const isCurrent = (index === currentBookMeta.progressIndex);
+        const statusBadge = isCurrent ? '<span style="color:#007AFF; font-size:12px;">(正在读)</span>' : '';
+
+        // 如果没有总结内容
+        const contentHtml = summaryText 
+            ? `<div class="sum-text">${summaryText}</div>`
+            : `<div class="sum-empty">暂无总结 (可能因为你跳过了或者是刚开始读)</div>`;
+
+        div.innerHTML = `
+            <div class="sum-chap-title">
+                <span>${chap.title}</span>
+                ${statusBadge}
+            </div>
+            ${contentHtml}
+        `;
+        
+        // 倒序插入？还是正序？
+        // 既然是回顾，通常正序比较好（从第一章开始）。如果想看最新的，可以用 appendChild。
+        // 如果想把最新的放在最上面，可以用 prepend(div)。这里用正序：
+        listContainer.appendChild(div);
+    });
+
+    // 如果完全没数据
+    if (listContainer.children.length === 0) {
+        listContainer.innerHTML = '<div style="text-align:center; color:#999; margin-top:50px;">还没有任何阅读笔记哦<br>读完一章后 AI 会自动记录</div>';
+    }
+
+    // 滚动到底部（看到最新的）
+    setTimeout(() => {
+        // 只有内容多的时候才自动滚到底
+        const modalBody = document.querySelector('#modal-book-summary .modal-body');
+        if(modalBody) modalBody.scrollTop = modalBody.scrollHeight;
+    }, 100);
+
+    openModal('modal-book-summary');
+}
     </script>
 </body>
 </html>
+
 
 
 
