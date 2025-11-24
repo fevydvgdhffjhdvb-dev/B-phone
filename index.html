@@ -819,6 +819,12 @@ select.x-input option {
     <div class="app-icon" id="app-icon-x" style="background: #000; color: white; font-family: sans-serif; font-weight: 900; font-size: 32px;">𝕏</div>
     <div class="app-name">X</div>
 </div>
+                <!-- 12. 共读 (Co-Reading) -->
+<div class="app-icon-container" onclick="navigateTo('page-bookshelf'); loadLibrary();">
+    <!-- 给它一个书本风格的颜色，比如橙棕色渐变 -->
+    <div class="app-icon" id="app-icon-book" style="background: linear-gradient(to bottom, #a0522d, #cd853f);">📚</div>
+    <div class="app-name">共读</div>
+</div>
             </div>
         </div>
 
@@ -1000,6 +1006,10 @@ select.x-input option {
                         <span class="ios-label">日程图标</span>
                         <input type="text" id="iconInput-sched" class="ios-input" placeholder="http://..." onchange="saveTheme()">
                     </div>
+                    <div class="ios-item">
+    <span class="ios-label">共读图标</span>
+    <input type="text" id="iconInput-book" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+</div>
                 </div>
 
                 <div class="ios-group-title">全局 CSS 代码 (高级美化)</div>
@@ -2249,7 +2259,7 @@ select.x-input option {
         }
         // --- 美化/主题系统 (终极版: 图标+字体+壁纸) ---
     let themeConfig = {
-            icons: { msg: "", mem: "", set: "", theme: "", diary: "", pomo: "" },
+            icons: { msg: "", mem: "", set: "", theme: "", diary: "", pomo: "", cal: "", sched: "", book: "" },
             customCss: "",
             bubbleCss: "",
             customFont: "",
@@ -2286,6 +2296,9 @@ select.x-input option {
             const iconSched = document.getElementById('iconInput-sched');
             if(iconSched) iconSched.value = themeConfig.icons.sched || "";
 
+            const iconBook = document.getElementById('iconInput-book');
+if(iconBook) iconBook.value = themeConfig.icons.book || "";
+
             // 2. 恢复CSS和字体
             const cssInput = document.getElementById('customCssInput');
             if(cssInput) cssInput.value = themeConfig.customCss || "";
@@ -2317,6 +2330,7 @@ select.x-input option {
         themeConfig.icons.pomo = document.getElementById('iconInput-pomo')?.value || "";
         themeConfig.icons.cal = document.getElementById('iconInput-cal')?.value || "";
         themeConfig.icons.sched = document.getElementById('iconInput-sched')?.value || "";
+        themeConfig.icons.book = document.getElementById('iconInput-book')?.value || "";
         
         themeConfig.customCss = document.getElementById('customCssInput')?.value || "";
         themeConfig.bubbleCss = document.getElementById('bubbleCssInput')?.value || ""; // 气泡美化
@@ -2341,6 +2355,7 @@ select.x-input option {
         updateAppIcon('app-icon-pomo', themeConfig.icons.pomo);
         updateAppIcon('app-icon-cal', themeConfig.icons.cal);
         updateAppIcon('app-icon-sched', themeConfig.icons.sched);
+        updateAppIcon('app-icon-book', themeConfig.icons.book);
 
         // B. 应用壁纸
         const homePage = document.getElementById('page-home');
@@ -5354,6 +5369,7 @@ loadLibrary();
     </script>
 </body>
 </html>
+
 
 
 
