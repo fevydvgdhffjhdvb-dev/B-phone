@@ -3875,20 +3875,34 @@ function renderXFeed() {
     });
 }
 
+// 加载用户个人页面的推文 (修复版)
 function loadUserProfileTweets() {
     const container = document.getElementById('x-profile-tweets-container');
-    if(!container) return; 
+    if(!container) {
+        console.error("找不到个人主页推文容器 x-profile-tweets-container");
+        return; 
+    }
     container.innerHTML = '';
 
+    // 筛选逻辑：
+    // 1. authorId 是 'user' (原创)
+    // 2. isRepost 是 true 且 authorId 是 'user' (我转帖的)
+    // 3. isQuote 是 true 且 authorId 是 'user' (我引用的)
+    // 其实只要 authorId === 'user' 就够了，因为 createTweet 里我们都把 user 的操作标记为了 authorId: 'user'
     const myTweets = xData.tweets.filter(t => t.authorId === 'user');
+
+    console.log("找到用户推文数量:", myTweets.length); // 方便调试
 
     if (myTweets.length === 0) {
         container.innerHTML = `<div style="padding:20px;text-align:center;color:#71767b">暂无推文</div>`;
         return;
     }
+    
+    // 按时间倒序
     const sortedMyTweets = myTweets.sort((a, b) => b.timestamp - a.timestamp);
 
     sortedMyTweets.forEach(tweet => {
+        // 复用 buildTweetElement 生成 DOM
         const el = buildTweetElement(tweet);
         container.appendChild(el);
     });
@@ -4050,21 +4064,31 @@ function openReplyModal(tweetId) {
     openTweetDetail(tweetId); 
 }
 
+// 发推文 (更新版：触发角色评论)
 function openComposeTweet() {
     const content = prompt("有什么新鲜事？");
     if (content) {
         const userTweet = createTweet({
             authorId: 'user',
             content: content,
-            skipAutoComments: true // 这里虽然跳过，但下面马上接了AI生成
+            skipAutoComments: true // 既然我们要AI生成，就跳过本地假数据
         });
         renderXFeed();
+        
+        // 将推文同步到个人主页
+        // 注意：createTweet 已经把推文加到 xData.tweets 里面了，且 authorId 是 'user'
+        // 所以只要 loadUserProfileTweets() 逻辑正确，这里不需要额外操作
 
-        // 【新增彩蛋】用户发推后，延迟触发路人/粉丝来评论！
         if(globalConfig.apiKey) {
+            // 1. 延迟触发路人/粉丝评论
             setTimeout(() => {
                 generateFanOrNPCCommentForUser(userTweet.id);
-            }, 3000 + Math.random() * 2000); // 延迟 3-5 秒
+            }, 3000);
+
+            // 2. 【新增】延迟触发角色评论 (必回)
+            setTimeout(() => {
+                generateCharacterCommentForUser(userTweet.id);
+            }, 6000); // 稍微晚一点，像真人一样
         }
     }
 }
@@ -4088,29 +4112,54 @@ function switchXTab(tab) {
 // 4. AI 驱动逻辑 (核心大整合)
 // ----------------------------
 
-function triggerPullToRefresh() {
+// 模拟下拉刷新 (批量生成版：6-8条，角色限制3条)
+async function triggerPullToRefresh() {
     const spinner = document.getElementById('x-refresh-spinner');
     if(spinner) spinner.style.display = 'block';
     
-    const roll = Math.random(); 
-    setTimeout(() => {
-        if (roll < 0.05) generateFanOrNPCTweetAI('passerby').then(finishRefresh);
-        else if (roll < 0.30) generateFanOrNPCTweetAI('fan').then(finishRefresh);
-        else {
-            if (contacts.length > 0) {
-                const randomChar = contacts[Math.floor(Math.random() * contacts.length)];
-                generateXTweetAI(randomChar.id).then(finishRefresh);
-            } else {
-                generateFanOrNPCTweetAI('passerby').then(finishRefresh);
-            }
-        }
-    }, 800);
+    // 1. 决定本次刷新生成的总条数 (6 到 8 条)
+    const totalToGenerate = Math.floor(Math.random() * 3) + 6; 
+    let charTweetCount = 0; // 当前批次已生成的角色推文计数
+    const maxCharTweets = 3; // 角色推文上限
+    
+    // 定义一个生成队列
+    const tasks = [];
 
-    function finishRefresh() {
-        if(spinner) spinner.style.display = 'none';
-        renderXFeed();
-        if(navigator.vibrate) navigator.vibrate(50);
+    for (let i = 0; i < totalToGenerate; i++) {
+        const roll = Math.random(); // 0.0 ~ 1.0
+        
+        // 逻辑判断：
+        // 1. 如果随机到了角色 (70%概率)，且还没超过上限 -> 生成角色推
+        // 2. 否则生成粉丝或路人推
+        
+        if (roll >= 0.30 && contacts.length > 0 && charTweetCount < maxCharTweets) {
+            // --- 生成角色推文 ---
+            charTweetCount++;
+            const randomChar = contacts[Math.floor(Math.random() * contacts.length)];
+            // 将 Promise 推入队列，并行执行
+            tasks.push(generateXTweetAI(randomChar.id));
+        } else {
+            // --- 生成路人/粉丝推文 ---
+            // 在剩下的概率里，再细分粉丝和路人
+            // 这里的逻辑是：只要不发角色推，就发NPC推。
+            // 为了保持你想要的 5% 路人 vs 25% 粉丝的比例 (大约 1:5)
+            const npcRoll = Math.random();
+            const type = npcRoll < 0.17 ? 'passerby' : 'fan'; // 0.17 是 5/30 的近似值
+            tasks.push(generateFanOrNPCTweetAI(type));
+        }
     }
+
+    // 等待所有 AI 生成任务完成 (并行执行，速度快)
+    await Promise.all(tasks);
+
+    // 全部完成后
+    if(spinner) spinner.style.display = 'none';
+    renderXFeed(); // 刷新列表
+    if(navigator.vibrate) navigator.vibrate(50);
+    
+    // 滚动到顶部
+    const feed = document.getElementById('x-feed-container');
+    if(feed) feed.scrollTop = 0;
 }
 
 // AI: 角色发推 (满血版：读记忆 + 强制生成评论)
@@ -4615,9 +4664,61 @@ function updateXBadge() {
         badge.style.display = 'none';
     }
 }
+        // 【新增】让角色给用户推文评论
+async function generateCharacterCommentForUser(tweetId) {
+    const tweet = xData.tweets.find(t => t.id === tweetId);
+    if(!tweet) return;
+
+    // 随机选一个角色来评论你
+    if(contacts.length === 0) return;
+    const char = contacts[Math.floor(Math.random() * contacts.length)];
+
+    // 构造 Prompt
+    const prompt = `
+    你现在扮演 "${char.name}"。人设：${char.systemPrompt}
+    
+    你的用户 "${xData.user.name}" 刚刚发了一条推特：
+    "${tweet.content}"
+    
+    请你在底下评论。
+    要求：符合你的人设，简短，像真实的推特回复。
+    `;
+
+    try {
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
+        const data = await res.json();
+        const replyText = data.choices[0].message.content;
+
+        // 创建评论
+        const charComment = {
+            id: 'cmt_char_' + Date.now(),
+            authorId: char.id, // 标记为角色
+            name: char.name, 
+            handle: "@" + char.id.substring(0,8),
+            avatar: char.avatar,
+            content: replyText, 
+            timestamp: Date.now()
+        };
+
+        // 插入评论
+        tweet.comments.push(charComment);
+        tweet.stats.replies++;
+        saveXData();
+        renderXFeed();
+        
+    } catch(e) { console.error(e); }
+}
     </script>
 </body>
 </html>
+
 
 
 
