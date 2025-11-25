@@ -5266,7 +5266,34 @@ async function generateChapterSummary() {
         currentBookMeta.summaries[idx] = summary;
         saveBookProgress();
         
-        alert(`✅ 本章总结完毕！\nAI 已经记住了 ${summary.length} 个字的剧情要点。`);
+        // === ✨ 新增功能：同步共读报告到主聊天框 ✨ ===
+        const chapterTitle = currentBookData.chapters[idx].title;
+        const bookTitle = currentBookMeta.title;
+
+        // 构造报告文案
+        const readingReport = `
+📖【共读报告】
+------------------
+📚 书籍：《${bookTitle}》
+📑 章节：${chapterTitle}
+📝 剧情回顾：
+${summary}
+------------------
+(系统提示：用户刚读完这一章。请${char.name}根据这个剧情回顾，可以在这个聊天框里和用户聊聊读后感，或者评价一下剧情发展。)
+`.trim();
+
+        // 将报告以“用户消息”的形式插入主聊天记录
+        // 这样 AI 就会以为是你发给它的，它就会根据这段话进行回复，从而实现“同步信息点”
+        char.messages.push({
+            role: 'user', // 这里用 user，假装是用户分享的报告
+            content: readingReport,
+            timestamp: Date.now()
+        });
+        
+        // 保存聊天数据
+        saveData(); 
+
+        alert(`✅ 总结完毕！\n共读报告已发送给 ${char.name}，退回主界面即可看到 Ta 的读后感。`);
 
     } catch(e) {
         alert("总结失败: " + e.message);
@@ -5275,12 +5302,38 @@ async function generateChapterSummary() {
     }
 }
 
-// 聊天
+// 打开阅读器聊天窗口（带历史记录加载）
 function openReaderChat() {
+    const historyBox = document.getElementById('reader-chat-history');
+    historyBox.innerHTML = ''; // 先清空界面
+
+    // 1. 检查并初始化这本书的聊天记录数组
+    if (!currentBookMeta.chatLogs) {
+        currentBookMeta.chatLogs = [];
+    }
+
+    // 2. 渲染历史记录
+    const char = contacts.find(c => c.id === activeContactId);
+    // 如果还没选人，就用个默认头像
+    const avatar = char ? char.avatar : ''; 
+
+    currentBookMeta.chatLogs.forEach(log => {
+        if (log.role === 'user') {
+            historyBox.innerHTML += `<div style="text-align:right; margin:10px 0;"><span style="background:#007AFF; color:white; padding:8px 12px; border-radius:15px; display:inline-block;">${log.content}</span></div>`;
+        } else {
+            historyBox.innerHTML += `<div style="text-align:left; margin:10px 0;"><img src="${avatar}" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;"> <span style="background:#f2f2f7; color:black; padding:8px 12px; border-radius:15px; display:inline-block;">${log.content}</span></div>`;
+        }
+    });
+
+    // 3. 滚到底部
+    setTimeout(() => {
+        historyBox.scrollTop = historyBox.scrollHeight;
+    }, 100);
+
     openModal('modal-reader-chat');
 }
 
-// --- 精准定位版聊天发送 ---
+// 发送阅读器消息（带保存功能）
 async function sendReaderMsg() {
     const input = document.getElementById('readerChatInput');
     const txt = input.value.trim();
@@ -5289,35 +5342,31 @@ async function sendReaderMsg() {
     const char = contacts.find(c => c.id === activeContactId);
     if(!char) return;
 
-    // 1. UI 显示用户消息
+    // --- 1. UI 显示用户消息 ---
     const historyBox = document.getElementById('reader-chat-history');
     historyBox.innerHTML += `<div style="text-align:right; margin:10px 0;"><span style="background:#007AFF; color:white; padding:8px 12px; border-radius:15px; display:inline-block;">${txt}</span></div>`;
     input.value = '';
+    historyBox.scrollTop = historyBox.scrollHeight;
 
-    // === 🔍 核心修改开始：计算当前阅读位置 ===
+    // --- 2. 保存用户消息到书本数据 ---
+    if (!currentBookMeta.chatLogs) currentBookMeta.chatLogs = [];
+    currentBookMeta.chatLogs.push({ role: 'user', content: txt, time: Date.now() });
+    saveBookProgress(); // 存入 LocalStorage
+
+    // --- 3. 准备上下文 (精准定位版) ---
     const idx = currentBookMeta.progressIndex;
     const fullBody = currentBookData.chapters[idx].body;
     const contentBox = document.getElementById('reader-content');
     
-    // 计算滚动百分比 (0.0 到 1.0)
-    // 防止分母为0 (如果内容很少没滚动条)
     let scrollPercent = 0;
     if (contentBox.scrollHeight > contentBox.clientHeight) {
         scrollPercent = contentBox.scrollTop / (contentBox.scrollHeight - contentBox.clientHeight);
     }
-
-    // 映射到字符位置
     const charIndex = Math.floor(fullBody.length * scrollPercent);
-
-    // 截取“视窗上下文”：
-    // 取当前位置 之前 1200 字 (让AI知道前因) + 之后 500 字 (防止截断半句话)
     const start = Math.max(0, charIndex - 1200);
     const end = Math.min(fullBody.length, charIndex + 500);
-    
     const currentContext = fullBody.substring(start, end);
-    // === 核心修改结束 ===
 
-    // 获取最近 6 章的总结作为“长期记忆”
     const recentSummaries = (currentBookMeta.summaries || [])
         .slice(Math.max(0, idx-6), idx)
         .map((s, i) => `[第${idx-6+i+1}章总结]: ${s}`)
@@ -5326,12 +5375,9 @@ async function sendReaderMsg() {
     const systemPrompt = `你正在和用户一起读一本书。
     你扮演角色：${char.name}。人设：${char.systemPrompt}。
     
-    【长期记忆(前情提要)】：${recentSummaries || "无"}
-    
-    【用户当前正在阅读的片段(可能有截断)】：
-    "...${currentContext}..."
-    
-    用户对你说："${txt}"
+    【长期记忆】：${recentSummaries || "无"}
+    【用户当前阅读片段】："...${currentContext}..."
+    用户说："${txt}"
     
     请结合用户当前看到的片段进行回复。如果片段没头没尾，请根据上下文推测。不要剧透后面还没读到的内容。`;
 
@@ -5351,8 +5397,13 @@ async function sendReaderMsg() {
         const data = await res.json();
         const reply = data.choices[0].message.content;
 
+        // --- 4. UI 显示 AI 回复 ---
         historyBox.innerHTML += `<div style="text-align:left; margin:10px 0;"><img src="${char.avatar}" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;"> <span style="background:#f2f2f7; color:black; padding:8px 12px; border-radius:15px; display:inline-block;">${reply}</span></div>`;
         historyBox.scrollTop = historyBox.scrollHeight;
+
+        // --- 5. 保存 AI 回复到书本数据 ---
+        currentBookMeta.chatLogs.push({ role: 'assistant', content: reply, time: Date.now() });
+        saveBookProgress(); // 再次保存
 
     } catch(e) {
         historyBox.innerHTML += `<div style="color:red; font-size:12px;">Error: ${e.message}</div>`;
@@ -5505,6 +5556,7 @@ function openSummaryList() {
     </script>
 </body>
 </html>
+
 
 
 
