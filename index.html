@@ -1469,6 +1469,9 @@ select.x-input option {
         <button onclick="exitReader()" style="background:none; border:none; font-size:16px; color:#5b4636; font-weight:bold;">‹ 书架</button>
         <span id="reader-title" style="font-weight:bold; font-size:14px; max-width:150px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">书名</span>
         <div style="display:flex; gap:15px;">
+            <!-- ✨✨✨ 新增这个按钮：手动触发同步 ✨✨✨ -->
+        <button onclick="manualShareReport()" style="background:none; border:none; font-size:20px;" title="同步阅读进度给AI">🔄</button>
+        <!-- ✨✨✨ 新增结束 ✨✨✨ -->
     <button onclick="openSummaryList()" style="background:none; border:none; font-size:20px;" title="查看阅读笔记">📝</button>
     <button onclick="toggleReaderSettings()" style="background:none; border:none; font-size:18px;">Aa</button>
 </div>
@@ -5148,17 +5151,47 @@ async function openBook(id) {
     renderReaderPage();
 }
 
+// 渲染阅读器页面 (修改版：增加进度恢复 + 滚动监听)
 function renderReaderPage() {
     const idx = currentBookMeta.progressIndex;
     const chapter = currentBookData.chapters[idx];
     
+    // 1. 设置标题和进度文字
     document.getElementById('reader-title').innerText = chapter.title;
+    document.getElementById('reader-progress').innerText = `${idx + 1}/${currentBookData.chapters.length}`;
     
+    // 2. 填充内容
     const contentBox = document.getElementById('reader-content');
     contentBox.innerText = chapter.body; 
-    contentBox.scrollTop = 0; // 每次换章都回到顶部
     
-    document.getElementById('reader-progress').innerText = `${idx + 1}/${currentBookData.chapters.length}`;
+    // --- ✨ 新增核心逻辑：恢复上次阅读位置 ---
+    if (currentBookMeta.scrollRatio && currentBookMeta.scrollRatio > 0) {
+        //稍微延迟一点点，等待文字渲染出高度，否则 scrollHeight 可能不准
+        setTimeout(() => {
+            const targetScroll = contentBox.scrollHeight * currentBookMeta.scrollRatio;
+            contentBox.scrollTop = targetScroll;
+        }, 50);
+    } else {
+        contentBox.scrollTop = 0; // 如果没记录，就回到顶部
+    }
+
+    // --- ✨ 新增核心逻辑：实时监听滚动并保存 ---
+    // 使用防抖 (Throttle) 机制，每隔 1 秒保存一次，避免疯狂写入 LocalStorage 卡顿
+    let saveTimeout;
+    contentBox.onscroll = function() {
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+            // 计算当前滚动的百分比 (0.0 - 1.0)
+            const ratio = contentBox.scrollTop / (contentBox.scrollHeight - contentBox.clientHeight);
+            
+            // 存入内存对象
+            currentBookMeta.scrollRatio = ratio;
+            
+            // 存入硬盘 (LocalStorage)
+            saveBookProgress();
+            // console.log("进度已保存:", (ratio*100).toFixed(2) + "%"); // 调试用
+        }, 1000); // 停止滚动 1秒 后保存
+    };
 }
 
 function exitReader() {
@@ -5203,6 +5236,7 @@ async function nextChapter() {
 
     // 只有在用户处理完总结(或取消)后，才真正跳转
     currentBookMeta.progressIndex++;
+    currentBookMeta.scrollRatio = 0;
     saveBookProgress();
     renderReaderPage();
 }
@@ -5210,6 +5244,7 @@ async function nextChapter() {
 function prevChapter() {
     if(currentBookMeta.progressIndex <= 0) return;
     currentBookMeta.progressIndex--;
+    currentBookMeta.scrollRatio = 0;
     saveBookProgress();
     renderReaderPage();
 }
@@ -5319,6 +5354,16 @@ ${summary}
         alert("总结失败: " + e.message);
     } finally {
         if(btn) btn.innerText = oldText;
+    }
+}
+        // 手动触发同步报告
+async function manualShareReport() {
+    const char = contacts.find(c => c.id === activeContactId);
+    if (!char) return alert("请先选择一个伴读角色");
+
+    if (confirm(`要将当前章节的阅读进度同步给 ${char.name} 吗？\n\nTa 会生成一份剧情总结，并在聊天里回复你的读后感。`)) {
+        // 直接复用已有的总结函数，它会自动生成报告、存入记忆、并发给角色
+        await generateChapterSummary();
     }
 }
 
@@ -5576,6 +5621,7 @@ function openSummaryList() {
     </script>
 </body>
 </html>
+
 
 
 
