@@ -3306,7 +3306,7 @@ async function processAutoReplyChain(charId) {
     }
 }
 
-// 生成单条回填消息的函数
+// 生成单条回填消息的函数 (修复版)
 async function generateBackfillMessage(char, simulatedTime, chainIndex) {
     // 计算模拟时间点的日期描述
     const simDate = new Date(simulatedTime);
@@ -3318,19 +3318,17 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
     
     // 构建 Prompt
     const backfillPrompt = `
-    【场景模拟：离线补发消息】
-    现在是虚拟时间：${dayStr} ${timeStr}。
-    现状：用户已经消失了约 ${hoursSinceUser} 小时。
-    这是你【连续第 ${chainIndex} 次】主动发消息寻找用户（用户之前的都没回）。
+    [系统强制指令]
+    当前是虚拟时间：${dayStr} ${timeStr}。
+    现状：用户已经不理你约 ${hoursSinceUser} 小时了。
+    这是你【连续第 ${chainIndex} 次】主动发消息寻找用户（用户一直没回）。
     
-    请根据你的角色设定和当前的虚拟时间点，发送一条消息。
+    请务必发送一条消息给用户。
     要求：
-    1. 如果是第1次追问：语气正常，开启新话题或问候。
-    2. 如果是第2-3次追问：语气开始疑惑、担忧或稍微有点小情绪。
-    3. 如果是第4-5次追问：语气可以是失落、自言自语或者假装生气。
-    4. 结合时间点（比如深夜、清晨）自然发挥。
-    5. 字数不要超过五十字。
-    6. 【重要】绝对不要重复你上一条发送的内容！必须换一种说法或换个角度。
+    1. 必须根据“连续追问次数”改变语气（第1次正常，后面逐渐焦急、失落或生气）。
+    2. 结合时间点（如深夜、清晨）发挥。
+    3. 字数50字以内。
+    4. 不要重复上一条内容！必须说话，不能留空！
     `;
 
     // 调用 API
@@ -3349,14 +3347,31 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
                 messages: [
                     { role: "system", content: char.systemPrompt },
                     ...history,
-                    { role: "system", content: backfillPrompt }
+                    // 【核心修改】将 role 改为 user，强制模型必须回应，防止空回
+                    { role: "user", content: backfillPrompt }
                 ],
                 temperature: 0.85 
             })
         });
         
+        if (!res.ok) {
+            throw new Error(`API error: ${res.status}`);
+        }
+
         const data = await res.json();
-        const reply = data.choices[0].message.content;
+        
+        // 【核心修改】增加空值检查，防止报错
+        if (!data.choices || data.choices.length === 0 || !data.choices[0].message) {
+            throw new Error("API 返回了空数据");
+        }
+
+        let reply = data.choices[0].message.content;
+
+        // 【核心修改】过滤掉空白回复
+        if (!reply || reply.trim() === "") {
+            console.warn("AI 生成了空内容，跳过本次补发");
+            return; // 直接退出，不生成空气泡
+        }
 
         // 存入消息，注意：timestamp 使用模拟的那个过去的时间！
         char.messages.push({ 
@@ -3365,12 +3380,12 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
             timestamp: simulatedTime 
         });
 
-        // 立即渲染到界面上，让用户看到消息“弹”出来
-        // 注意：这里我们不播放打字动画，直接显示，因为是历史消息
+        // 立即渲染到界面上
         appendMsgUI('assistant', reply, null, char.messages.length, false, simulatedTime);
 
     } catch (e) {
-        console.error("补发生成失败", e);
+        console.error("补发生成失败:", e);
+        // 这里不弹窗，以免打断自动流程，但在控制台记录
     }
 }
         // ==========================================
@@ -5556,6 +5571,7 @@ function openSummaryList() {
     </script>
 </body>
 </html>
+
 
 
 
