@@ -768,6 +768,119 @@ select.x-input option {
     color: #ccc;
     font-style: italic;
 }
+        /* ============ 音乐播放器专用样式 ============ */
+        
+        /* 1. 悬浮球 (最小化时显示) */
+        .music-float-btn {
+            position: absolute; top: 50px; right: 20px;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 200; cursor: pointer; overflow: hidden;
+            animation: spin 10s linear infinite; /* 默认旋转 */
+            animation-play-state: paused;
+            display: none; /* 默认隐藏，导入歌曲后显示 */
+        }
+        .music-float-btn.playing { animation-play-state: running; }
+        .music-float-btn img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+
+        /* 2. 全屏播放器层 */
+        .music-player-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #333; z-index: 300;
+            display: flex; flex-direction: column;
+            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+            overflow: hidden;
+        }
+        .music-player-overlay.show { transform: translateY(0); }
+
+        /* 动态模糊背景 */
+        .music-bg-blur {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover; background-position: center;
+            filter: blur(30px) brightness(0.6); transform: scale(1.2);
+            z-index: 0; transition: background-image 0.5s;
+        }
+
+        /* 播放器内容区 */
+        .music-content { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; padding-top: 50px; }
+
+        /* 顶部栏 */
+        .music-header {
+            width: 100%; display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 20px; color: #fff; font-size: 24px;
+        }
+        
+        /* 双头像互动区 */
+        .music-avatars {
+            display: flex; align-items: center; gap: 15px; margin-bottom: 20px;
+        }
+        .m-avatar { width: 50px; height: 50px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.8); object-fit: cover;}
+        /* 连接线动画 */
+        .m-connect-line {
+            flex: 1; height: 2px; background: rgba(255,255,255,0.3); width: 60px; position: relative;
+        }
+        .m-connect-line::after {
+            content: ''; position: absolute; top: -4px; left: 0; width: 10px; height: 10px;
+            background: #fff; border-radius: 50%; box-shadow: 0 0 10px #fff;
+            animation: connectMove 2s infinite ease-in-out;
+        }
+        @keyframes connectMove { 0% { left: 0; opacity: 0;} 50% { opacity: 1; } 100% { left: 100%; opacity: 0;} }
+
+        /* 黑胶唱片区 */
+        .vinyl-wrapper {
+            width: 280px; height: 280px; border-radius: 50%;
+            background: #000;
+            border: 5px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; align-items: center; justify-content: center;
+            animation: spin 20s linear infinite;
+            animation-play-state: paused;
+            margin-top: 20px; cursor: pointer;
+        }
+        .vinyl-wrapper.playing { animation-play-state: running; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .vinyl-cover { width: 190px; height: 190px; border-radius: 50%; object-fit: cover; border: 4px solid #111; }
+
+        /* 歌词区 (默认隐藏，点击切换) */
+        .lyrics-container {
+            position: absolute; top: 120px; width: 100%; bottom: 180px;
+            padding: 20px 40px; overflow-y: auto; text-align: center;
+            mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+            display: none; scroll-behavior: smooth;
+        }
+        .lyrics-container.active { display: block; }
+        .lrc-line { 
+            padding: 10px 0; font-size: 16px; color: rgba(255,255,255,0.5); transition: 0.3s; cursor: pointer;
+            min-height: 20px;
+        }
+        .lrc-line.highlight { color: #fff; font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.5); transform: scale(1.05); }
+
+        /* 底部控制栏 */
+        .music-controls {
+            width: 100%; padding: 20px 30px; padding-bottom: 50px;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            position: absolute; bottom: 0;
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        .music-info-text { text-align: center; color: #fff; }
+        .m-title { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
+        .m-artist { font-size: 14px; color: rgba(255,255,255,0.7); }
+        
+        .progress-bar-box { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.6); font-size: 12px; }
+        .progress-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; position: relative; overflow: hidden;}
+        .progress-fill { width: 0%; height: 100%; background: #fff; border-radius: 2px; }
+
+        .btn-row { display: flex; justify-content: space-between; align-items: center; padding: 0 20px; }
+        .m-btn { background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; }
+        .m-btn-play { font-size: 50px; }
+        .m-btn-import { font-size: 20px; border: 1px solid rgba(255,255,255,0.5); padding: 5px 15px; border-radius: 20px; }
+
+        /* 导入弹窗特别样式 */
+        .import-area { display: flex; flex-direction: column; gap: 10px; }
+        .import-area textarea { height: 100px; font-size: 12px; white-space: pre; }
     </style>
 </head>
 <body>
@@ -1523,6 +1636,104 @@ select.x-input option {
         </div>
     </div>
 </div>
+        <!-- 🎵 音乐播放器悬浮球 (在所有页面之上) -->
+    <div id="music-float-btn" class="music-float-btn" onclick="toggleMusicPlayer(true)">
+        <img id="float-cover" src="https://i.postimg.cc/Vvq4PMVp/IMG-9639.jpg">
+    </div>
+
+    <!-- 🎵 全屏音乐播放器 -->
+    <div id="music-player" class="music-player-overlay">
+        <!-- 背景模糊层 -->
+        <div id="music-bg" class="music-bg-blur" style="background-image: url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500');"></div>
+        
+        <div class="music-content">
+            <!-- 顶部 -->
+            <div class="music-header">
+                <button onclick="toggleMusicPlayer(false)" style="background:none;border:none;color:#fff;">⌄</button>
+                <span style="font-size:16px; opacity:0.8;">一起听</span>
+                <button style="width:24px;"></button> <!-- 占位 -->
+            </div>
+
+            <!-- 头像互动 -->
+            <div class="music-avatars">
+                <img id="m-user-avatar" src="" class="m-avatar">
+                <div class="m-connect-line"></div>
+                <img id="m-ai-avatar" src="" class="m-avatar">
+            </div>
+
+            <!-- 唱片区 (点击切换歌词) -->
+            <div id="vinyl-view" class="vinyl-wrapper" onclick="switchMusicView()">
+                <img id="m-cover" src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500" class="vinyl-cover">
+            </div>
+
+            <!-- 歌词区 -->
+            <div id="lyrics-view" class="lyrics-container" onclick="switchMusicView()">
+                <div class="lrc-line">点击右下角“导入”</div>
+                <div class="lrc-line">粘贴歌词开始</div>
+            </div>
+            
+            <!-- 底部控制 -->
+            <div class="music-controls">
+                <div class="music-info-text">
+                    <div id="m-title" class="m-title">未播放</div>
+                    <div id="m-artist" class="m-artist">--</div>
+                </div>
+
+                <div class="progress-bar-box">
+                    <span id="curr-time">00:00</span>
+                    <div class="progress-bar"><div id="prog-fill" class="progress-fill"></div></div>
+                    <span id="total-time">00:00</span>
+                </div>
+
+                <div class="btn-row">
+                    <button class="m-btn m-btn-import" onclick="openModal('modal-import-music')">导入歌曲</button>
+                    <button id="btn-play-pause" class="m-btn m-btn-play" onclick="togglePlayMusic()">▶</button>
+                    <button class="m-btn" style="font-size:20px;" onclick="openModal('modal-import-music')">≡</button> <!-- 播放列表入口(暂用导入代替) -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🎵 导入歌曲弹窗 -->
+    <div class="modal-overlay" id="modal-import-music">
+        <div class="modal-box">
+            <div class="modal-header">导入歌曲 (LRC模式)</div>
+            <div class="modal-body">
+                <div class="import-area">
+                    <div class="ios-item">
+                        <span class="ios-label">歌名</span>
+                        <input type="text" id="imp-title" class="ios-input" placeholder="例如: 晴天">
+                    </div>
+                    <div class="ios-item">
+                        <span class="ios-label">歌手</span>
+                        <input type="text" id="imp-artist" class="ios-input" placeholder="例如: 周杰伦">
+                    </div>
+                    
+                    <div class="ios-item">
+                        <span class="ios-label">封面图 URL</span>
+                        <input type="text" id="imp-cover" class="ios-input" placeholder="http://...">
+                    </div>
+
+                    <div class="ios-item" style="flex-direction:column; align-items:flex-start;">
+                        <span class="ios-label" style="margin-bottom:5px;">音频文件 (推荐)</span>
+                        <input type="file" id="imp-file" accept="audio/*" class="ios-input" style="padding-left:0;">
+                    </div>
+                    
+                    <div class="ios-item" style="flex-direction:column; align-items:flex-start;">
+                        <span class="ios-label" style="margin-bottom:5px;">或者 音频直链</span>
+                        <input type="text" id="imp-url" class="ios-input" placeholder="http://...">
+                    </div>
+
+                    <div class="ios-group-title">歌词 (LRC 格式)</div>
+                    <textarea id="imp-lrc" class="ios-input" style="height:120px; border:1px solid #eee; padding:5px;" placeholder="[00:00.00] 粘贴歌词到这里...&#10;[00:05.00] 歌词内容..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" onclick="closeModal('modal-import-music')">取消</button>
+                <button class="modal-btn" onclick="confirmImportMusic()">开始播放</button>
+            </div>
+        </div>
+    </div>
 
         <!-- ============ 弹窗组件 ============ -->
 
@@ -2015,6 +2226,7 @@ select.x-input option {
             let systemPromptFull = char.systemPrompt + `\n[当前时间: ${new Date().toLocaleString()}]\n[用户名称: ${char.userName}]`;
             if(char.userPersona) systemPromptFull += `\n[用户设定: ${char.userPersona}]`;
             systemPromptFull += getStatusContext(char);
+            systemPromptFull += getMusicContext();
             
             // 喂入日记
             if (char.diaries && char.diaries.length > 0) {
@@ -5726,9 +5938,273 @@ function openSummaryList() {
 
     openModal('modal-book-summary');
 }
+        // ==========================================
+    // --- 🎵 音乐播放器核心逻辑 (Music Player) ---
+    // ==========================================
+
+    let audioPlayer = new Audio();
+    let musicState = {
+        isPlaying: false,
+        title: "",
+        artist: "",
+        lyrics: [], // 格式: [{time: 12.5, text: "歌词"}]
+        currentLine: -1,
+        cover: ""
+    };
+
+    // 1. 初始化
+    audioPlayer.ontimeupdate = updateMusicProgress;
+    audioPlayer.onended = () => {
+        musicState.isPlaying = false;
+        updatePlayerUI();
+    };
+
+    // 2. 界面切换 (展开/收起)
+    function toggleMusicPlayer(show) {
+        const player = document.getElementById('music-player');
+        if (show) {
+            // 更新头像
+            const char = getActiveChar();
+            if(char) {
+                document.getElementById('m-ai-avatar').src = char.avatar;
+                document.getElementById('m-user-avatar').src = char.userAvatar;
+            }
+            player.classList.add('show');
+        } else {
+            player.classList.remove('show');
+        }
+    }
+
+    // 3. 视图切换 (黑胶 <-> 歌词)
+    function switchMusicView() {
+        const vinyl = document.getElementById('vinyl-view');
+        const lyrics = document.getElementById('lyrics-view');
+        
+        if (lyrics.style.display === 'block') {
+            lyrics.style.display = 'none';
+            vinyl.style.display = 'flex';
+        } else {
+            vinyl.style.display = 'none';
+            lyrics.style.display = 'block';
+            // 切换到歌词时，自动滚动到当前句
+            scrollToCurrentLyric();
+        }
+    }
+
+    // 4. 导入歌曲
+    function confirmImportMusic() {
+        const title = document.getElementById('imp-title').value || "未知歌曲";
+        const artist = document.getElementById('imp-artist').value || "未知歌手";
+        const coverUrl = document.getElementById('imp-cover').value || "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500";
+        const lrcText = document.getElementById('imp-lrc').value;
+        const fileInput = document.getElementById('imp-file');
+        const urlInput = document.getElementById('imp-url').value;
+
+        // 设置基本信息
+        musicState.title = title;
+        musicState.artist = artist;
+        musicState.cover = coverUrl;
+        
+        // 解析歌词
+        musicState.lyrics = parseLRC(lrcText);
+        renderLyrics();
+
+        // 设置音频源
+        if (fileInput.files && fileInput.files[0]) {
+            const fileUrl = URL.createObjectURL(fileInput.files[0]);
+            audioPlayer.src = fileUrl;
+        } else if (urlInput) {
+            audioPlayer.src = urlInput;
+        } else {
+            alert("请选择音频文件或输入链接");
+            return;
+        }
+
+        // 更新UI
+        document.getElementById('m-title').innerText = title;
+        document.getElementById('m-artist').innerText = artist;
+        document.getElementById('m-cover').src = coverUrl;
+        document.getElementById('float-cover').src = coverUrl;
+        document.getElementById('music-bg').style.backgroundImage = `url('${coverUrl}')`;
+        
+        // 显示悬浮球
+        document.getElementById('music-float-btn').style.display = 'flex';
+
+        closeModal('modal-import-music');
+        
+        // 尝试播放
+        audioPlayer.play().then(() => {
+            musicState.isPlaying = true;
+            updatePlayerUI();
+            toggleMusicPlayer(true); // 自动打开播放器
+        }).catch(e => {
+            alert("自动播放受限，请手动点击播放按钮");
+            toggleMusicPlayer(true);
+        });
+    }
+
+    // 5. LRC 解析器 (正则魔法)
+    function parseLRC(lrc) {
+        const lines = lrc.split('\n');
+        const result = [];
+        const timeExp = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/;
+        
+        lines.forEach(line => {
+            const match = timeExp.exec(line);
+            if (match) {
+                const minutes = parseInt(match[1]);
+                const seconds = parseInt(match[2]);
+                const ms = parseFloat("0." + match[3]);
+                const time = minutes * 60 + seconds + ms;
+                const text = line.replace(timeExp, '').trim();
+                if(text) result.push({ time, text });
+            }
+        });
+        return result;
+    }
+
+    // 6. 渲染歌词 DOM
+    function renderLyrics() {
+        const container = document.getElementById('lyrics-view');
+        container.innerHTML = ''; // 清空
+        if(musicState.lyrics.length === 0) {
+            container.innerHTML = '<div class="lrc-line" style="margin-top:50px;">纯音乐 / 无歌词</div>';
+            return;
+        }
+        
+        // 顶部留白
+        container.innerHTML += '<div style="height: 40vh;"></div>';
+        
+        musicState.lyrics.forEach((line, index) => {
+            const div = document.createElement('div');
+            div.className = 'lrc-line';
+            div.innerText = line.text;
+            div.dataset.index = index;
+            div.onclick = () => {
+                // 点击歌词跳转进度
+                audioPlayer.currentTime = line.time;
+            };
+            container.appendChild(div);
+        });
+        
+        // 底部留白
+        container.innerHTML += '<div style="height: 40vh;"></div>';
+    }
+
+    // 7. 播放控制
+    function togglePlayMusic() {
+        if (audioPlayer.paused) {
+            audioPlayer.play();
+            musicState.isPlaying = true;
+        } else {
+            audioPlayer.pause();
+            musicState.isPlaying = false;
+        }
+        updatePlayerUI();
+    }
+
+    function updatePlayerUI() {
+        const btn = document.getElementById('btn-play-pause');
+        const vinyl = document.getElementById('vinyl-view');
+        const floatBtn = document.getElementById('music-float-btn');
+        
+        if (musicState.isPlaying) {
+            btn.innerText = "⏸";
+            vinyl.classList.add('playing');
+            floatBtn.classList.add('playing');
+        } else {
+            btn.innerText = "▶";
+            vinyl.classList.remove('playing');
+            floatBtn.classList.remove('playing');
+        }
+    }
+
+    // 8. 进度与歌词同步 (每秒执行多次)
+    function updateMusicProgress() {
+        const curr = audioPlayer.currentTime;
+        const total = audioPlayer.duration || 0;
+
+        // 更新进度条
+        document.getElementById('curr-time').innerText = formatTime(curr);
+        document.getElementById('total-time').innerText = formatTime(total);
+        document.getElementById('prog-fill').style.width = (curr / total * 100) + "%";
+
+        // 更新歌词高亮
+        if (musicState.lyrics.length > 0) {
+            let activeIndex = -1;
+            for (let i = 0; i < musicState.lyrics.length; i++) {
+                if (curr >= musicState.lyrics[i].time) {
+                    activeIndex = i;
+                } else {
+                    break;
+                }
+            }
+
+            if (activeIndex !== musicState.currentLine) {
+                musicState.currentLine = activeIndex;
+                highlightLyric(activeIndex);
+            }
+        }
+    }
+
+    function highlightLyric(index) {
+        if(index === -1) return;
+        const lines = document.querySelectorAll('.lrc-line');
+        lines.forEach(l => l.classList.remove('highlight'));
+        
+        const activeLine = document.querySelector(`.lrc-line[data-index="${index}"]`);
+        if (activeLine) {
+            activeLine.classList.add('highlight');
+            // 自动滚动 (只有在歌词界面显示时)
+            const container = document.getElementById('lyrics-view');
+            if(container.style.display === 'block') {
+                activeLine.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+        }
+    }
+
+    function scrollToCurrentLyric() {
+        const index = musicState.currentLine;
+        if(index !== -1) {
+             const activeLine = document.querySelector(`.lrc-line[data-index="${index}"]`);
+             if(activeLine) activeLine.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }
+
+    function formatTime(s) {
+        const m = Math.floor(s / 60).toString().padStart(2, '0');
+        const sec = Math.floor(s % 60).toString().padStart(2, '0');
+        return `${m}:${sec}`;
+    }
+
+    // ==========================================
+    // --- 🧠 AI 感知接口 (重要!) ---
+    // ==========================================
+    
+    // 这个函数会生成一段 prompt，插入到你聊天发送的 system prompt 里
+    function getMusicContext() {
+        if (!musicState.isPlaying && audioPlayer.paused) return "";
+
+        const curr = audioPlayer.currentTime;
+        let lyricText = "纯音乐/间奏中";
+        
+        // 找当前这一句和下一句，让AI更有前瞻性
+        if (musicState.currentLine !== -1 && musicState.lyrics[musicState.currentLine]) {
+            lyricText = `"${musicState.lyrics[musicState.currentLine].text}"`;
+        }
+
+        return `
+        [实时状态：你们正在一起听歌]
+        歌曲信息：《${musicState.title}》 - ${musicState.artist}
+        播放进度：${formatTime(curr)}
+        当前正在唱的歌词：${lyricText}
+        【指令】：如果用户的发言与歌词、旋律或听歌氛围有关，请结合上述歌词内容进行回复。例如评论歌词写得好，或者旋律很动人。如果用户在聊别的，就忽略听歌状态。
+        `;
+    }
     </script>
 </body>
 </html>
+
 
 
 
