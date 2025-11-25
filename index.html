@@ -772,7 +772,7 @@ select.x-input option {
         
         /* 1. 悬浮球 (最小化时显示) */
         .music-float-btn {
-            position: absolute; top: 100px; right: 15px;
+            position: absolute; top: 80px; right: 30px;
             width: 40px; height: 40px; border-radius: 50%;
             background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.3);
@@ -5908,7 +5908,9 @@ async function exportDataV2() {
             libraryMeta: libraryMeta,
             schedule: mySchedule,
             xData: xData,
-            bookContents: allBooks 
+            bookContents: allBooks,
+            // 👇👇👇 新增下面这一行：把歌单也塞进去！ 👇👇👇
+            playlist: musicPlaylist
         };
 
         const blob = new Blob([JSON.stringify(backupPayload)], {type:'application/json'});
@@ -5947,6 +5949,10 @@ async function importDataV2(e) {
             if(d.libraryMeta) {
                 libraryMeta = d.libraryMeta;
                 localStorage.setItem('ai_phone_library', JSON.stringify(libraryMeta));
+            }
+            if(d.playlist) {
+                musicPlaylist = d.playlist;
+                localStorage.setItem('ai_phone_playlist', JSON.stringify(musicPlaylist));
             }
             
             // 恢复 IndexedDB
@@ -6444,6 +6450,7 @@ function openSummaryList() {
     </script>
 </body>
 </html>
+
 
 
 
