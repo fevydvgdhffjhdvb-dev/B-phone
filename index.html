@@ -785,27 +785,28 @@ select.x-input option {
         .music-float-btn.playing { animation-play-state: running; }
         .music-float-btn img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
 
-        /* 播放器遮罩层 (修复版：解决最小化后挡住按钮的问题) */
+        /* 播放器遮罩层 (终极修复版：彻底解决黑屏卡死) */
         .music-player-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #333; z-index: 300;
             display: flex; flex-direction: column;
             
-            /* 默认移出屏幕 */
-            transform: translateY(100%); 
-            transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.3s;
-            overflow: hidden;
-
-            /* 👇【关键修改】隐藏时，让鼠标/手指穿透它，不要挡住下面的按钮 */
-            pointer-events: none; 
+            /* 默认状态：完全隐藏 */
+            transform: translateY(110%); /* 移得更远一点，确保不出镜 */
             opacity: 0; 
+            pointer-events: none; /* 禁止点击 */
+            visibility: hidden;   /* 👈 核心修复：让浏览器彻底停止渲染它 */
+
+            /* 过渡动画 */
+            transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.3s, visibility 0.3s;
         }
 
         .music-player-overlay.show { 
+            /* 显示状态 */
             transform: translateY(0); 
-            /* 👇【关键修改】显示时，恢复点击 */
-            pointer-events: auto; 
-            opacity: 1;
+            opacity: 1; 
+            pointer-events: auto; /* 恢复点击 */
+            visibility: visible;  /* 👈 核心修复：告诉浏览器该干活了 */
         }
 
         /* 动态模糊背景 */
@@ -6174,7 +6175,7 @@ function openSummaryList() {
 
         // UI 处理
         closeModal('modal-import-music');
-        // toggleMusicPlayer(true);
+        
         
         // 如果是本地文件，提示一下刷新会消失
         if(isLocalFile) {
@@ -6450,6 +6451,7 @@ function openSummaryList() {
     </script>
 </body>
 </html>
+
 
 
 
