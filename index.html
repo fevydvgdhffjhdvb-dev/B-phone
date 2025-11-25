@@ -772,7 +772,7 @@ select.x-input option {
         
         /* 1. 悬浮球 (最小化时显示) */
         .music-float-btn {
-            position: absolute; top: 50px; right: 20px;
+            position: absolute; top: 120px; right: 20px;
             width: 40px; height: 40px; border-radius: 50%;
             background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.3);
@@ -785,15 +785,28 @@ select.x-input option {
         .music-float-btn.playing { animation-play-state: running; }
         .music-float-btn img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
 
-        /* 2. 全屏播放器层 */
+        /* 播放器遮罩层 (修复版：解决最小化后挡住按钮的问题) */
         .music-player-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #333; z-index: 300;
             display: flex; flex-direction: column;
-            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+            
+            /* 默认移出屏幕 */
+            transform: translateY(100%); 
+            transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.3s;
             overflow: hidden;
+
+            /* 👇【关键修改】隐藏时，让鼠标/手指穿透它，不要挡住下面的按钮 */
+            pointer-events: none; 
+            opacity: 0; 
         }
-        .music-player-overlay.show { transform: translateY(0); }
+
+        .music-player-overlay.show { 
+            transform: translateY(0); 
+            /* 👇【关键修改】显示时，恢复点击 */
+            pointer-events: auto; 
+            opacity: 1;
+        }
 
         /* 动态模糊背景 */
         .music-bg-blur {
@@ -6155,7 +6168,7 @@ function openSummaryList() {
 
         // UI 处理
         closeModal('modal-import-music');
-        toggleMusicPlayer(true);
+        // toggleMusicPlayer(true);
         
         // 如果是本地文件，提示一下刷新会消失
         if(isLocalFile) {
@@ -6431,6 +6444,7 @@ function openSummaryList() {
     </script>
 </body>
 </html>
+
 
 
 
