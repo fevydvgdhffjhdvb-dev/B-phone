@@ -1803,6 +1803,11 @@ select.x-input option {
                 // bar.style.color = 'black';
                 indicator.style.backgroundColor = 'black';
             }
+            // ✨✨✨【在这里添加这行代码】✨✨✨
+    // 如果进入的是消息列表页，立即刷新列表
+    if(pageId === 'page-msg-list') {
+        updateContactList();
+    }
 
             if(pageId === 'page-chat' && activeContactId) {
                 renderChat(activeContactId);
@@ -5571,6 +5576,7 @@ function openSummaryList() {
     </script>
 </body>
 </html>
+
 
 
 
