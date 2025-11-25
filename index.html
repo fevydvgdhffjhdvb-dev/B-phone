@@ -6096,7 +6096,7 @@ function openSummaryList() {
             renderPlaylistUI();
             // 如果有歌，加载第一首但不播放，准备好状态
             if (musicPlaylist.length > 0) {
-                // switchSong(0, false); // 可选：自动加载第一首
+                 switchSong(0, false); // 可选：自动加载第一首
             }
         }
     }
@@ -6203,12 +6203,21 @@ function openSummaryList() {
         }
     }
 
-    // 渲染播放列表界面
+    // 渲染播放列表界面 (修复版：自动显示/隐藏悬浮球)
     function renderPlaylistUI() {
         const container = document.getElementById('playlist-content');
         const countSpan = document.getElementById('pl-count');
         container.innerHTML = '';
         countSpan.innerText = musicPlaylist.length;
+
+        // 👇👇👇 核心修复：只要列表里有歌，就显示悬浮球；没歌就隐藏 👇👇👇
+        const floatBtn = document.getElementById('music-float-btn');
+        if (musicPlaylist.length > 0) {
+            floatBtn.style.display = 'flex';
+        } else {
+            floatBtn.style.display = 'none';
+        }
+        // 👆👆👆 修复结束 👆👆👆
 
         musicPlaylist.forEach((song, idx) => {
             const isActive = (idx === currentPlayIndex);
@@ -6422,6 +6431,7 @@ function openSummaryList() {
     </script>
 </body>
 </html>
+
 
 
 
