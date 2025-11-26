@@ -772,7 +772,9 @@ select.x-input option {
         
         /* 1. 悬浮球 (最小化时显示) */
         .music-float-btn {
-            position: absolute; top:100px; right: 10px;
+            touch-action: none;
+            position: absolute;
+            transition: none !important; top:100px; right: 10px;
             width: 40px; height: 40px; border-radius: 50%;
             background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.3);
@@ -782,6 +784,9 @@ select.x-input option {
             animation-play-state: paused;
             display: none; /* 默认隐藏，导入歌曲后显示 */
         }
+        .music-float-btn:active {
+    transform: scale(1.1);
+}
         .music-float-btn.playing { animation-play-state: running; }
         .music-float-btn img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
 
@@ -1833,9 +1838,10 @@ select.x-input option {
     </div>
 </div>
         <!-- 🎵 音乐播放器悬浮球 (在所有页面之上) -->
-    <div id="music-float-btn" class="music-float-btn" onclick="toggleMusicPlayer(true)">
-        <img id="float-cover" src="https://i.postimg.cc/Vvq4PMVp/IMG-9639.jpg">
-    </div>
+    <!-- 去掉了 onclick，加了 style 让它初始位置靠谱点 -->
+<div id="music-float-btn" class="music-float-btn" style="top: 100px; right: 20px;">
+    <img id="float-cover" src="https://i.postimg.cc/Vvq4PMVp/IMG-9639.jpg">
+</div>
 
     <!-- 🎵 全屏音乐播放器 -->
     <div id="music-player" class="music-player-overlay">
@@ -7010,9 +7016,136 @@ function getWalletContext() {
 
     return context;
 }
+        // ==========================================
+// --- 🎵 悬浮球拖拽逻辑 (Draggable) ---
+// ==========================================
+
+function initDraggableBtn() {
+    const btn = document.getElementById('music-float-btn');
+    const container = document.querySelector('.phone-frame'); // 限制范围在手机框内
+
+    let isDragging = false;
+    let hasMoved = false; // 用于区分是点击还是拖动
+    let startX, startY, startLeft, startTop;
+
+    // 获取坐标的辅助函数 (兼容鼠标和触摸)
+    const getClientXY = (e) => {
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
+    };
+
+    // 1. 开始拖动
+    const startHandler = (e) => {
+        isDragging = true;
+        hasMoved = false; // 重置移动标记
+        
+        const { x, y } = getClientXY(e);
+        startX = x;
+        startY = y;
+
+        // 获取当前按钮的位置 (去掉 px 单位)
+        // 注意：getComputedStyle 获取的是最终渲染位置
+        const style = window.getComputedStyle(btn);
+        startLeft = parseFloat(style.left); 
+        startTop = parseFloat(style.top);
+
+        // 如果是 right 定位的，需要转换成 left 定位，否则拖动会有问题
+        if (isNaN(startLeft)) {
+            const rect = btn.getBoundingClientRect();
+            const parentRect = container.getBoundingClientRect();
+            startLeft = rect.left - parentRect.left;
+            startTop = rect.top - parentRect.top;
+            // 立即重置为 left/top 模式，清除 right/bottom
+            btn.style.right = 'auto';
+            btn.style.bottom = 'auto';
+            btn.style.left = startLeft + 'px';
+            btn.style.top = startTop + 'px';
+        }
+    };
+
+    // 2. 拖动中
+    const moveHandler = (e) => {
+        if (!isDragging) return;
+        
+        // 阻止默认事件（防止页面滚动）
+        if (e.type === 'touchmove') e.preventDefault();
+
+        const { x, y } = getClientXY(e);
+        const deltaX = x - startX;
+        const deltaY = y - startY;
+
+        // 如果移动距离超过 5px，就认为是在拖动，而不是点击
+        if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+            hasMoved = true;
+        }
+
+        let newLeft = startLeft + deltaX;
+        let newTop = startTop + deltaY;
+
+        // --- 边界限制 (不让它跑出手机) ---
+        const maxLeft = container.offsetWidth - btn.offsetWidth;
+        const maxTop = container.offsetHeight - btn.offsetHeight;
+
+        // 限制范围
+        newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+        newTop = Math.max(0, Math.min(newTop, maxTop));
+
+        // 应用新位置
+        btn.style.left = newLeft + 'px';
+        btn.style.top = newTop + 'px';
+    };
+
+    // 3. 结束拖动
+    const endHandler = () => {
+        isDragging = false;
+        
+        // 吸附边缘效果 (可选：如果你想让它松手后自动贴边，把下面注释解开)
+        /*
+        const currentLeft = parseFloat(btn.style.left);
+        const maxLeft = container.offsetWidth - btn.offsetWidth;
+        if (currentLeft < maxLeft / 2) {
+            btn.style.left = '5px'; // 吸附左边
+        } else {
+            btn.style.left = (maxLeft - 5) + 'px'; // 吸附右边
+        }
+        */
+    };
+
+    // 4. 处理点击 (代替原本 HTML 里的 onclick)
+    const clickHandler = (e) => {
+        // 如果刚才发生了移动（拖动），就不要触发打开播放器
+        if (hasMoved) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+        // 如果没有移动，说明是点击，打开播放器
+        toggleMusicPlayer(true);
+    };
+
+    // 绑定事件 (兼容 电脑鼠标 和 手机触摸)
+    btn.addEventListener('mousedown', startHandler);
+    document.addEventListener('mousemove', moveHandler);
+    document.addEventListener('mouseup', endHandler);
+
+    btn.addEventListener('touchstart', startHandler);
+    btn.addEventListener('touchmove', moveHandler, { passive: false }); // passive: false 允许 preventDefault
+    btn.addEventListener('touchend', endHandler);
+
+    // 绑定点击事件
+    btn.addEventListener('click', clickHandler);
+}
+
+// 页面加载完成后，启动这个功能
+// 注意：如果你代码里已经有 window.onload，把 initDraggableBtn() 加进去
+// 或者直接在最下面执行一遍：
+setTimeout(initDraggableBtn, 1000); // 延迟1秒执行，确保元素都加载出来了
     </script>
 </body>
 </html>
+
 
 
 
