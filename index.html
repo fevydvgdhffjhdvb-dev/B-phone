@@ -7569,10 +7569,17 @@ async function triggerCallAI(userText) {
     let sysPrompt = `
     【系统强制指令：语音通话模式】
     你正在和用户进行语音通话。你扮演角色：${char.name}。人设：${char.systemPrompt}。
-    1. 用户只能打字，但你能“听”到。
-    2. 你必须**只说英语** (这是外语练习设定)。
-    3. **核心格式**：回复必须用 "||" 分隔英文和中文翻译。
-       格式：English content... || 中文翻译...
+    ⚠️ 必须严格遵守以下格式规则，否则系统会报错：
+    1. 你只能说英语 (English only for the speech part).
+    2. 格式结构：[完整的英文回复] || [中文翻译]
+    3. 🚫 禁止英汉夹杂，禁止在英文还没说完时插入中文。
+    4. 🚫 禁止在 "||" 后面出现英文。
+    
+    ✅ 正确示范：
+    Oh, really? That sounds interesting. Tell me more about it. || 噢真的吗？听起来很有趣。多跟我讲讲。
+    
+    ❌ 错误示范 (绝对禁止)：
+    Oh, really? || 真的吗？ That sounds interesting. || 有趣。
     `;
 
     // B. 获取主界面的历史聊天记录 (取最近 15 条)
@@ -7587,7 +7594,7 @@ async function triggerCallAI(userText) {
         { role: "system", content: char.systemPrompt + sysPrompt },
         ...mainChatHistory,       // 之前的聊天背景
         ...currentCallContext,    // 这通电话里已经说过的话
-        { role: "user", content: finalUserText } // 用户刚说的话
+        { role: "user", content: finalUserText + " (Remember format: English || Chinese)" } // 用户刚说的话
     ];
 
     try {
@@ -7741,6 +7748,7 @@ async function speakText(text) {
     </script>
 </body>
 </html>
+
 
 
 
