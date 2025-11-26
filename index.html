@@ -1033,30 +1033,42 @@ select.x-input option {
 .btn-tts-play.playing {
     fill: #34c759; /* 播放变绿 */
 }
-        /* --- 新增工具栏样式 --- */
+        /* --- 修改后的工具栏样式 (仿输入法工具栏) --- */
 .chat-toolbar {
     display: flex;
-    gap: 10px;
-    padding: 0 5px 10px 5px;
-    border-bottom: 1px solid #eee;
-    margin-bottom: 10px;
+    align-items: center;
+    gap: 20px; /* 图标之间的间距 */
+    padding: 8px 15px;
+    overflow-x: auto; /* 图标太多时允许横向滚动 */
+    background: rgba(255, 255, 255, 0.6); /* 微微透明背景 */
+    backdrop-filter: blur(5px);
+    border-top: 1px solid rgba(0,0,0,0.05);
+    /* 隐藏滚动条 */
+    scrollbar-width: none; 
+    -ms-overflow-style: none;
 }
+.chat-toolbar::-webkit-scrollbar { display: none; }
+
 .toolbar-btn {
-    flex: 1;
-    background: #fff;
-    border: 1px solid #eee;
-    border-radius: 12px;
-    padding: 8px;
-    font-size: 12px;
-    color: #333;
+    background: none;
+    border: none;
+    padding: 5px;
+    font-size: 24px; /* 图标大小调整 */
+    color: #ff8da1; /* 图片里的粉色风格 */
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
     cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    border-radius: 8px;
+    box-shadow: none; /* 去掉阴影 */
+    flex-shrink: 0;
+    transition: transform 0.2s, background 0.2s;
 }
-.toolbar-btn:active { background: #f5f5f5; transform: scale(0.98); }
+
+.toolbar-btn:active {
+    transform: scale(0.9);
+    background: rgba(0,0,0,0.05);
+}
 
 /* --- 全屏通话界面 --- */
 .call-overlay {
@@ -1257,16 +1269,19 @@ select.x-input option {
 
             <div class="input-area">
                 <div class="chat-toolbar">
-                <button class="toolbar-btn" onclick="startFakeCallRequest()">
-                    <span style="font-size:18px;">📞</span> 通话
-                </button>
-                <button class="toolbar-btn" onclick="openModal('modal-import-music')">
-                    <span style="font-size:18px;">🎵</span> 一起听
-                </button>
-                <button class="toolbar-btn" onclick="openSummaryModal()">
-                    <span style="font-size:18px;">✨</span> 总结
-                </button>
-            </div>
+    <!-- 通话 -->
+    <button class="toolbar-btn" onclick="startFakeCallRequest()" title="通话">
+        📞
+    </button>
+    <!-- 一起听 -->
+    <button class="toolbar-btn" onclick="openModal('modal-import-music')" title="一起听">
+        🎵
+    </button>
+    <!-- 总结 -->
+    <button class="toolbar-btn" onclick="openSummaryModal()" title="总结">
+        ✨
+    </button>
+</div>
            
                 <div id="uploadPreview">
                     <img id="img-preview-blob" style="width:40px; height:40px; object-fit:cover; border-radius:4px;">
@@ -2382,6 +2397,7 @@ select.x-input option {
 
         // 临时图片
         let currentImg = null;
+        let currentCallContext = []; // 用来存通话时的临时记忆
 
         // --- 初始化与生命周期 ---
         window.onload = function() {
@@ -7486,18 +7502,18 @@ function declineCall() {
 // 4. 接听 (Accept)
 function acceptCall() {
     const modal = document.getElementById('modal-voice-call');
-    modal.classList.add('active'); // 进入通话UI状态
+    modal.classList.add('active'); 
     isCallActive = true;
 
-    document.getElementById('call-status-text').innerText = "00:00";
-    // 启动计时器 (简单版，不真的计时了，就显示通话中)
-    document.getElementById('call-status-text').innerText = "正在通话中...";
+    // --- 新增：重置通话上下文 ---
+    currentCallContext = []; 
+    // -------------------------
 
+    document.getElementById('call-status-text').innerText = "正在通话中...";
     document.getElementById('call-action-incoming').style.display = 'none';
     document.getElementById('call-action-active').style.display = 'flex';
     document.getElementById('call-chat-area').style.display = 'flex';
 
-    // 触发 AI 的开场白
     triggerCallAI("start_call");
 }
 
@@ -7527,33 +7543,46 @@ function sendCallMsg() {
     triggerCallAI(text);
 }
 
-// 7. 核心：通话专用 AI 请求 (强制英文 + 双语输出)
+// 7. 核心：通话专用 AI 请求 (带上下文记忆版)
 async function triggerCallAI(userText) {
     const char = getActiveChar();
     if(!globalConfig.apiKey) return alert("No API Key");
 
-    // 界面显示“对方正在说话...”
-    const container = document.getElementById('call-avatar-container');
     const status = document.getElementById('call-status-text');
-    status.innerText = "对方正在说话...";
+    status.innerText = "对方正在思考..."; // UI 提示
+
+    // 处理开场白逻辑
+    let finalUserText = userText;
+    if(userText === "start_call") {
+        finalUserText = "（接通了电话）喂？"; // 模拟用户说的话
+    }
+
+    // --- 【修改点2】构建超级 Prompt ---
     
-    // 构造 Prompt：强制格式
+    // A. 系统设定
     let sysPrompt = `
     【系统强制指令：语音通话模式】
-    你正在和用户进行语音通话。
-    你扮演角色：${char.name}。人设：${char.systemPrompt}。
-    1. 用户因为环境原因只能打字，但你能看到。
-    2. 你必须**只说英语**。
-    3. 语气要符合你的人设。
-    4. **核心格式要求**：你的回复必须包含两部分：英文原话 和 中文翻译。
-    请严格使用 "||" 符号将它们分开。
-    格式示例：
-    English text here... || 中文翻译在这里...
+    你正在和用户进行语音通话。你扮演角色：${char.name}。人设：${char.systemPrompt}。
+    1. 用户只能打字，但你能“听”到。
+    2. 你必须**只说英语** (这是外语练习设定)。
+    3. **核心格式**：回复必须用 "||" 分隔英文和中文翻译。
+       格式：English content... || 中文翻译...
     `;
 
-    if(userText === "start_call") {
-        userText = "我接通了电话。请用英语跟我打个招呼，语气要苏一点。";
-    }
+    // B. 获取主界面的历史聊天记录 (取最近 15 条)
+    // 这样 AI 就知道你们刚才在聊什么了
+    const mainChatHistory = char.messages.slice(-15).map(m => ({
+        role: m.role,
+        content: m.content
+    }));
+
+    // C. 组合所有消息：系统设定 + 历史聊天 + 本次通话记录 + 用户最新的一句
+    const apiMessages = [
+        { role: "system", content: char.systemPrompt + sysPrompt },
+        ...mainChatHistory,       // 之前的聊天背景
+        ...currentCallContext,    // 这通电话里已经说过的话
+        { role: "user", content: finalUserText } // 用户刚说的话
+    ];
 
     try {
         const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
@@ -7561,45 +7590,42 @@ async function triggerCallAI(userText) {
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
                 model: globalConfig.model,
-                messages: [
-                    { role: "system", content: char.systemPrompt + sysPrompt },
-                    { role: "user", content: userText }
-                ],
+                messages: apiMessages, // 发送完整的上下文
                 temperature: 0.8
             })
         });
         const data = await res.json();
         const reply = data.choices[0].message.content;
 
-        // --- 解析双语 ---
+        // 解析双语 (English || Chinese)
         let englishPart = reply;
         let chinesePart = "";
-        
         if(reply.includes("||")) {
             const parts = reply.split("||");
             englishPart = parts[0].trim();
             chinesePart = parts[1].trim();
-        } else {
-            // 如果 AI 没听话，没给翻译，就只显示英文
-            englishPart = reply;
         }
 
-        // --- 1. UI 显示 (双语) ---
+        // --- 【修改点3】更新通话记忆 ---
+        // 把这一轮对话存进去，下一句 AI 就记得了
+        currentCallContext.push({ role: "user", content: finalUserText });
+        currentCallContext.push({ role: "assistant", content: reply });
+
+        // UI 显示
         appendCallUI('ai', englishPart, chinesePart);
         status.innerText = "正在通话中...";
 
-        // --- 2. 播放声音 (只读英文!) ---
-        // 这里复用你之前的 speakText，但要稍微改一下，让它支持传入文本
-        // 哪怕你没在设置里开开关，这里强制尝试播放（如果填了Key）
+        // 播放声音 (调用刚才加上的 speakText)
         if(globalConfig.xiApiKey) {
-            document.querySelector('.call-avatar-container').classList.add('talking'); // 动画开始
-            await speakText(englishPart); 
-            document.querySelector('.call-avatar-container').classList.remove('talking'); // 动画结束
+            document.querySelector('.call-avatar-container').classList.add('talking'); // 呼吸灯开始
+            await speakText(englishPart); // 等待读完
+            document.querySelector('.call-avatar-container').classList.remove('talking'); // 呼吸灯结束
         }
 
     } catch(e) {
         console.error(e);
-        status.innerText = "连接断开...";
+        status.innerText = "链接断开..."; // 这里就是你之前看到的报错
+        // 建议：可以在这里加个 alert(e.message) 看看具体报什么错
     }
 }
 
@@ -7621,9 +7647,52 @@ function appendCallUI(role, mainText, subText="") {
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
 }
+        // --- 新增：独立的文本转语音函数 (修复通话无声问题) ---
+async function speakText(text) {
+    // 1. 检查配置
+    if (!globalConfig.xiApiKey || !globalConfig.xiVoiceId) {
+        console.warn("未配置 ElevenLabs API，无法发声");
+        return; 
+    }
+
+    try {
+        // 2. 发送请求
+        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${globalConfig.xiVoiceId}`, {
+            method: 'POST',
+            headers: {
+                'xi-api-key': globalConfig.xiApiKey,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: text,
+                model_id: "eleven_multilingual_v2", // 确保模型ID正确
+                voice_settings: {
+                    stability: 0.5,
+                    similarity_boost: 0.8
+                }
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error("语音API请求失败");
+        }
+
+        // 3. 播放音频
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        
+        await audio.play(); // 播放
+
+    } catch (e) {
+        console.error("SpeakText Error:", e);
+        // 这里不弹窗打扰用户，只在控制台报错
+    }
+}
     </script>
 </body>
 </html>
+
 
 
 
