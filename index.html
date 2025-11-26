@@ -1265,6 +1265,11 @@ select.x-input option {
     <span class="ios-label">共读图标</span>
     <input type="text" id="iconInput-book" class="ios-input" placeholder="http://..." onchange="saveTheme()">
 </div>
+                    <!-- 原有的共读图标设置在上面，把下面这段加在它后面 -->
+<div class="ios-item">
+    <span class="ios-label">记账图标</span>
+    <input type="text" id="iconInput-wallet" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+</div>
                 </div>
 
                 <div class="ios-group-title">全局 CSS 代码 (高级美化)</div>
@@ -2826,6 +2831,9 @@ select.x-input option {
             const iconBook = document.getElementById('iconInput-book');
 if(iconBook) iconBook.value = themeConfig.icons.book || "";
 
+            const iconWallet = document.getElementById('iconInput-wallet');
+        if(iconWallet) iconWallet.value = themeConfig.icons.wallet || "";
+
             // 2. 恢复CSS和字体
             const cssInput = document.getElementById('customCssInput');
             if(cssInput) cssInput.value = themeConfig.customCss || "";
@@ -2858,6 +2866,7 @@ if(iconBook) iconBook.value = themeConfig.icons.book || "";
         themeConfig.icons.cal = document.getElementById('iconInput-cal')?.value || "";
         themeConfig.icons.sched = document.getElementById('iconInput-sched')?.value || "";
         themeConfig.icons.book = document.getElementById('iconInput-book')?.value || "";
+        themeConfig.icons.wallet = document.getElementById('iconInput-wallet')?.value || "";
         
         themeConfig.customCss = document.getElementById('customCssInput')?.value || "";
         themeConfig.bubbleCss = document.getElementById('bubbleCssInput')?.value || ""; // 气泡美化
@@ -2883,6 +2892,7 @@ if(iconBook) iconBook.value = themeConfig.icons.book || "";
         updateAppIcon('app-icon-cal', themeConfig.icons.cal);
         updateAppIcon('app-icon-sched', themeConfig.icons.sched);
         updateAppIcon('app-icon-book', themeConfig.icons.book);
+        updateAppIcon('app-icon-wallet', themeConfig.icons.wallet);
 
         // B. 应用壁纸
         const homePage = document.getElementById('page-home');
@@ -7003,6 +7013,7 @@ function getWalletContext() {
     </script>
 </body>
 </html>
+
 
 
 
