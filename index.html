@@ -955,6 +955,41 @@ select.x-input option {
 .diary-star:active {
     transform: scale(0.9);
 }
+        /* --- 记账本专属样式 --- */
+.wallet-card-summary {
+    background: linear-gradient(135deg, #34c759, #248a3d);
+    color: #fff;
+    margin: 20px;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 10px 20px rgba(52, 199, 89, 0.3);
+}
+.w-label { font-size: 14px; opacity: 0.8; margin-bottom: 5px; }
+.w-balance { font-size: 36px; font-weight: bold; margin-bottom: 20px; }
+.w-row { display: flex; justify-content: space-between; margin-bottom: 15px; }
+.w-sub-label { font-size: 12px; opacity: 0.7; }
+.w-num { font-size: 18px; font-weight: 600; }
+/* 进度条 */
+.w-progress-bg { background: rgba(0,0,0,0.2); height: 6px; border-radius: 3px; overflow: hidden; }
+.w-progress-fill { background: #fff; height: 100%; width: 0%; transition: width 0.5s; border-radius: 3px; }
+
+/* 账单列表项 */
+.bill-item {
+    background: #fff;
+    padding: 15px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.bill-item:last-child { border-bottom: none; }
+.bill-icon {
+    width: 40px; height: 40px; background: #f2f2f7; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 20px; margin-right: 15px;
+}
+.bill-info { flex: 1; }
+.bill-title { font-size: 16px; font-weight: 500; color: #000; }
+.bill-time { font-size: 12px; color: #999; margin-top: 2px; }
+.bill-amount { font-size: 18px; font-weight: bold; color: #000; }
+.btn-del-bill { color: #ff3b30; margin-left: 10px; cursor: pointer; padding: 5px; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -1038,6 +1073,11 @@ select.x-input option {
     <!-- 给它一个书本风格的颜色，比如橙棕色渐变 -->
     <div class="app-icon" id="app-icon-book" style="background: linear-gradient(to bottom, #a0522d, #cd853f);">📚</div>
     <div class="app-name">共读</div>
+</div>
+                <!-- 13. 记账本 (Wallet) -->
+<div class="app-icon-container" onclick="navigateTo('page-wallet'); initWalletPage();">
+    <div class="app-icon" id="app-icon-wallet" style="background: linear-gradient(to bottom, #34c759, #28a745);">💸</div>
+    <div class="app-name">记账本</div>
 </div>
             </div>
         </div>
@@ -1646,6 +1686,82 @@ select.x-input option {
         <div style="padding:20px; text-align:center; color:#999; font-size:12px;">
             点击右上角 + 号导入 TXT<br>
             书籍正文存储于 IndexedDB，不占 LocalStorage
+        </div>
+    </div>
+</div>
+        <!-- ============ 17. 记账本 (Wallet) ============ -->
+<div class="page" id="page-wallet" style="background: #f2f2f7;">
+    <div class="app-header">
+        <button class="btn-icon-text" onclick="goHome()">‹ 桌面</button>
+        <span class="app-title">我的钱包</span>
+        <button class="btn-icon-only" onclick="openBudgetModal()">设置</button>
+    </div>
+    
+    <div class="content-scroll">
+        <!-- 顶部资产卡片 -->
+        <div class="wallet-card-summary">
+            <div class="w-label">本月剩余预算</div>
+            <div class="w-balance" id="wallet-balance">¥ 0.00</div>
+            
+            <div class="w-row">
+                <div>
+                    <span class="w-sub-label">本月预算</span>
+                    <div class="w-num" id="wallet-budget-display">0</div>
+                </div>
+                <div style="text-align:right;">
+                    <span class="w-sub-label">已支出</span>
+                    <div class="w-num danger" id="wallet-expense-display">0</div>
+                </div>
+            </div>
+            <!-- 进度条 -->
+            <div class="w-progress-bg">
+                <div class="w-progress-fill" id="wallet-progress"></div>
+            </div>
+            <div id="wallet-warning" style="font-size:10px; color:#ffdddd; margin-top:5px; display:none;">⚠️ 预算告急！</div>
+        </div>
+
+        <!-- 记一笔区域 -->
+        <div class="ios-list" style="margin-top:20px;">
+            <div class="ios-item">
+                <span class="ios-label">金额</span>
+                <input type="number" id="bill-amount" class="ios-input" placeholder="0.00" style="font-size:20px; color:#000;">
+            </div>
+            <div class="ios-item">
+                <span class="ios-label">分类</span>
+                <select id="bill-cate" class="ios-input" style="direction: rtl;">
+                    <option value="餐饮">🍔 餐饮美食</option>
+                    <option value="购物">🛍️ 购物消费</option>
+                    <option value="交通">🚕 交通出行</option>
+                    <option value="娱乐">🎮 休闲娱乐</option>
+                    <option value="居住">🏠 居住缴费</option>
+                    <option value="其他">📝 其他支出</option>
+                </select>
+            </div>
+            <div class="ios-item">
+                <span class="ios-label">备注</span>
+                <input type="text" id="bill-desc" class="ios-input" placeholder="买了什么?">
+            </div>
+            <button class="ios-btn" onclick="addTransaction()" style="font-weight:bold; color:#34c759;">+ 记一笔</button>
+        </div>
+
+        <!-- 账单明细 -->
+        <div class="ios-group-title">近期账单</div>
+        <div id="wallet-list-container">
+            <!-- 动态生成 -->
+        </div>
+    </div>
+</div>
+
+<!-- 设置预算弹窗 -->
+<div class="modal-overlay" id="modal-budget">
+    <div class="modal-box" style="height:auto; top:30%;">
+        <div class="modal-header">设置本月预算</div>
+        <div class="modal-body" style="padding:20px;">
+            <input type="number" id="input-budget-setting" class="ios-input" style="text-align:center; border:1px solid #eee; border-radius:10px; padding:10px; font-size:24px;" placeholder="例如: 3000">
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-budget')">取消</button>
+            <button class="modal-btn" onclick="saveBudgetSetting()">保存</button>
         </div>
     </div>
 </div>
@@ -4038,6 +4154,8 @@ function getStatusContext(char) {
     // === 插入结束 ===
     // === ✨ 插入日程感知 ===
     context += getScheduleContext();
+    // === ✨ 插入钱包感知 ===
+    context += getWalletContext();
 
     return context;
 }
@@ -6642,9 +6760,250 @@ function openSummaryList() {
         【指令】：如果用户的发言与歌词、旋律或听歌氛围有关，请结合上述歌词内容进行回复。例如评论歌词写得好，或者旋律很动人。如果用户在聊别的，就忽略听歌状态。
         `;
     }
+        // ==========================================
+// --- 17. 记账本 (Wallet) 逻辑模块 ---
+// ==========================================
+
+let walletData = {
+    budget: 0,       // 月预算
+    transactions: [] // 账单记录 {id, amount, cate, desc, time}
+};
+
+// 1. 初始化
+function initWalletPage() {
+    loadWalletData();
+    renderWalletUI();
+}
+
+function loadWalletData() {
+    const saved = localStorage.getItem('ai_phone_wallet');
+    if(saved) walletData = JSON.parse(saved);
+}
+
+function saveWalletData() {
+    localStorage.setItem('ai_phone_wallet', JSON.stringify(walletData));
+}
+
+// 2. 渲染 UI
+function renderWalletUI() {
+    const listCon = document.getElementById('wallet-list-container');
+    
+    // 计算总支出
+    let totalExpense = 0;
+    // 过滤出本月的账单 (简化版，暂不处理跨月，假设只记当月)
+    // 如果要做严格的月份筛选，可以加 Date 判断
+    walletData.transactions.forEach(t => {
+        totalExpense += parseFloat(t.amount);
+    });
+
+    const remain = walletData.budget - totalExpense;
+    
+    // 更新卡片
+    document.getElementById('wallet-budget-display').innerText = walletData.budget.toFixed(2);
+    document.getElementById('wallet-expense-display').innerText = totalExpense.toFixed(2);
+    document.getElementById('wallet-balance').innerText = "¥ " + remain.toFixed(2);
+
+    // 进度条
+    let percent = 0;
+    if(walletData.budget > 0) percent = (totalExpense / walletData.budget) * 100;
+    if(percent > 100) percent = 100;
+    document.getElementById('wallet-progress').style.width = percent + "%";
+    
+    // 警告状态
+    const warn = document.getElementById('wallet-warning');
+    if (remain < 0) {
+        warn.style.display = 'block';
+        warn.innerText = "⚠️ 严重超支！";
+        document.querySelector('.wallet-card-summary').style.background = "linear-gradient(135deg, #ff3b30, #d70015)";
+    } else if (remain < walletData.budget * 0.2 && walletData.budget > 0) {
+        warn.style.display = 'block';
+        warn.innerText = "⚠️ 预算不足 20%";
+        document.querySelector('.wallet-card-summary').style.background = "linear-gradient(135deg, #ff9500, #ff5e3a)";
+    } else {
+        warn.style.display = 'none';
+        document.querySelector('.wallet-card-summary').style.background = "linear-gradient(135deg, #34c759, #248a3d)";
+    }
+
+    // 渲染列表
+    listCon.innerHTML = '';
+    const sorted = [...walletData.transactions].reverse(); // 最新的在前面
+
+    if (sorted.length === 0) {
+        listCon.innerHTML = `<div style="text-align:center; padding:20px; color:#999;">本月暂无支出</div>`;
+    } else {
+        sorted.forEach(t => {
+            const date = new Date(t.time);
+            const timeStr = `${date.getMonth()+1}月${date.getDate()}日 ${date.getHours()}:${date.getMinutes().toString().padStart(2,'0')}`;
+            
+            // 简单图标映射
+            let icon = "💸";
+            if(t.cate.includes("餐饮")) icon = "🍔";
+            if(t.cate.includes("购物")) icon = "🛍️";
+            if(t.cate.includes("交通")) icon = "🚕";
+            if(t.cate.includes("娱乐")) icon = "🎮";
+            if(t.cate.includes("居住")) icon = "🏠";
+
+            const div = document.createElement('div');
+            div.className = 'ios-list'; // 借用一下list样式容器
+            div.style.marginBottom = '10px';
+            div.innerHTML = `
+                <div class="bill-item">
+                    <div class="bill-icon">${icon}</div>
+                    <div class="bill-info">
+                        <div class="bill-title">${t.cate} ${t.desc ? '- '+t.desc : ''}</div>
+                        <div class="bill-time">${timeStr}</div>
+                    </div>
+                    <div class="bill-amount">- ${parseFloat(t.amount).toFixed(2)}</div>
+                    <div class="btn-del-bill" onclick="deleteTransaction(${t.id})">×</div>
+                </div>
+            `;
+            listCon.appendChild(div);
+        });
+    }
+}
+
+// 3. 记一笔
+async function addTransaction() {
+    const amtInput = document.getElementById('bill-amount');
+    const cateInput = document.getElementById('bill-cate');
+    const descInput = document.getElementById('bill-desc');
+    
+    const amount = parseFloat(amtInput.value);
+    const cate = cateInput.value;
+    const desc = descInput.value.trim();
+
+    if (!amount || amount <= 0) return alert("请输入有效金额");
+
+    const newTrans = {
+        id: Date.now(),
+        amount: amount,
+        cate: cate,
+        desc: desc,
+        time: Date.now()
+    };
+
+    walletData.transactions.push(newTrans);
+    saveWalletData();
+    
+    // 清空输入
+    amtInput.value = '';
+    descInput.value = '';
+    
+    // 刷新界面
+    renderWalletUI();
+
+    // ✨✨✨ 核心：同步给 AI ✨✨✨
+    await shareExpenseToAI(newTrans);
+}
+
+function deleteTransaction(id) {
+    if(confirm("确定删除这条账单吗？")) {
+        walletData.transactions = walletData.transactions.filter(t => t.id !== id);
+        saveWalletData();
+        renderWalletUI();
+    }
+}
+
+// 4. 设置预算
+function openBudgetModal() {
+    document.getElementById('input-budget-setting').value = walletData.budget || "";
+    openModal('modal-budget');
+}
+
+function saveBudgetSetting() {
+    const val = parseFloat(document.getElementById('input-budget-setting').value);
+    if(val >= 0) {
+        walletData.budget = val;
+        saveWalletData();
+        renderWalletUI();
+        closeModal('modal-budget');
+    }
+}
+
+// ==========================================
+// --- 🧠 AI 财务感知模块 ---
+// ==========================================
+
+// 1. 记账后立刻触发 AI 评价
+async function shareExpenseToAI(trans) {
+    const char = contacts.find(c => c.id === activeContactId);
+    if (!char) {
+        alert("账单已记，但没选聊天对象，所以 AI 不会评价哦。");
+        return;
+    }
+
+    // 计算当前剩余情况
+    let totalExpense = 0;
+    walletData.transactions.forEach(t => totalExpense += parseFloat(t.amount));
+    const remain = walletData.budget - totalExpense;
+    const isOverBudget = remain < 0;
+
+    // 构造系统消息（假装是用户手机系统发出的通知）
+    const sysReport = `
+💰【记账提醒】
+------------------
+用户刚刚记了一笔账：
+💸 金额：-${trans.amount} 元
+🏷️ 分类：${trans.cate}
+📝 备注：${trans.desc || "无"}
+📊 本月剩余预算：${remain.toFixed(2)} 元
+------------------
+(系统提示：请${char.name}根据这笔消费和剩余预算，对用户的消费行为进行点评。
+如果用户乱花钱且预算不足，请严厉批评或阴阳怪气；
+如果用户买了有用的东西或预算充足，可以正常交流。
+不需要打招呼，直接评价这笔钱花得值不值。)
+    `.trim();
+
+    // 存入聊天记录
+    char.messages.push({
+        role: 'user', // 用 user 角色模拟系统报告，AI 会以为是用户发的截图或自动同步
+        content: sysReport,
+        timestamp: Date.now()
+    });
+    saveData();
+    
+    alert(`已同步给 ${char.name}，正在等 Ta 查账...`);
+    
+    // 自动跳转回聊天界面
+    activeContactId = char.id;
+    navigateTo('page-chat');
+    
+    // 触发 AI 回复
+    triggerAI();
+}
+
+// 2. 将钱包状态注入到通用上下文 (getStatusContext)
+// 这样你在普通聊天时问“我还有钱吗”，AI 也能回答
+// *** 请手动将下面这段逻辑，复制并替换掉原来的 getScheduleContext() 后面 ***
+// *** 或者我给你一个新的 getWalletContext()，你去 getStatusContext() 里调用它 ***
+
+function getWalletContext() {
+    if (walletData.budget <= 0 && walletData.transactions.length === 0) return "";
+
+    let totalExpense = 0;
+    walletData.transactions.forEach(t => totalExpense += parseFloat(t.amount));
+    const remain = walletData.budget - totalExpense;
+    
+    let context = `\n[财务状态数据]: 本月预算 ${walletData.budget}, 已花 ${totalExpense}, 剩余 ${remain}。`;
+    
+    if (remain < 0) {
+        context += `\n[财务警报]: 用户已经超支了！请在对话中时刻提醒他省钱，拒绝他的一切败家想法。`;
+    } else if (remain < walletData.budget * 0.2) {
+        context += `\n[财务警报]: 预算即将耗尽。建议用户勒紧裤腰带。`;
+    }
+    
+    // 获取最近一笔消费
+    if (walletData.transactions.length > 0) {
+        const last = walletData.transactions[walletData.transactions.length - 1];
+        context += `\n[最近消费]: 刚刚花了 ${last.amount} 元在 "${last.cate}" 上。`;
+    }
+
+    return context;
+}
     </script>
 </body>
 </html>
+
 
 
 
