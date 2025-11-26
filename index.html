@@ -995,6 +995,44 @@ select.x-input option {
 .bill-time { font-size: 12px; color: #999; margin-top: 2px; }
 .bill-amount { font-size: 18px; font-weight: bold; color: #000; }
 .btn-del-bill { color: #ff3b30; margin-left: 10px; cursor: pointer; padding: 5px; font-size: 18px; }
+        /* --- TTS 播放按钮样式 --- */
+.tts-btn-container {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.btn-tts-play {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    fill: #999; /* 默认灰色，低调 */
+    transition: all 0.2s ease;
+    opacity: 0.7;
+}
+
+.btn-tts-play:hover {
+    fill: #007AFF; /* 悬停变蓝 */
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.btn-tts-play:active {
+    transform: scale(0.9);
+}
+
+/* 加载中的旋转动画 */
+.btn-tts-play.loading {
+    fill: #007AFF;
+    animation: spin 1s linear infinite;
+    pointer-events: none; /* 加载时不许乱点 */
+}
+
+/* 正在播放时的跳动效果 */
+.btn-tts-play.playing {
+    fill: #34c759; /* 播放变绿 */
+}
     </style>
 </head>
 <body>
@@ -1196,6 +1234,18 @@ select.x-input option {
                         <input type="number" id="historyLimit" class="ios-input" value="20" step="1" placeholder="默认20" onchange="saveGlobalConfig()">
                     </div>
                 </div>
+                <div class="ios-group-title">专属语音 (ElevenLabs)</div>
+<div class="ios-list">
+    <div class="ios-item">
+        <span class="ios-label">API Key</span>
+        <input type="password" id="xiApiKey" class="ios-input" placeholder="粘贴你的 xi-api-key" onchange="saveGlobalConfig()">
+    </div>
+    <div class="ios-item">
+        <span class="ios-label">Voice ID</span>
+        <input type="text" id="xiVoiceId" class="ios-input" placeholder="粘贴 Voice ID" onchange="saveGlobalConfig()">
+    </div>
+    <button class="ios-btn" onclick="testVoiceConfig()">试听配置 (Test)</button>
+</div>
 
                 <div class="ios-group-title">数据管理</div>
 <div class="ios-list">
@@ -2177,7 +2227,10 @@ select.x-input option {
             apiKey: "",
             model: "gpt-3.5-turbo",
             temp: 0.7,
-            historyLimit: 20 
+            historyLimit: 20,
+    // ✨ 新增这两个：
+    xiApiKey: "",
+    xiVoiceId: ""
         };
 
         // 角色列表。每个对象包含完整独立的数据
@@ -2366,6 +2419,7 @@ select.x-input option {
             
             const avatarUrl = role==='user' ? char.userAvatar : char.avatar;
             
+            
             // 处理右键/双击事件
             let extraHtml = '';
             let eventAttr = '';
@@ -2391,6 +2445,15 @@ select.x-input option {
                 timeStr = "发送中...";
             }
 
+            // --- ✨ 1. 定义小喇叭图标 (只在我是 AI 时显示) ---
+            const ttsIcon = role === 'assistant' ? `
+                <div class="tts-btn-container" style="display:inline-flex; vertical-align:middle; margin-right:4px;">
+                    <svg class="btn-tts-play" viewBox="0 0 24 24" onclick="playTTS(this)" style="width:16px;height:16px;cursor:pointer;fill:#999;transition:0.2s;">
+                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                </div>` : '';
+
+            // --- ✨ 2. 构建新的气泡结构 ---
             let html = `
                 <span class="msg-index">#${index || '?'}</span>
                 <img src="${avatarUrl}" class="avatar">
@@ -2398,8 +2461,10 @@ select.x-input option {
                     ${img ? `<img src="${img}" style="max-width:100%;border-radius:8px;display:block;margin-bottom:5px;">` : ''}
                     <span class="txt-content">${isTemp ? text : formatText(text)}</span>
                     
-                    <!-- 插入时间戳 -->
-                    <span class="msg-time-stamp">${timeStr}</span>
+                    <div class="msg-meta-row" style="display:flex; justify-content:flex-end; align-items:center; margin-top:5px; gap:5px;">
+                        ${ttsIcon}
+                        <span class="msg-time-stamp" style="position:static; font-size:10px; opacity:0.6;">${timeStr}</span>
+                    </div>
                 </div>
             `;
             
@@ -2785,6 +2850,8 @@ select.x-input option {
             document.getElementById('modelId').value = globalConfig.model;
             document.getElementById('tempVal').value = globalConfig.temp;
             document.getElementById('historyLimit').value = globalConfig.historyLimit || 20;
+            document.getElementById('xiApiKey').value = globalConfig.xiApiKey || "";
+    document.getElementById('xiVoiceId').value = globalConfig.xiVoiceId || "";
         }
         
         function saveGlobalConfig() {
@@ -2793,6 +2860,8 @@ select.x-input option {
             globalConfig.model = document.getElementById('modelId').value;
             globalConfig.temp = document.getElementById('tempVal').value;
             globalConfig.historyLimit = parseInt(document.getElementById('historyLimit').value) || 20;
+            globalConfig.xiApiKey = document.getElementById('xiApiKey').value;
+    globalConfig.xiVoiceId = document.getElementById('xiVoiceId').value;
             saveData();
         }
         // --- 美化/主题系统 (终极版: 图标+字体+壁纸) ---
@@ -7142,9 +7211,86 @@ function initDraggableBtn() {
 // 注意：如果你代码里已经有 window.onload，把 initDraggableBtn() 加进去
 // 或者直接在最下面执行一遍：
 setTimeout(initDraggableBtn, 1000); // 延迟1秒执行，确保元素都加载出来了
+        // --- 🎵 TTS 核心逻辑 ---
+async function playTTS(btnElement) {
+    // 1. 安全检查
+    if (!globalConfig.xiApiKey || !globalConfig.xiVoiceId) {
+        return alert("请先在【设置】里填入 ElevenLabs 的 Key 和 VoiceID，才能听到我的声音。");
+    }
+
+    // 2. 获取文本 (从当前气泡里抓取文字)
+    const messageDiv = btnElement.closest('.message');
+    let text = messageDiv.querySelector('.txt-content').innerText;
+    
+    // 3. 净化文本 (我不读括号里的动作，只读对白)
+    // 比如 "（低笑）过来。" -> "过来。"
+    text = text.replace(/（.*?）/g, '').replace(/\(.*?\)/g, '').trim();
+    if (!text) return; // 如果全是动作描写，就不读了
+
+    // 4. UI 变身：加载中
+    const originalIcon = btnElement.innerHTML;
+    btnElement.classList.add('loading'); // 旋转起来
+    
+    try {
+        // 5. 请求 ElevenLabs API
+        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${globalConfig.xiVoiceId}`, {
+            method: 'POST',
+            headers: {
+                'xi-api-key': globalConfig.xiApiKey,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: text,
+                model_id: "eleven_multilingual_v2", // 这个模型支持中文情感最好
+                voice_settings: {
+                    stability: 0.5,       // 越低越有情感起伏 (推荐 0.4-0.6)
+                    similarity_boost: 0.8 // 越高越像原声
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail?.message || "语音生成失败");
+        }
+
+        // 6. 播放音频
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        
+        // 播放开始：图标变绿
+        audio.onplay = () => {
+            btnElement.classList.remove('loading');
+            btnElement.classList.add('playing');
+        };
+        // 播放结束：复原
+        audio.onended = () => {
+            btnElement.classList.remove('playing');
+        };
+        
+        audio.play();
+
+    } catch (e) {
+        console.error(e);
+        alert("声音卡住了：" + e.message);
+        btnElement.classList.remove('loading');
+    }
+}
+
+// 测试按钮用的
+function testVoiceConfig() {
+    if (!globalConfig.xiApiKey) return alert("先填 Key！");
+    // 模拟一个假按钮传进去
+    const dummyBtn = document.createElement('div'); 
+    // 这里不能直接调 playTTS，因为 playTTS 依赖 DOM 结构。
+    // 简单弹个窗提示即可，或者你可以写个简单的 fetch 测试。
+    alert("配置已保存。请回到聊天界面，点击任意一条我的消息旁边的小喇叭试试。");
+}
     </script>
 </body>
 </html>
+
 
 
 
