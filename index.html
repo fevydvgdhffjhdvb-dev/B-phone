@@ -7597,30 +7597,42 @@ async function triggerCallAI(userText) {
         const data = await res.json();
         const reply = data.choices[0].message.content;
 
-        // 解析双语 (English || Chinese)
+        // --- 核心修改 1：更强壮的解析逻辑 ---
+        // 目的：不管AI回什么格式，先把该读的字提取出来
         let englishPart = reply;
         let chinesePart = "";
+        
         if(reply.includes("||")) {
             const parts = reply.split("||");
             englishPart = parts[0].trim();
             chinesePart = parts[1].trim();
+        } else {
+            // 如果AI抽风没发 ||，就把整段话当成英文读，确保有声音
+            englishPart = reply; 
+            chinesePart = "(AI未提供翻译)"; 
         }
 
-        // --- 【修改点3】更新通话记忆 ---
-        // 把这一轮对话存进去，下一句 AI 就记得了
+        // 打印日志，方便你在浏览器控制台(F12)看到它到底想读什么
+        console.log("AI回复原文:", reply);
+        console.log("提取出的朗读文本:", englishPart);
+
+        // --- 保持不变：更新记忆和UI ---
         currentCallContext.push({ role: "user", content: finalUserText });
         currentCallContext.push({ role: "assistant", content: reply });
 
-        // UI 显示
         appendCallUI('ai', englishPart, chinesePart);
         status.innerText = "正在通话中...";
 
-        // 播放声音 (调用刚才加上的 speakText)
+        // --- 核心修改 2：简化的播放逻辑 ---
         if(globalConfig.xiApiKey) {
-            document.querySelector('.call-avatar-container').classList.add('talking'); // 呼吸灯开始
-            await speakText(englishPart); // 等待读完
-            document.querySelector('.call-avatar-container').classList.remove('talking'); // 呼吸灯结束
+            // 注意：这里我们删掉了 document.querySelector...classList.add('talking')
+            // 因为我们在上一步修改 speakText 函数时，已经把动画逻辑写在音频播放事件里了
+            // 这样能保证“有声音才有动画”，不会乱闪
+            
+            // 使用 await 确保读完这一句，才算流程结束
+            await speakText(englishPart); 
         }
+
 
     } catch(e) {
         console.error(e);
@@ -7647,13 +7659,17 @@ function appendCallUI(role, mainText, subText="") {
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
 }
-        // --- 新增：独立的文本转语音函数 (修复通话无声问题) ---
+        // 全局变量：用来存当前的语音对象，防止被浏览器回收
+let globalAudioPlayer = null;
+
 async function speakText(text) {
     // 1. 检查配置
     if (!globalConfig.xiApiKey || !globalConfig.xiVoiceId) {
-        console.warn("未配置 ElevenLabs API，无法发声");
         return; 
     }
+
+    // 如果没文字，直接跳过
+    if (!text || text.trim().length === 0) return;
 
     try {
         // 2. 发送请求
@@ -7665,7 +7681,7 @@ async function speakText(text) {
             },
             body: JSON.stringify({
                 text: text,
-                model_id: "eleven_multilingual_v2", // 确保模型ID正确
+                model_id: "eleven_multilingual_v2", 
                 voice_settings: {
                     stability: 0.5,
                     similarity_boost: 0.8
@@ -7674,24 +7690,52 @@ async function speakText(text) {
         });
 
         if (!response.ok) {
-            throw new Error("语音API请求失败");
+            // ✨ 关键修改：如果有错误，把错误弹出来，不再静默失败
+            const errJson = await response.json();
+            throw new Error(errJson.detail?.message || "API请求失败");
         }
 
         // 3. 播放音频
         const audioBlob = await response.blob();
         const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
         
-        await audio.play(); // 播放
+        // ✨ 关键修改：如果有正在播的，先停掉
+        if (globalAudioPlayer) {
+            globalAudioPlayer.pause();
+            globalAudioPlayer.currentTime = 0;
+        }
+
+        // ✨ 关键修改：赋值给全局变量
+        globalAudioPlayer = new Audio(audioUrl);
+        
+        // 呼吸灯控制
+        const avatarContainer = document.querySelector('.call-avatar-container');
+        
+        // 播放开始
+        globalAudioPlayer.onplay = () => {
+             if(avatarContainer) avatarContainer.classList.add('talking');
+        };
+        
+        // 播放结束
+        globalAudioPlayer.onended = () => {
+             if(avatarContainer) avatarContainer.classList.remove('talking');
+        };
+
+        // 这里的 await 只是等待“开始播放”，不是等待“播放结束”
+        // 加上 return Promise 可以让代码等待读完（可选，防止下一句叠音）
+        await globalAudioPlayer.play(); 
 
     } catch (e) {
         console.error("SpeakText Error:", e);
-        // 这里不弹窗打扰用户，只在控制台报错
+        // ✨ 关键修改：不再默默忍受，弹出错误让你知道发生了什么
+        // 比如额度没了、或者网络超时
+        alert("语音播放失败: " + e.message); 
     }
 }
     </script>
 </body>
 </html>
+
 
 
 
