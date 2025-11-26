@@ -6185,44 +6185,39 @@ function openSummaryList() {
 
     // 4. 导入歌曲 (改为添加到列表)
     async function confirmImportMusic() {
-    const title = document.getElementById('imp-title').value.trim() || "未知歌曲";
-    const artist = document.getElementById('imp-artist').value.trim() || "未知歌手";
-    
-    // 封面图还是可以用 URL，因为图片通常比较稳定，且体积小，如果图片挂了不影响听歌
-    let coverUrl = document.getElementById('imp-cover').value.trim();
-    if (!coverUrl) coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500";
-
-    const lrcText = document.getElementById('imp-lrc').value;
+    // 1. 获取输入值
+    const titleInput = document.getElementById('imp-title');
+    const artistInput = document.getElementById('imp-artist');
+    const coverInput = document.getElementById('imp-cover');
+    const lrcInput = document.getElementById('imp-lrc');
     const fileInput = document.getElementById('imp-file');
-    const urlInput = document.getElementById('imp-url').value.trim();
+    const urlInput = document.getElementById('imp-url');
 
-    // 生成一个纯数字 ID，方便数据库索引
+    const title = titleInput.value.trim() || "未知歌曲";
+    const artist = artistInput.value.trim() || "未知歌手";
+    let coverUrl = coverInput.value.trim();
+    if (!coverUrl) coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500";
+    
+    const lrcText = lrcInput.value;
     const songId = Date.now().toString(); 
     
     let finalSrc = "";
     let isLocalFile = false;
     
-    // 给按钮加个 loading 状态，因为存 FLAC 可能需要几百毫秒
+    // 按钮变身 loading 状态
     const confirmBtn = document.querySelector('#modal-import-music .modal-btn:last-child');
     const originalBtnText = confirmBtn.innerText;
     confirmBtn.innerText = "正在保存...";
 
     try {
-        // 优先处理：本地文件上传 (MP3/FLAC/WAV)
+        // 2. 处理文件逻辑
         if (fileInput.files && fileInput.files[0]) {
             const file = fileInput.files[0];
-            
-            // 1. 核心步骤：把文件写入 IndexedDB
-            await saveAudioToDB(songId, file);
-            
-            // 2. 标记这是本地文件
+            await saveAudioToDB(songId, file); // 存入数据库
             isLocalFile = true;
-            // 3. src 字段存一个特殊标记，告诉播放器去数据库找
             finalSrc = "db:" + songId; 
-
-        } else if (urlInput) {
-            // 降级处理：用户非要用 URL 也可以，但我们不保证有效期
-            finalSrc = urlInput;
+        } else if (urlInput.value.trim()) {
+            finalSrc = urlInput.value.trim();
             isLocalFile = false;
         } else {
             alert("请选择音频文件 (推荐) 或输入链接");
@@ -6230,33 +6225,39 @@ function openSummaryList() {
             return;
         }
 
-        // 构建歌曲对象 (存入 localStorage 的只是元数据，很小)
+        // 3. 构建歌曲对象并保存
         const newSong = {
             id: songId,
             title: title,
             artist: artist,
             cover: coverUrl,
-            src: finalSrc, // "db:123456" 或 "http..."
+            src: finalSrc,
             lrcRaw: lrcText, 
             isLocal: isLocalFile 
         };
 
-        // 添加到列表
         musicPlaylist.push(newSong);
-        savePlaylistData(); // 保存列表数据到 LocalStorage
+        savePlaylistData();
         renderPlaylistUI();
 
-        // 自动播放刚导入的歌
-        const newIndex = musicPlaylist.length - 1;
-        // 注意：这里需要 await，因为 switchSong 现在也变成了异步操作
-        await switchSong(newIndex, true);
+        // 4. 自动播放
+        await switchSong(musicPlaylist.length - 1, true);
 
-        // 关闭弹窗
+        // 5. 关闭弹窗
         closeModal('modal-import-music');
+
+        // ✨✨✨ 核心修改在这里：自动清空所有输入框 ✨✨✨
+        titleInput.value = '';
+        artistInput.value = '';
+        coverInput.value = '';
+        lrcInput.value = '';
+        fileInput.value = ''; // 这一步很重要，清空文件选择状态
+        urlInput.value = '';
+        // ✨✨✨ 修改结束 ✨✨✨
 
     } catch (err) {
         console.error(err);
-        alert("保存歌曲失败，可能是文件太大或存储空间不足。");
+        alert("保存歌曲失败：" + err.message);
     } finally {
         confirmBtn.innerText = originalBtnText;
     }
@@ -6554,6 +6555,7 @@ function openSummaryList() {
     </script>
 </body>
 </html>
+
 
 
 
