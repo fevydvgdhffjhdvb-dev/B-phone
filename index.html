@@ -2398,6 +2398,8 @@ select.x-input option {
         // 临时图片
         let currentImg = null;
         let currentCallContext = []; // 用来存通话时的临时记忆
+        // --- 定义一个全局音频对象，作为“通行证” ---
+let globalAudioPass = new Audio();
 
         // --- 初始化与生命周期 ---
         window.onload = function() {
@@ -7501,6 +7503,8 @@ function declineCall() {
 
 // 4. 接听 (Accept)
 function acceptCall() {
+    globalAudioPass.play().catch(() => {});
+    globalAudioPass.pause();
     const modal = document.getElementById('modal-voice-call');
     modal.classList.add('active'); 
     isCallActive = true;
@@ -7531,6 +7535,8 @@ function endCall() {
 
 // 6. 通话中的消息发送
 function sendCallMsg() {
+    globalAudioPass.play().catch(() => {}); 
+    globalAudioPass.pause();
     const input = document.getElementById('call-input');
     const text = input.value.trim();
     if(!text) return;
@@ -7698,32 +7704,32 @@ async function speakText(text) {
         // 3. 播放音频
         const audioBlob = await response.blob();
         const audioUrl = URL.createObjectURL(audioBlob);
-        
-        // ✨ 关键修改：如果有正在播的，先停掉
-        if (globalAudioPlayer) {
-            globalAudioPlayer.pause();
-            globalAudioPlayer.currentTime = 0;
-        }
 
-        // ✨ 关键修改：赋值给全局变量
-        globalAudioPlayer = new Audio(audioUrl);
+        // --- 核心修正开始 ---
         
-        // 呼吸灯控制
+        // 1. 如果当前正在播上一句，先停掉，防止重叠
+        globalAudioPass.pause();
+        globalAudioPass.currentTime = 0;
+
+        // 2. 把新的音频地址赋给这个“已有通行证”的播放器
+        globalAudioPass.src = audioUrl;
+        
+        // 3. 设置呼吸灯动画监听
         const avatarContainer = document.querySelector('.call-avatar-container');
         
-        // 播放开始
-        globalAudioPlayer.onplay = () => {
+        // 清除旧的监听器（防止累积），重新绑定
+        globalAudioPass.onplay = () => {
              if(avatarContainer) avatarContainer.classList.add('talking');
         };
         
-        // 播放结束
-        globalAudioPlayer.onended = () => {
+        globalAudioPass.onended = () => {
              if(avatarContainer) avatarContainer.classList.remove('talking');
         };
 
-        // 这里的 await 只是等待“开始播放”，不是等待“播放结束”
-        // 加上 return Promise 可以让代码等待读完（可选，防止下一句叠音）
-        await globalAudioPlayer.play(); 
+        // 4. 播放（因为这个对象在 sendCallMsg 里被激活过，所以浏览器会放行）
+        await globalAudioPass.play(); 
+        
+        // --- 核心修正结束 ---
 
     } catch (e) {
         console.error("SpeakText Error:", e);
@@ -7735,6 +7741,7 @@ async function speakText(text) {
     </script>
 </body>
 </html>
+
 
 
 
