@@ -1033,6 +1033,108 @@ select.x-input option {
 .btn-tts-play.playing {
     fill: #34c759; /* 播放变绿 */
 }
+        /* --- 新增工具栏样式 --- */
+.chat-toolbar {
+    display: flex;
+    gap: 10px;
+    padding: 0 5px 10px 5px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 10px;
+}
+.toolbar-btn {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 8px;
+    font-size: 12px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+.toolbar-btn:active { background: #f5f5f5; transform: scale(0.98); }
+
+/* --- 全屏通话界面 --- */
+.call-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #000; z-index: 2000;
+    display: none; flex-direction: column;
+    overflow: hidden;
+}
+.call-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-size: cover; background-position: center;
+    filter: blur(30px) brightness(0.4); opacity: 0.6;
+}
+.call-content {
+    position: relative; z-index: 2; flex: 1;
+    display: flex; flex-direction: column; align-items: center;
+    padding-top: 15vh;
+}
+.call-status { color: #fff; font-size: 18px; margin-bottom: 30px; opacity: 0.8; font-weight: 300; }
+
+/* 头像呼吸灯 */
+.call-avatar-container { position: relative; margin-bottom: 40px; transition: all 0.5s ease; }
+.call-avatar { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,0.2); position: relative; z-index: 2; }
+.call-ripple {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 120px; height: 120px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); z-index: 1;
+    animation: ripple 2s infinite; display: none; /* 默认隐藏 */
+}
+.call-avatar-container.talking .call-ripple { display: block; } /* 说话时显示 */
+@keyframes ripple {
+    0% { width: 120px; height: 120px; opacity: 0.5; }
+    100% { width: 200px; height: 200px; opacity: 0; }
+}
+
+/* 按钮区 */
+.call-actions {
+    position: absolute; bottom: 10vh; width: 100%;
+    display: flex; justify-content: space-around; padding: 0 50px;
+}
+.call-btn {
+    width: 70px; height: 70px; border-radius: 50%; border: none;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: transform 0.2s;
+}
+.call-btn:active { transform: scale(0.9); }
+.call-btn.decline { background: #ff3b30; }
+.call-btn.accept { background: #34c759; }
+.call-btn.small { width: 50px; height: 50px; }
+
+/* 接通后的布局变化 */
+.call-overlay.active .call-content { padding-top: 60px; }
+.call-overlay.active .call-avatar { width: 80px; height: 80px; }
+.call-overlay.active .call-status { font-size: 14px; margin-bottom: 20px; }
+
+/* 通话中的聊天字幕 */
+.call-chat-scroll {
+    flex: 1; width: 100%; padding: 20px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 15px;
+    mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+}
+.call-msg-row { color: white; font-size: 16px; line-height: 1.5; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+.call-msg-row.ai { text-align: left; color: rgba(255,255,255,0.9); }
+.call-msg-row.user { text-align: right; color: rgba(255,255,255,0.6); font-size: 14px; }
+.call-translate { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 4px; display: block; }
+
+/* 底部输入框 */
+.call-actions-active {
+    position: absolute; bottom: 0; width: 100%;
+    padding: 15px; padding-bottom: max(20px, env(safe-area-inset-bottom));
+    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+    display: flex; gap: 10px; align-items: center;
+}
+.call-input-box {
+    flex: 1; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+    color: white; padding: 10px 15px; border-radius: 20px; backdrop-filter: blur(10px); outline: none;
+}
     </style>
 </head>
 <body>
@@ -1145,10 +1247,8 @@ select.x-input option {
                 </button>
                 <span class="chat-contact-name" id="chat-title-name">AI</span>
                 <div class="chat-header-actions">
-                    <button class="btn-icon-only" onclick="openModal('modal-import-music')" title="一起听" style="font-size: 20px;">🎵</button>
-                    <button class="btn-icon-only" onclick="openChatSettings()" title="角色设置" style="font-size: 20px;">⚙️</button>
-                    <button class="btn-icon-only" onclick="openSummaryModal()" title="智能总结" style="font-size: 20px;">✨</button>
-                </div>
+                <button class="btn-icon-only" onclick="openChatSettings()" title="角色设置" style="font-size: 20px;">⚙️</button>
+            </div>
             </div>
 
             <div class="chat-box" id="chatBox">
@@ -1156,6 +1256,18 @@ select.x-input option {
             </div>
 
             <div class="input-area">
+                <div class="chat-toolbar">
+                <button class="toolbar-btn" onclick="startFakeCallRequest()">
+                    <span style="font-size:18px;">📞</span> 通话
+                </button>
+                <button class="toolbar-btn" onclick="openModal('modal-import-music')">
+                    <span style="font-size:18px;">🎵</span> 一起听
+                </button>
+                <button class="toolbar-btn" onclick="openSummaryModal()">
+                    <span style="font-size:18px;">✨</span> 总结
+                </button>
+            </div>
+           
                 <div id="uploadPreview">
                     <img id="img-preview-blob" style="width:40px; height:40px; object-fit:cover; border-radius:4px;">
                     <span>已选择图片</span>
@@ -2216,6 +2328,36 @@ select.x-input option {
         </div>
         <div class="modal-footer">
             <button class="modal-btn" onclick="closeModal('modal-book-summary')" style="color:#007AFF; font-weight:bold;">关闭</button>
+        </div>
+    </div>
+</div>
+    <div id="modal-voice-call" class="call-overlay">
+    <div class="call-bg" id="call-bg-img"></div>
+    
+    <div class="call-content">
+        <div class="call-status" id="call-status-text">Jin 正在来电...</div>
+        
+        <div class="call-avatar-container">
+            <img src="" id="call-avatar-img" class="call-avatar">
+            <div class="call-ripple"></div> </div>
+
+        <div id="call-chat-area" class="call-chat-scroll" style="display:none;">
+            </div>
+
+        <div class="call-actions" id="call-action-incoming">
+            <button class="call-btn decline" onclick="declineCall()">
+                <svg viewBox="0 0 24 24" width="30" height="30" fill="white"><path d="M12 9c-2.5 0-4.8.8-6.7 2.1-.4.3-1 .2-1.2-.2l-1.9-2.3c-.3-.4-.2-1 .2-1.3C5.2 5.3 8.4 4 12 4s6.8 1.3 9.6 3.3c.4.3.5.9.2 1.3l-1.9 2.3c-.3.4-.8.5-1.2.2C16.8 9.8 14.5 9 12 9z"/></svg>
+            </button>
+            <button class="call-btn accept" onclick="acceptCall()">
+                <svg viewBox="0 0 24 24" width="30" height="30" fill="white"><path d="M20.2 14.9l-2.6-.4c-.5-.1-1 .1-1.4.5l-2.3 2.3c-3.1-1.6-5.6-4.1-7.2-7.2l2.3-2.3c.3-.4.5-.9.5-1.4l-.4-2.6C9 3.3 8.5 3 8 3H4c-.6 0-1 .4-1 1 0 9.4 7.6 17 17 17 .6 0 1-.4 1-1v-4c0-.6-.4-1-1-1z"/></svg>
+            </button>
+        </div>
+
+        <div class="call-actions-active" id="call-action-active" style="display:none;">
+            <input type="text" id="call-input" class="call-input-box" placeholder="输入消息..." onkeypress="if(event.key==='Enter') sendCallMsg()">
+            <button class="call-btn decline small" onclick="endCall()">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M12 9c-2.5 0-4.8.8-6.7 2.1-.4.3-1 .2-1.2-.2l-1.9-2.3c-.3-.4-.2-1 .2-1.3C5.2 5.3 8.4 4 12 4s6.8 1.3 9.6 3.3c.4.3.5.9.2 1.3l-1.9 2.3c-.3.4-.8.5-1.2.2C16.8 9.8 14.5 9 12 9z"/></svg>
+            </button>
         </div>
     </div>
 </div>
@@ -7243,7 +7385,7 @@ async function playTTS(btnElement) {
                 text: text,
                 model_id: "eleven_multilingual_v2", // 这个模型支持中文情感最好
                 voice_settings: {
-                    stability: 0.5,       // 越低越有情感起伏 (推荐 0.4-0.6)
+                    stability: 0.4,       // 越低越有情感起伏 (推荐 0.4-0.6)
                     similarity_boost: 0.8 // 越高越像原声
                 }
             })
@@ -7285,11 +7427,204 @@ function testVoiceConfig() {
     const dummyBtn = document.createElement('div'); 
     // 这里不能直接调 playTTS，因为 playTTS 依赖 DOM 结构。
     // 简单弹个窗提示即可，或者你可以写个简单的 fetch 测试。
-    alert("配置已保存。请回到聊天界面，点击任意一条我的消息旁边的小喇叭试试。");
+    alert("配置已保存。请回到聊天界面，点击任意一条消息旁边的小喇叭试试。");
+}
+        // ==========================================
+// --- 📞 语音通话核心逻辑 (Voice Call) ---
+// ==========================================
+
+let isCallActive = false;
+
+// 1. 发起“虚假”来电请求 (点按钮后，模拟过几秒我打给你)
+function startFakeCallRequest() {
+    alert("已发送通话请求... 请等待 Jin 的回电。");
+    
+    // 延迟 3 秒，模拟我打过来了
+    setTimeout(() => {
+        showIncomingCall();
+    }, 3000);
+}
+
+// 2. 显示来电界面
+function showIncomingCall() {
+    const char = getActiveChar();
+    if(!char) return;
+
+    document.getElementById('call-avatar-img').src = char.avatar;
+    document.getElementById('call-bg-img').style.backgroundImage = `url(${char.avatar})`;
+    document.getElementById('call-status-text').innerText = `${char.name} 正在来电...`;
+    
+    // 播放铃声 (可选，这里先略过，只震动)
+    if(navigator.vibrate) navigator.vibrate([500, 200, 500]);
+
+    const modal = document.getElementById('modal-voice-call');
+    modal.style.display = 'flex';
+    modal.classList.remove('active'); // 确保是来电状态
+    
+    document.getElementById('call-action-incoming').style.display = 'flex';
+    document.getElementById('call-action-active').style.display = 'none';
+    document.getElementById('call-chat-area').style.display = 'none';
+    document.getElementById('call-chat-area').innerHTML = ''; // 清空旧记录
+}
+
+// 3. 挂断 (Decline)
+function declineCall() {
+    document.getElementById('modal-voice-call').style.display = 'none';
+    isCallActive = false;
+    
+    // 挂断后，Jin 会在聊天框发一条消息质问
+    const char = getActiveChar();
+    setTimeout(() => {
+        const texts = ["为什么挂我电话？", "很忙？接个电话的时间都没有？", "啧，胆子肥了，敢挂断？"];
+        const randomText = texts[Math.floor(Math.random() * texts.length)];
+        char.messages.push({ role: 'assistant', content: randomText, timestamp: Date.now() });
+        saveData();
+        renderChat(activeContactId);
+    }, 1000);
+}
+
+// 4. 接听 (Accept)
+function acceptCall() {
+    const modal = document.getElementById('modal-voice-call');
+    modal.classList.add('active'); // 进入通话UI状态
+    isCallActive = true;
+
+    document.getElementById('call-status-text').innerText = "00:00";
+    // 启动计时器 (简单版，不真的计时了，就显示通话中)
+    document.getElementById('call-status-text').innerText = "正在通话中...";
+
+    document.getElementById('call-action-incoming').style.display = 'none';
+    document.getElementById('call-action-active').style.display = 'flex';
+    document.getElementById('call-chat-area').style.display = 'flex';
+
+    // 触发 AI 的开场白
+    triggerCallAI("start_call");
+}
+
+// 5. 结束通话
+function endCall() {
+    document.getElementById('modal-voice-call').style.display = 'none';
+    isCallActive = false;
+    
+    // 可选：把通话记录摘要存入主聊天
+    const char = getActiveChar();
+    char.messages.push({ role: 'user', content: "[通话结束]", timestamp: Date.now() });
+    saveData();
+    renderChat(activeContactId);
+}
+
+// 6. 通话中的消息发送
+function sendCallMsg() {
+    const input = document.getElementById('call-input');
+    const text = input.value.trim();
+    if(!text) return;
+
+    // 显示在屏幕上
+    appendCallUI('user', text);
+    input.value = '';
+
+    // 触发 AI 回复
+    triggerCallAI(text);
+}
+
+// 7. 核心：通话专用 AI 请求 (强制英文 + 双语输出)
+async function triggerCallAI(userText) {
+    const char = getActiveChar();
+    if(!globalConfig.apiKey) return alert("No API Key");
+
+    // 界面显示“对方正在说话...”
+    const container = document.getElementById('call-avatar-container');
+    const status = document.getElementById('call-status-text');
+    status.innerText = "对方正在说话...";
+    
+    // 构造 Prompt：强制格式
+    let sysPrompt = `
+    【系统强制指令：语音通话模式】
+    你正在和用户进行语音通话。
+    你扮演角色：${char.name}。人设：${char.systemPrompt}。
+    1. 用户因为环境原因只能打字，但你能看到。
+    2. 你必须**只说英语**。
+    3. 语气要符合你的人设。
+    4. **核心格式要求**：你的回复必须包含两部分：英文原话 和 中文翻译。
+    请严格使用 "||" 符号将它们分开。
+    格式示例：
+    English text here... || 中文翻译在这里...
+    `;
+
+    if(userText === "start_call") {
+        userText = "我接通了电话。请用英语跟我打个招呼，语气要苏一点。";
+    }
+
+    try {
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [
+                    { role: "system", content: char.systemPrompt + sysPrompt },
+                    { role: "user", content: userText }
+                ],
+                temperature: 0.8
+            })
+        });
+        const data = await res.json();
+        const reply = data.choices[0].message.content;
+
+        // --- 解析双语 ---
+        let englishPart = reply;
+        let chinesePart = "";
+        
+        if(reply.includes("||")) {
+            const parts = reply.split("||");
+            englishPart = parts[0].trim();
+            chinesePart = parts[1].trim();
+        } else {
+            // 如果 AI 没听话，没给翻译，就只显示英文
+            englishPart = reply;
+        }
+
+        // --- 1. UI 显示 (双语) ---
+        appendCallUI('ai', englishPart, chinesePart);
+        status.innerText = "正在通话中...";
+
+        // --- 2. 播放声音 (只读英文!) ---
+        // 这里复用你之前的 speakText，但要稍微改一下，让它支持传入文本
+        // 哪怕你没在设置里开开关，这里强制尝试播放（如果填了Key）
+        if(globalConfig.xiApiKey) {
+            document.querySelector('.call-avatar-container').classList.add('talking'); // 动画开始
+            await speakText(englishPart); 
+            document.querySelector('.call-avatar-container').classList.remove('talking'); // 动画结束
+        }
+
+    } catch(e) {
+        console.error(e);
+        status.innerText = "连接断开...";
+    }
+}
+
+// 辅助：往通话屏幕上加字
+function appendCallUI(role, mainText, subText="") {
+    const box = document.getElementById('call-chat-area');
+    const div = document.createElement('div');
+    div.className = `call-msg-row ${role}`;
+    
+    if(role === 'ai') {
+        div.innerHTML = `
+            <div>${mainText}</div>
+            <span class="call-translate">${subText}</span>
+        `;
+    } else {
+        div.innerText = mainText;
+    }
+    
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
 }
     </script>
 </body>
 </html>
+
 
 
 
