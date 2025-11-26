@@ -936,6 +936,25 @@ select.x-input option {
         .btn-del-song {
             color: #666; font-size: 18px; padding: 5px; background: none; border: none;
         }
+        /* --- 日记星星收藏按钮 --- */
+.diary-star {
+    position: absolute;
+    top: 10px;
+    right: 40px; /* 放在删除按钮左边 */
+    font-size: 20px;
+    cursor: pointer;
+    color: #e5e5ea; /* 默认灰色（空心效果用颜色模拟，或者直接用字符区别） */
+    transition: color 0.2s, transform 0.2s;
+    z-index: 10;
+}
+.diary-star.active {
+    color: #ffcc00; /* 选中变黄 */
+    transform: scale(1.2); /* 稍微变大一点 */
+    text-shadow: 0 0 5px rgba(255, 204, 0, 0.5);
+}
+.diary-star:active {
+    transform: scale(0.9);
+}
     </style>
 </head>
 <body>
@@ -2322,10 +2341,41 @@ select.x-input option {
             systemPromptFull += getStatusContext(char);
             systemPromptFull += getMusicContext();
             
-            // 喂入日记
+            // 喂入日记 (混合记忆版：收藏 + 最近)
             if (char.diaries && char.diaries.length > 0) {
-                const recentDiaries = char.diaries.slice(-6).join('\n\n---\n\n');
-                systemPromptFull += `\n\n[我的私密日记本 (只有我自己能看，用于回忆之前的经历和心情)]:\n${recentDiaries}`;
+                // 1. 数据清洗
+                const safeDiaries = char.diaries.map(d => typeof d === 'string' ? {content:d, isStarred:false} : d);
+                
+                // 2. 获取【短期记忆】：无论是否收藏，强制读取最近的 3 篇
+                // 这样保证 AI 知道最近发生了啥，不会“失忆”
+                const recentDiaries = safeDiaries.slice(-3);
+                
+                // 3. 获取【核心记忆】：找出所有收藏的
+                let starredDiaries = safeDiaries.filter(d => d.isStarred);
+                
+                // 4. 去重：如果最近的3篇里已经包含了收藏的，就不要重复算在“收藏列表”里了
+                // (通过比较内容或引用对象来去重)
+                starredDiaries = starredDiaries.filter(s => !recentDiaries.includes(s));
+
+                // 5. 限制上限：收藏的日记最多再额外读取 8 篇
+                // 如果收藏超过 8 篇，优先读取“最新的收藏”
+                if (starredDiaries.length > 8) {
+                    starredDiaries = starredDiaries.slice(-8);
+                }
+
+                // 6. 合并：把“收藏”放在前面，“最近”放在后面 (符合时间线逻辑)
+                const finalDiaries = [...starredDiaries, ...recentDiaries];
+
+                // 7. 提取文本并排序 (确保按时间顺序喂给AI)
+                // 因为我们刚才把收藏(可能很旧)和最近(新)拼在了一起，原来的顺序可能是乱的
+                // 这里不做复杂排序了，直接按在数组里的原有顺序其实就是时间序
+                // 但为了严谨，我们直接基于 finalDiaries 里的内容生成文本
+                
+                const diaryText = finalDiaries.map(d => {
+                   return (d.isStarred ? "★ [重要回忆] " : "") + d.content;
+                }).join('\n\n---\n\n');
+
+                systemPromptFull += `\n\n[我的日记本 (包含核心回忆和最近日记)]:\n${diaryText}`;
             }
             // 喂入记忆
             if(char.memories.length > 0) {
@@ -3029,10 +3079,25 @@ function renderUserDiaryList() {
     container.innerHTML = headerHtml + listHtml;
 }
 
-// 3. 渲染“角色日记”列表 (查看AI写的)
+// 渲染“角色日记”列表 (查看AI写的)
 function renderAiDiaryList(charId) {
     const char = contacts.find(c => c.id === charId);
     if (!char) return;
+
+    // === 🛠️ 数据自动升级逻辑 🛠️ ===
+    // 如果发现日记是纯字符串，把它变成对象 { content:String, isStarred:Boolean }
+    if (char.diaries && char.diaries.length > 0) {
+        let needSave = false;
+        char.diaries = char.diaries.map(d => {
+            if (typeof d === 'string') {
+                needSave = true;
+                return { content: d, isStarred: false, timestamp: Date.now() };
+            }
+            return d;
+        });
+        if (needSave) saveData(); // 保存升级后的数据结构
+    }
+    // ============================
 
     const container = document.getElementById('diaryListContainer');
     const headerHtml = `
@@ -3047,13 +3112,23 @@ function renderAiDiaryList(charId) {
     if (!char.diaries || char.diaries.length === 0) {
         listHtml += '<div style="text-align:center; color:#999; margin-top:50px;">Ta 还没有写过日记</div>';
     } else {
-        // 倒序
-        [...char.diaries].reverse().forEach((content, index) => {
-            // 计算原始索引用于删除
+        // 倒序显示
+        [...char.diaries].reverse().forEach((item, index) => {
+            // 计算原始索引
             const originalIndex = char.diaries.length - 1 - index;
+            
+            // 判断是否收藏
+            const starClass = item.isStarred ? 'diary-star active' : 'diary-star';
+            const starIcon = item.isStarred ? '★' : '☆'; // 实心星/空心星
+
             listHtml += `
-                <div class="memory-card" style="border-left: 4px solid #ff2d55;">
-                    <div style="line-height:1.6; color:#333;">${content.replace(/\n/g, '<br>')}</div>
+                <div class="memory-card" style="border-left: 4px solid #ff2d55; position:relative;">
+                    <div style="line-height:1.6; color:#333; padding-right:20px;">${item.content.replace(/\n/g, '<br>')}</div>
+                    
+                    <!-- 星星按钮 -->
+                    <div class="${starClass}" onclick="toggleDiaryStar('${charId}', ${originalIndex})">${starIcon}</div>
+                    
+                    <!-- 删除按钮 -->
                     <div class="btn-del-mem" onclick="deleteDiary('${charId}', ${originalIndex})">×</div>
                 </div>
             `;
@@ -3061,6 +3136,21 @@ function renderAiDiaryList(charId) {
     }
     listHtml += '</div>';
     container.innerHTML = headerHtml + listHtml;
+}
+        // 切换日记收藏状态
+function toggleDiaryStar(charId, index) {
+    const char = contacts.find(c => c.id === charId);
+    if (!char || !char.diaries[index]) return;
+
+    // 切换状态
+    char.diaries[index].isStarred = !char.diaries[index].isStarred;
+    saveData();
+    
+    // 刷新列表显示
+    renderAiDiaryList(charId);
+    
+    // 给个震动反馈（如果支持）
+    if(navigator.vibrate) navigator.vibrate(50);
 }
 
 // 4. 删除逻辑
@@ -6555,6 +6645,7 @@ function openSummaryList() {
     </script>
 </body>
 </html>
+
 
 
 
