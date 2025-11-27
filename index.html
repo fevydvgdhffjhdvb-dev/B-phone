@@ -1564,6 +1564,11 @@ select.x-input option {
     <span class="ios-label">记账图标</span>
     <input type="text" id="iconInput-wallet" class="ios-input" placeholder="http://..." onchange="saveTheme()">
 </div>
+                    <!-- 在 id="page-theme" 里面的 input 列表最后加入这个 -->
+<div class="ios-item">
+    <span class="ios-label">粮仓图标</span>
+    <input type="text" id="iconInput-forum" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+</div>
                 </div>
 
                 <div class="ios-group-title">全局 CSS 代码 (高级美化)</div>
@@ -3297,6 +3302,9 @@ if(iconBook) iconBook.value = themeConfig.icons.book || "";
             const iconWallet = document.getElementById('iconInput-wallet');
         if(iconWallet) iconWallet.value = themeConfig.icons.wallet || "";
 
+            const iconForum = document.getElementById('iconInput-forum');
+            if(iconForum) iconForum.value = themeConfig.icons.forum || "";
+
             // 2. 恢复CSS和字体
             const cssInput = document.getElementById('customCssInput');
             if(cssInput) cssInput.value = themeConfig.customCss || "";
@@ -3330,6 +3338,7 @@ if(iconBook) iconBook.value = themeConfig.icons.book || "";
         themeConfig.icons.sched = document.getElementById('iconInput-sched')?.value || "";
         themeConfig.icons.book = document.getElementById('iconInput-book')?.value || "";
         themeConfig.icons.wallet = document.getElementById('iconInput-wallet')?.value || "";
+        themeConfig.icons.forum = document.getElementById('iconInput-forum')?.value || "";
         
         themeConfig.customCss = document.getElementById('customCssInput')?.value || "";
         themeConfig.bubbleCss = document.getElementById('bubbleCssInput')?.value || ""; // 气泡美化
@@ -3356,6 +3365,7 @@ if(iconBook) iconBook.value = themeConfig.icons.book || "";
         updateAppIcon('app-icon-sched', themeConfig.icons.sched);
         updateAppIcon('app-icon-book', themeConfig.icons.book);
         updateAppIcon('app-icon-wallet', themeConfig.icons.wallet);
+        updateAppIcon('app-icon-forum', themeConfig.icons.forum);
 
         // B. 应用壁纸
         const homePage = document.getElementById('page-home');
@@ -8172,7 +8182,7 @@ function openCreateFicModal() {
     openModal('modal-create-fic');
 }
 
-// 4. 提交创作请求 (调用 AI)
+// 4. 提交创作请求 (优化版：支持自定义名字)
 async function submitFicRequest() {
     if(!globalConfig.apiKey) return alert("请先配置 API Key");
     
@@ -8183,25 +8193,35 @@ async function submitFicRequest() {
     
     if(!setting) return alert("请填写一些设定或梗概，不然 AI 没法写哦");
 
+    // ✨ 1. 获取你在资料卡里设置的名字
+    // 如果没设置，就默认叫 "你"
+    const myName = char.userName || "你";
+
     const btn = document.getElementById('btn-submit-fic');
     const oldText = btn.innerText;
-    btn.innerText = "太太正在码字中(约30s)...";
+    btn.innerText = "太太正在码字中...";
     btn.disabled = true;
 
-    // 构造 Prompt
+    closeModal('modal-create-fic');
+    alert(`收到！AI 太太正在后台以 "${myName}" 为主角产粮中...\n你可以去聊天或看书，大概需要 30-60 秒。`);
+
+    // ✨ 2. 修改 Prompt，把名字塞进去
     const prompt = `
     你现在是一位知名的同人小说写手（产粮太太）。
     你要根据用户要求写一篇短篇同人文。
     
-    【CP对象】：${char.name} x 用户(我)
+    【CP对象】：${char.name} x ${myName}
     【风格】：${tone}
     【设定/梗】：${setting}
     【角色人设参考】：${char.systemPrompt}
     
     任务要求：
-    1. 创作一篇 500-800 字的同人短文，标题自拟，内容要贴合设定。
-    2. 模拟 4-6 条粉丝评论（要真实，要有嗑到了的、催更的、尖叫的）。
-    3. 返回纯 JSON 格式：
+    1. 创作一篇 500-800 字的同人短文，标题自拟。
+    2. ⚠️ 关键要求：文中的主角名字请使用 "${myName}"。
+       - 如果是第三人称写法，直接用 "${myName}"。
+       - 如果是第二人称“你”的视角，对话中对方称呼时要叫 "${myName}"。
+    3. 模拟 4-6 条粉丝评论（要真实，要有嗑到了的、催更的、尖叫的）。
+    4. 返回纯 JSON 格式：
     {
         "title": "文章标题",
         "content": "文章正文（支持换行符）",
@@ -8218,23 +8238,22 @@ async function submitFicRequest() {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
-                model: globalConfig.model, // 建议用 gpt-3.5-turbo-16k 或 gpt-4 以支持长文
+                model: globalConfig.model,
                 messages: [{ role: "user", content: prompt }]
             })
         });
         
         const data = await res.json();
         let jsonStr = data.choices[0].message.content;
-        // 清理 markdown 标记
         jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
-        
         const result = JSON.parse(jsonStr);
 
         // 存入数据
         const newPost = {
             id: Date.now().toString(),
             charId: charId,
-            cpName: `${char.name} x 我`,
+            // ✨ 3. 这里的标签也改成你的名字
+            cpName: `${char.name} x ${myName}`,
             tone: tone,
             timestamp: Date.now(),
             title: result.title,
@@ -8247,11 +8266,18 @@ async function submitFicRequest() {
         forumData.push(newPost);
         saveForumData();
         
-        closeModal('modal-create-fic');
         renderForumFeed();
         
-        // 自动打开看
-        openFicDetail(newPost.id);
+        // 通知逻辑
+        const forumPage = document.getElementById('page-forum');
+        if (forumPage.classList.contains('active')) {
+            openFicDetail(newPost.id);
+        } else {
+            if(confirm(`✨ 叮！\n关于 ${myName} 的同人文《${result.title}》写好了！\n要现在去看看吗？`)) {
+                navigateTo('page-forum');
+                openFicDetail(newPost.id);
+            }
+        }
 
     } catch(e) {
         alert("产粮失败: " + e.message);
@@ -8374,6 +8400,7 @@ function confirmShare(targetCharId) {
     </script>
 </body>
 </html>
+
 
 
 
