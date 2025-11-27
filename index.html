@@ -1362,17 +1362,29 @@ select.x-input option {
                     </div>
                 </div>
                 <div class="ios-group-title">专属语音 (ElevenLabs)</div>
-<div class="ios-list">
-    <div class="ios-item">
-        <span class="ios-label">API Key</span>
-        <input type="password" id="xiApiKey" class="ios-input" placeholder="粘贴你的 xi-api-key" onchange="saveGlobalConfig()">
-    </div>
-    <div class="ios-item">
-        <span class="ios-label">Voice ID</span>
-        <input type="text" id="xiVoiceId" class="ios-input" placeholder="粘贴 Voice ID" onchange="saveGlobalConfig()">
-    </div>
-    <button class="ios-btn" onclick="testVoiceConfig()">试听配置 (Test)</button>
-</div>
+                <div class="ios-list">
+                    <div class="ios-item">
+                        <span class="ios-label">API Key</span>
+                        <input type="password" id="xiApiKey" class="ios-input" placeholder="粘贴你的 xi-api-key" onchange="saveGlobalConfig()">
+                    </div>
+                    <div class="ios-item">
+                        <span class="ios-label">Voice ID</span>
+                        <input type="text" id="xiVoiceId" class="ios-input" placeholder="粘贴 Voice ID" onchange="saveGlobalConfig()">
+                    </div>
+                    
+                    <div class="ios-item">
+                        <span class="ios-label">Model ID</span>
+                        <input type="text" id="xiModelId" class="ios-input" placeholder="默认 eleven_multilingual_v2" onchange="saveGlobalConfig()">
+                    </div>
+                    <button class="ios-btn" onclick="fetchElevenLabsModels()">⬇️ 拉取声音模型列表</button>
+                    
+                    <div class="ios-item" id="xiModelSelectContainer" style="display:none;">
+                        <span class="ios-label">选择模型</span>
+                        <select id="xiModelSelect" class="ios-input" style="direction: rtl;" onchange="document.getElementById('xiModelId').value=this.value; saveGlobalConfig()">
+                        </select>
+                    </div>
+                    <button class="ios-btn" onclick="testVoiceConfig()">试听配置 (Test)</button>
+                </div>
 
                 <div class="ios-group-title">数据管理</div>
 <div class="ios-list">
@@ -2387,7 +2399,8 @@ select.x-input option {
             historyLimit: 20,
     // ✨ 新增这两个：
     xiApiKey: "",
-    xiVoiceId: ""
+    xiVoiceId: "",
+            xiModelId: "eleven_multilingual_v2"
         };
 
         // 角色列表。每个对象包含完整独立的数据
@@ -3012,6 +3025,7 @@ let globalAudioPass = new Audio();
             document.getElementById('historyLimit').value = globalConfig.historyLimit || 20;
             document.getElementById('xiApiKey').value = globalConfig.xiApiKey || "";
     document.getElementById('xiVoiceId').value = globalConfig.xiVoiceId || "";
+            document.getElementById('xiModelId').value = globalConfig.xiModelId || "eleven_multilingual_v2";
         }
         
         function saveGlobalConfig() {
@@ -3022,6 +3036,7 @@ let globalAudioPass = new Audio();
             globalConfig.historyLimit = parseInt(document.getElementById('historyLimit').value) || 20;
             globalConfig.xiApiKey = document.getElementById('xiApiKey').value;
     globalConfig.xiVoiceId = document.getElementById('xiVoiceId').value;
+            globalConfig.xiModelId = document.getElementById('xiModelId').value;
             saveData();
         }
         // --- 美化/主题系统 (终极版: 图标+字体+壁纸) ---
@@ -7401,7 +7416,7 @@ async function playTTS(btnElement) {
             },
             body: JSON.stringify({
                 text: text,
-                model_id: "eleven_multilingual_v2", // 这个模型支持中文情感最好
+                model_id: globalConfig.xiModelId || "eleven_multilingual_v2",
                 voice_settings: {
                     stability: 0.4,       // 越低越有情感起伏 (推荐 0.4-0.6)
                     similarity_boost: 0.8 // 越高越像原声
@@ -7694,7 +7709,7 @@ async function speakText(text) {
             },
             body: JSON.stringify({
                 text: text,
-                model_id: "eleven_multilingual_v2", 
+                model_id: globalConfig.xiModelId || "eleven_multilingual_v2",
                 voice_settings: {
                     stability: 0.5,
                     similarity_boost: 0.8
@@ -7745,9 +7760,51 @@ async function speakText(text) {
         alert("语音播放失败: " + e.message); 
     }
 }
+        // --- 🎵 拉取 ElevenLabs 模型列表 (新增) ---
+    async function fetchElevenLabsModels() {
+        const key = document.getElementById('xiApiKey').value;
+        if (!key) return alert("请先填入 API Key！");
+
+        const btn = event.target;
+        const oldText = btn.innerText;
+        btn.innerText = "正在连接...";
+
+        try {
+            const res = await fetch('https://api.elevenlabs.io/v1/models', {
+                method: "GET",
+                headers: { "xi-api-key": key }
+            });
+
+            if (!res.ok) throw new Error("连接失败，请检查Key或网络");
+
+            const data = await res.json(); // 这是一个数组
+            
+            const select = document.getElementById('xiModelSelect');
+            select.innerHTML = '<option value="" disabled selected>请选择模型</option>';
+
+            // 排序：把 Turbo 和 Multilingual v2 这种常用的放前面
+            // 这里直接按原样遍历即可，通常最新的在前面
+            data.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.model_id;
+                opt.innerText = `${m.name}`; 
+                select.appendChild(opt);
+            });
+
+            document.getElementById('xiModelSelectContainer').style.display = 'flex';
+            alert(`成功拉取到 ${data.length} 个模型！\n请点击下方“选择模型”进行切换。`);
+
+        } catch (e) {
+            console.error(e);
+            alert("拉取失败: " + e.message);
+        } finally {
+            btn.innerText = oldText;
+        }
+    }
     </script>
 </body>
 </html>
+
 
 
 
