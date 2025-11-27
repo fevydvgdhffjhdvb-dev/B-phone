@@ -7418,7 +7418,7 @@ async function playTTS(btnElement) {
                 text: text,
                 model_id: globalConfig.xiModelId || "eleven_multilingual_v2",
                 voice_settings: {
-                    stability: 0.4,       // 越低越有情感起伏 (推荐 0.4-0.6)
+                    stability: 0.5,       // 越低越有情感起伏 (推荐 0.4-0.6)
                     similarity_boost: 0.8 // 越高越像原声
                 }
             })
@@ -7804,6 +7804,7 @@ async function speakText(text) {
     </script>
 </body>
 </html>
+
 
 
 
