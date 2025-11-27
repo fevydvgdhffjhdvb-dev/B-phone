@@ -1197,6 +1197,51 @@ select.x-input option {
     75% { transform: rotate(-1deg); }
     100% { transform: rotate(0deg); }
 }
+        /* --- 同人论坛 (Fanfic Forum) --- */
+#page-forum { background: #f5f5f5; }
+.forum-feed { padding: 15px; padding-bottom: 80px; }
+.forum-card {
+    background: #fff; border-radius: 8px; padding: 15px; margin-bottom: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; transition: transform 0.2s;
+}
+.forum-card:active { transform: scale(0.98); }
+.forum-title { font-size: 17px; font-weight: bold; margin-bottom: 5px; color: #333; }
+.forum-meta { font-size: 12px; color: #999; display: flex; gap: 10px; margin-bottom: 8px; }
+.forum-tag { background: #f0f0f5; color: #5856d6; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+.forum-preview { font-size: 14px; color: #666; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.5; }
+
+/* 创作悬浮按钮 */
+.btn-fab-write {
+    position: absolute; bottom: 30px; right: 20px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #ff2d55; color: white; font-size: 24px;
+    border: none; box-shadow: 0 4px 12px rgba(255, 45, 85, 0.4);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100;
+}
+
+/* 帖子详情页 */
+.post-detail-content { font-size: 16px; line-height: 1.8; color: #333; white-space: pre-wrap; margin-bottom: 20px; }
+.post-comment-section { border-top: 1px solid #eee; padding-top: 15px; margin-top: 20px; }
+.post-comment-item { display: flex; gap: 10px; margin-bottom: 15px; font-size: 13px; }
+.post-cmt-avatar { width: 32px; height: 32px; border-radius: 50%; background: #eee; flex-shrink: 0; }
+.post-cmt-box { flex: 1; }
+.post-cmt-user { font-weight: bold; color: #555; margin-bottom: 2px; }
+.post-cmt-text { color: #333; line-height: 1.4; }
+
+/* --- 聊天中的“分享卡片”样式 --- */
+.msg-link-card {
+    background: #f2f2f7; border-radius: 12px; overflow: hidden;
+    margin-top: 5px; border: 1px solid rgba(0,0,0,0.05); cursor: pointer;
+    max-width: 260px;
+}
+.link-card-cover {
+    height: 80px; background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+    display: flex; align-items: center; justify-content: center; color: #fff; font-weight: bold; font-size: 24px;
+}
+.link-card-info { padding: 10px; }
+.link-card-title { font-weight: bold; font-size: 14px; margin-bottom: 4px; color: #000; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;}
+.link-card-desc { font-size: 12px; color: #666; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.link-card-footer { font-size: 10px; color: #999; margin-top: 5px; display: flex; justify-content: space-between; align-items: center;}
     </style>
 </head>
 <body>
@@ -1285,6 +1330,11 @@ select.x-input option {
 <div class="app-icon-container" onclick="navigateTo('page-wallet'); initWalletPage();">
     <div class="app-icon" id="app-icon-wallet" style="background: linear-gradient(to bottom, #34c759, #28a745);">💸</div>
     <div class="app-name">记账本</div>
+</div>
+                <!-- 14. 同人论坛 (Fanfic) -->
+<div class="app-icon-container" onclick="navigateTo('page-forum'); renderForumFeed();">
+    <div class="app-icon" id="app-icon-forum" style="background: linear-gradient(to bottom, #ff2d55, #ff5e3a);">✒️</div>
+    <div class="app-name">粮仓</div>
 </div>
             </div>
         </div>
@@ -2017,6 +2067,46 @@ select.x-input option {
         </div>
     </div>
 </div>
+        <!-- ============ 14. 同人论坛 (粮仓) ============ -->
+<div class="page" id="page-forum">
+    <div class="app-header">
+        <button class="btn-icon-text" onclick="goHome()">‹ 桌面</button>
+        <span class="app-title">同人粮仓</span>
+        <span style="width:50px;"></span>
+    </div>
+    <div class="content-scroll" style="background:#f9f9f9;">
+        <div id="forum-feed" class="forum-feed">
+            <!-- 帖子列表 -->
+        </div>
+    </div>
+    <button class="btn-fab-write" onclick="openCreateFicModal()">+</button>
+</div>
+
+<!-- ============ 15. 帖子详情页 (覆盖在论坛上) ============ -->
+<div class="page" id="page-forum-detail" style="background:#fff; z-index: 60;">
+    <div class="app-header">
+        <button class="btn-icon-text" onclick="closeFicDetail()">‹ 返回</button>
+        <span class="app-title">阅读</span>
+        <button class="btn-icon-only" onclick="shareFicToChat()" style="font-size: 20px;">↗️</button>
+    </div>
+    <div class="content-scroll" style="padding: 20px;">
+        <h1 id="fic-detail-title" style="font-size:22px; margin-bottom:10px;">标题</h1>
+        <div class="forum-meta">
+            <span id="fic-detail-author">产粮大大</span> · 
+            <span id="fic-detail-tags">#甜文</span>
+        </div>
+        <div id="fic-detail-body" class="post-detail-content">
+            <!-- 正文 -->
+        </div>
+        
+        <div class="post-comment-section">
+            <div style="font-weight:bold; margin-bottom:15px;">热门评论</div>
+            <div id="fic-detail-comments">
+                <!-- 评论列表 -->
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- ============ 16. 阅读器 (Reader) - 升级版 ============ -->
 <div class="page" id="page-reader" style="background: #f8f1e5;"> <!-- 羊皮纸背景 -->
@@ -2394,6 +2484,58 @@ select.x-input option {
         </div>
     </div>
 </div>
+    <!-- 创建同人文弹窗 -->
+<div class="modal-overlay" id="modal-create-fic">
+    <div class="modal-box" style="height:auto; max-height:80%;">
+        <div class="modal-header">发布约稿需求 (AI产粮)</div>
+        <div class="modal-body" style="padding:15px;">
+            <div class="ios-list">
+                <div class="ios-item">
+                    <span class="ios-label">CP 对象</span>
+                    <select id="fic-target-char" class="ios-input" style="direction: rtl;">
+                        <!-- 动态填充 -->
+                    </select>
+                </div>
+                <div class="ios-item">
+                    <span class="ios-label">文风/类型</span>
+                    <select id="fic-tone" class="ios-input" style="direction: rtl;">
+                        <option value="甜宠">🍬 甜宠撒糖</option>
+                        <option value="虐恋">🔪 虐恋情深</option>
+                        <option value="搞笑">🤣 沙雕搞笑</option>
+                        <option value="车车">🚗 深夜激情</option>
+                        <option value="AU">🌍 架空设定 (AU)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="ios-group-title">设定 / 梗 / 世界观 (越详细越好)</div>
+            <textarea id="fic-prompt" class="ios-input" style="width:100%; height:120px; border:1px solid #eee; border-radius:8px; padding:10px; margin-top:5px;" placeholder="例如：ABO设定，我是Alpha他是Omega；或者哈利波特AU，他是斯莱特林学长..."></textarea>
+            
+            <div style="font-size:12px; color:#999; margin-top:10px;">
+                * AI 将扮演一位同人写手，根据你的设定创作短文并模拟粉丝评论。
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-create-fic')">取消</button>
+            <button class="modal-btn" onclick="submitFicRequest()" id="btn-submit-fic" style="font-weight:bold; color:#ff2d55;">开始产粮</button>
+        </div>
+    </div>
+</div>
+
+<!-- 分享选择弹窗 -->
+<div class="modal-overlay" id="modal-share-fic">
+    <div class="modal-box" style="height:auto;">
+        <div class="modal-header">分享给...</div>
+        <div class="modal-body" style="padding:0;">
+            <div id="share-contact-list" class="ios-list" style="margin:0;">
+                <!-- 列表 -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-share-fic')">取消</button>
+        </div>
+    </div>
+</div>
     <!-- ============ 阅读笔记弹窗 ============ -->
 <div class="modal-overlay" id="modal-book-summary">
     <div class="modal-box">
@@ -2724,159 +2866,177 @@ let globalAudioPass = new Audio();
         }
 
         async function triggerAI() {
-            const char = getActiveChar();
-            if(!char) return;
-            if(!globalConfig.apiKey) return alert("请先在设置中配置 API Key");
+    const char = getActiveChar();
+    if (!char) return;
+    if (!globalConfig.apiKey) return alert("请先在设置中配置 API Key");
 
-            const btn = document.getElementById('btn-ai');
-            
-            // === ✨ 核心修复：智能重刷逻辑 START ===
-            // 1. 检查有没有消息
-            if (char.messages.length > 0) {
-                const lastIndex = char.messages.length - 1;
-                const lastMsg = char.messages[lastIndex];
-                
-                // 2. 如果最后一条是 AI (assistant) 发的，说明是重刷
-                if (lastMsg.role === 'assistant') {
-                    // 从数组中彻底删除这一条
-                    char.messages.pop(); 
-                    // 立即保存数据，防止刷新丢失
-                    saveData(); 
-                    // 3. 关键：立即刷新界面，让旧气泡在视觉上立刻消失
-                    renderChat(activeContactId); 
-                }
-            }
-            // === ✨ 智能重刷逻辑 END ===
+    const btn = document.getElementById('btn-ai');
 
-            // 变成打字机动画 (防止重复点击)
-            const originalBtnContent = btn.innerHTML;
-            btn.innerHTML = '<span class="typing-indicator"></span><span class="typing-indicator"></span>';
-            btn.disabled = true;
+    // === ✨ 核心修复：智能重刷逻辑 START ===
+    // 1. 检查有没有消息
+    if (char.messages.length > 0) {
+        const lastIndex = char.messages.length - 1;
+        const lastMsg = char.messages[lastIndex];
 
-            // --- 构建 Prompt (和之前保持一致) ---
-            let systemPromptFull = char.systemPrompt + `\n[当前时间: ${new Date().toLocaleString()}]\n[用户名称: ${char.userName}]`;
-            if(char.userPersona) systemPromptFull += `\n[用户设定: ${char.userPersona}]`;
-            systemPromptFull += getStatusContext(char);
-            systemPromptFull += getMusicContext();
-            
-            // 喂入日记 (混合记忆版：收藏 + 最近)
-            if (char.diaries && char.diaries.length > 0) {
-                // 1. 数据清洗
-                const safeDiaries = char.diaries.map(d => typeof d === 'string' ? {content:d, isStarred:false} : d);
-                
-                // 2. 获取【短期记忆】：无论是否收藏，强制读取最近的 3 篇
-                // 这样保证 AI 知道最近发生了啥，不会“失忆”
-                const recentDiaries = safeDiaries.slice(-3);
-                
-                // 3. 获取【核心记忆】：找出所有收藏的
-                let starredDiaries = safeDiaries.filter(d => d.isStarred);
-                
-                // 4. 去重：如果最近的3篇里已经包含了收藏的，就不要重复算在“收藏列表”里了
-                // (通过比较内容或引用对象来去重)
-                starredDiaries = starredDiaries.filter(s => !recentDiaries.includes(s));
-
-                // 5. 限制上限：收藏的日记最多再额外读取 8 篇
-                // 如果收藏超过 8 篇，优先读取“最新的收藏”
-                if (starredDiaries.length > 8) {
-                    starredDiaries = starredDiaries.slice(-8);
-                }
-
-                // 6. 合并：把“收藏”放在前面，“最近”放在后面 (符合时间线逻辑)
-                const finalDiaries = [...starredDiaries, ...recentDiaries];
-
-                // 7. 提取文本并排序 (确保按时间顺序喂给AI)
-                // 因为我们刚才把收藏(可能很旧)和最近(新)拼在了一起，原来的顺序可能是乱的
-                // 这里不做复杂排序了，直接按在数组里的原有顺序其实就是时间序
-                // 但为了严谨，我们直接基于 finalDiaries 里的内容生成文本
-                
-                const diaryText = finalDiaries.map(d => {
-                   return (d.isStarred ? "★ [重要回忆] " : "") + d.content;
-                }).join('\n\n---\n\n');
-
-                systemPromptFull += `\n\n[我的日记本 (包含核心回忆和最近日记)]:\n${diaryText}`;
-            }
-            // 喂入记忆
-            if(char.memories.length > 0) {
-                systemPromptFull += `\n[长期记忆库]:\n${char.memories.join('\n')}`;
-            }
-
-            let apiMsgs = [{role: "system", content: systemPromptFull}];
-            
-            // 构建消息历史
-            const limit = globalConfig.historyLimit || 20;
-            const history = char.messages.slice(-limit);
-            
-            history.forEach(m => {
-                if(m.image) {
-                    apiMsgs.push({
-                        role: m.role,
-                        content: [
-                            { type: "text", text: m.content || " " },
-                            { type: "image_url", image_url: { url: m.image } }
-                        ]
-                    });
-                } else {
-                    apiMsgs.push({ role: m.role, content: m.content });
-                }
-            });
-
-            // UI 占位 (现在屏幕上应该是干净的，这个占位符会出现在最下方)
-            const aiMsgIndex = char.messages.length + 1;
-            const aiUiSpan = appendMsgUI('assistant', '...', null, aiMsgIndex, true);
-            let fullText = "";
-
-            try {
-                const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-                    body: JSON.stringify({
-                        model: globalConfig.model,
-                        messages: apiMsgs,
-                        temperature: parseFloat(globalConfig.temp),
-                        stream: true
-                    })
-                });
-
-                if(!res.ok) throw new Error(res.statusText);
-
-                const reader = res.body.getReader();
-                const decoder = new TextDecoder();
-
-                while(true) {
-                    const {done, value} = await reader.read();
-                    if(done) break;
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-                    for(const line of lines) {
-                        if(line.startsWith('data: ') && line !== 'data: [DONE]') {
-                            try {
-                                const json = JSON.parse(line.replace('data: ',''));
-                                const delta = json.choices[0].delta.content || "";
-                                fullText += delta;
-                                aiUiSpan.innerHTML = formatText(fullText);
-                                scrollToBottom();
-                            } catch(e){}
-                        }
-                    }
-                }
-                
-                // 保存 AI 回复 (加上时间戳)
-                char.messages.push({ role: 'assistant', content: fullText, timestamp: Date.now() });
-                saveData();
-                
-                // 再次刷新以确保格式正确 (特别是时间戳显示)
-                renderChat(activeContactId); 
-
-            } catch(e) {
-                aiUiSpan.innerText = "Error: " + e.message;
-                // 如果出错，也把错误存进去，或者你可以选择不存
-                char.messages.push({ role: 'assistant', content: "Error: " + e.message });
-                saveData();
-            }
-
-            btn.innerHTML = originalBtnContent;
-            btn.disabled = false;
+        // 2. 如果最后一条是 AI (assistant) 发的，说明是重刷
+        if (lastMsg.role === 'assistant') {
+            // 从数组中彻底删除这一条
+            char.messages.pop();
+            // 立即保存数据，防止刷新丢失
+            saveData();
+            // 3. 关键：立即刷新界面，让旧气泡在视觉上立刻消失
+            renderChat(activeContactId);
         }
+    }
+    // === ✨ 智能重刷逻辑 END ===
+
+    // 变成打字机动画 (防止重复点击)
+    const originalBtnContent = btn.innerHTML;
+    btn.innerHTML = '<span class="typing-indicator"></span><span class="typing-indicator"></span>';
+    btn.disabled = true;
+
+    // --- 1. 构建 System Prompt (基础设定) ---
+    let systemPromptFull = char.systemPrompt + `\n[当前时间: ${new Date().toLocaleString()}]\n[用户名称: ${char.userName}]`;
+    if (char.userPersona) systemPromptFull += `\n[用户设定: ${char.userPersona}]`;
+    
+    // 注入各种感知上下文
+    systemPromptFull += getStatusContext(char);
+    systemPromptFull += getMusicContext();
+
+    // --- 2. 喂入日记 (混合记忆版：收藏 + 最近) ---
+    if (char.diaries && char.diaries.length > 0) {
+        // 数据清洗
+        const safeDiaries = char.diaries.map(d => typeof d === 'string' ? { content: d, isStarred: false } : d);
+
+        // 获取【短期记忆】：强制读取最近 3 篇
+        const recentDiaries = safeDiaries.slice(-3);
+
+        // 获取【核心记忆】：找出所有收藏的
+        let starredDiaries = safeDiaries.filter(d => d.isStarred);
+
+        // 去重
+        starredDiaries = starredDiaries.filter(s => !recentDiaries.includes(s));
+
+        // 限制上限
+        if (starredDiaries.length > 8) {
+            starredDiaries = starredDiaries.slice(-8);
+        }
+
+        // 合并
+        const finalDiaries = [...starredDiaries, ...recentDiaries];
+
+        const diaryText = finalDiaries.map(d => {
+            return (d.isStarred ? "★ [重要回忆] " : "") + d.content;
+        }).join('\n\n---\n\n');
+
+        systemPromptFull += `\n\n[我的日记本 (包含核心回忆和最近日记)]:\n${diaryText}`;
+    }
+
+    // --- 3. 喂入长期记忆 ---
+    if (char.memories.length > 0) {
+        systemPromptFull += `\n[长期记忆库]:\n${char.memories.join('\n')}`;
+    }
+
+    // 初始化 API 消息数组
+    let apiMsgs = [{ role: "system", content: systemPromptFull }];
+
+    // --- 4. 构建消息历史 (包含同人文读取逻辑) ---
+    const limit = globalConfig.historyLimit || 20;
+    const history = char.messages.slice(-limit);
+
+    history.forEach(m => {
+        let contentToSend = m.content;
+
+        // 🔥 【同人文核心逻辑】如果包含隐藏的同人文数据，我们需要把全文注入给 AI
+        if (m.hiddenContext && m.hiddenContext.type === "share_fanfic") {
+            contentToSend = `
+            [系统提示：用户分享了一个链接，以下是链接的完整内容]
+            文章标题：《${m.hiddenContext.title}》
+            文章正文：
+            ${m.hiddenContext.content}
+            
+            粉丝热门评论：
+            ${m.hiddenContext.comments}
+            
+            (用户发送这条消息是想和你分享这篇关于你们的同人文。请阅读全文和评论，并发表你的看法。如果是甜文可以害羞或开心，如果是虐文可以安慰用户，如果是OOC或奇怪设定可以吐槽。)
+            `;
+        } else {
+            // 如果是普通消息，但包含了 HTML 标签 (比如卡片/图片)，我们要清理一下 HTML 标签，只留纯文本
+            if (m.content.includes('<div class="msg-link-card"')) {
+                // 这是一个旧的分享但丢失了 hiddenContext? 做个兜底
+                contentToSend = "[用户分享了一篇同人文链接]";
+            }
+        }
+
+        if (m.image) {
+            apiMsgs.push({
+                role: m.role,
+                content: [
+                    { type: "text", text: contentToSend || " " },
+                    { type: "image_url", image_url: { url: m.image } }
+                ]
+            });
+        } else {
+            apiMsgs.push({ role: m.role, content: contentToSend });
+        }
+    });
+
+    // --- 5. UI 占位与 API 调用 ---
+    const aiMsgIndex = char.messages.length + 1;
+    const aiUiSpan = appendMsgUI('assistant', '...', null, aiMsgIndex, true);
+    let fullText = "";
+
+    try {
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: apiMsgs,
+                temperature: parseFloat(globalConfig.temp),
+                stream: true
+            })
+        });
+
+        if (!res.ok) throw new Error(res.statusText);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                    try {
+                        const json = JSON.parse(line.replace('data: ', ''));
+                        const delta = json.choices[0].delta.content || "";
+                        fullText += delta;
+                        aiUiSpan.innerHTML = formatText(fullText);
+                        scrollToBottom();
+                    } catch (e) { }
+                }
+            }
+        }
+
+        // 保存 AI 回复 (加上时间戳)
+        char.messages.push({ role: 'assistant', content: fullText, timestamp: Date.now() });
+        saveData();
+
+        // 再次刷新以确保格式正确 (特别是时间戳显示)
+        renderChat(activeContactId);
+
+    } catch (e) {
+        aiUiSpan.innerText = "Error: " + e.message;
+        char.messages.push({ role: 'assistant', content: "Error: " + e.message });
+        saveData();
+    }
+
+    btn.innerHTML = originalBtnContent;
+    btn.disabled = false;
+}
 
         // --- 3. 智能总结功能 ---
         function openSummaryModal() {
@@ -7943,9 +8103,278 @@ async function speakText(text) {
             btn.innerText = oldText;
         }
     }
+        // ==========================================
+// --- 18. 同人论坛 (粮仓) 系统 ---
+// ==========================================
+
+let forumData = [];
+let currentFicId = null; // 当前正在看的帖子ID
+
+// 1. 初始化与数据加载
+function initForum() {
+    const saved = localStorage.getItem('ai_phone_forum');
+    if(saved) forumData = JSON.parse(saved);
+}
+// 页面加载时调用
+window.addEventListener('load', initForum);
+
+function saveForumData() {
+    localStorage.setItem('ai_phone_forum', JSON.stringify(forumData));
+}
+
+// 2. 渲染帖子列表
+function renderForumFeed() {
+    const container = document.getElementById('forum-feed');
+    container.innerHTML = '';
+    
+    if(forumData.length === 0) {
+        container.innerHTML = `<div style="text-align:center; color:#999; margin-top:100px;">这里空空如也<br>快点右下角 + 号去约稿吧</div>`;
+        return;
+    }
+
+    // 倒序排列
+    const sorted = [...forumData].reverse();
+    
+    sorted.forEach(post => {
+        const div = document.createElement('div');
+        div.className = 'forum-card';
+        div.onclick = () => openFicDetail(post.id);
+        
+        div.innerHTML = `
+            <div class="forum-title">${post.title}</div>
+            <div class="forum-meta">
+                <span style="color:#ff2d55; font-weight:bold;">${post.authorName}</span>
+                <span>${new Date(post.timestamp).toLocaleDateString()}</span>
+            </div>
+            <div style="margin-bottom:8px;">
+                <span class="forum-tag">#${post.cpName}</span>
+                <span class="forum-tag">#${post.tone}</span>
+            </div>
+            <div class="forum-preview">${post.content}</div>
+            <div style="font-size:12px; color:#999; margin-top:8px;">❤️ ${post.likes} 热度 · 💬 ${post.comments.length} 评论</div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// 3. 打开创作弹窗
+function openCreateFicModal() {
+    const select = document.getElementById('fic-target-char');
+    select.innerHTML = '';
+    contacts.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.innerText = c.name;
+        select.appendChild(opt);
+    });
+    // 清空输入
+    document.getElementById('fic-prompt').value = '';
+    openModal('modal-create-fic');
+}
+
+// 4. 提交创作请求 (调用 AI)
+async function submitFicRequest() {
+    if(!globalConfig.apiKey) return alert("请先配置 API Key");
+    
+    const charId = document.getElementById('fic-target-char').value;
+    const tone = document.getElementById('fic-tone').value;
+    const setting = document.getElementById('fic-prompt').value.trim();
+    const char = contacts.find(c => c.id === charId);
+    
+    if(!setting) return alert("请填写一些设定或梗概，不然 AI 没法写哦");
+
+    const btn = document.getElementById('btn-submit-fic');
+    const oldText = btn.innerText;
+    btn.innerText = "太太正在码字中(约30s)...";
+    btn.disabled = true;
+
+    // 构造 Prompt
+    const prompt = `
+    你现在是一位知名的同人小说写手（产粮太太）。
+    你要根据用户要求写一篇短篇同人文。
+    
+    【CP对象】：${char.name} x 用户(我)
+    【风格】：${tone}
+    【设定/梗】：${setting}
+    【角色人设参考】：${char.systemPrompt}
+    
+    任务要求：
+    1. 创作一篇 500-800 字的同人短文，标题自拟，内容要贴合设定。
+    2. 模拟 4-6 条粉丝评论（要真实，要有嗑到了的、催更的、尖叫的）。
+    3. 返回纯 JSON 格式：
+    {
+        "title": "文章标题",
+        "content": "文章正文（支持换行符）",
+        "authorName": "随机生成的写手ID",
+        "comments": [
+            {"user": "粉丝ID", "text": "评论内容"},
+            ...
+        ]
+    }
+    `;
+
+    try {
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model, // 建议用 gpt-3.5-turbo-16k 或 gpt-4 以支持长文
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
+        
+        const data = await res.json();
+        let jsonStr = data.choices[0].message.content;
+        // 清理 markdown 标记
+        jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        const result = JSON.parse(jsonStr);
+
+        // 存入数据
+        const newPost = {
+            id: Date.now().toString(),
+            charId: charId,
+            cpName: `${char.name} x 我`,
+            tone: tone,
+            timestamp: Date.now(),
+            title: result.title,
+            content: result.content,
+            authorName: result.authorName || "热心产粮太太",
+            comments: result.comments || [],
+            likes: Math.floor(Math.random() * 500) + 100
+        };
+
+        forumData.push(newPost);
+        saveForumData();
+        
+        closeModal('modal-create-fic');
+        renderForumFeed();
+        
+        // 自动打开看
+        openFicDetail(newPost.id);
+
+    } catch(e) {
+        alert("产粮失败: " + e.message);
+        console.error(e);
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
+
+// 5. 打开帖子详情
+function openFicDetail(id) {
+    const post = forumData.find(p => p.id === id);
+    if(!post) return;
+    
+    currentFicId = id;
+    
+    document.getElementById('fic-detail-title').innerText = post.title;
+    document.getElementById('fic-detail-author').innerText = post.authorName;
+    document.getElementById('fic-detail-tags').innerText = `#${post.cpName} #${post.tone}`;
+    document.getElementById('fic-detail-body').innerText = post.content;
+    
+    const cmtList = document.getElementById('fic-detail-comments');
+    cmtList.innerHTML = '';
+    
+    post.comments.forEach(c => {
+        cmtList.innerHTML += `
+            <div class="post-comment-item">
+                <div class="post-cmt-avatar" style="background:hsl(${Math.random()*360},70%,90%)"></div>
+                <div class="post-cmt-box">
+                    <div class="post-cmt-user">${c.user}</div>
+                    <div class="post-cmt-text">${c.text}</div>
+                </div>
+            </div>
+        `;
+    });
+
+    document.getElementById('page-forum-detail').classList.add('active');
+}
+
+function closeFicDetail() {
+    document.getElementById('page-forum-detail').classList.remove('active');
+    currentFicId = null;
+}
+
+// 6. 分享逻辑：弹出选择联系人
+function shareFicToChat() {
+    const list = document.getElementById('share-contact-list');
+    list.innerHTML = '';
+    
+    contacts.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'ios-item';
+        div.style.cursor = 'pointer';
+        div.onclick = () => confirmShare(c.id);
+        div.innerHTML = `
+            <img src="${c.avatar}" style="width:30px;height:30px;border-radius:50%;margin-right:10px;">
+            <span class="ios-label" style="flex:1">${c.name}</span>
+            <span style="color:#007AFF;">发送</span>
+        `;
+        list.appendChild(div);
+    });
+    
+    openModal('modal-share-fic');
+}
+
+// 7. 确认分享：发送卡片消息到聊天
+function confirmShare(targetCharId) {
+    const post = forumData.find(p => p.id === currentFicId);
+    if(!post) return;
+    
+    const char = contacts.find(c => c.id === targetCharId);
+    
+    // 构造一个特殊的“卡片消息”
+    // 注意：我们在 content 里只存卡片的 HTML 代码用于显示
+    // 真正的全文内容我们需要存在消息对象的额外字段里，以便 triggerAI 读取
+    
+    const cardHtml = `
+        分享了一篇同人文：
+        <div class="msg-link-card" onclick="openFicDetail('${post.id}')">
+            <div class="link-card-cover">CP</div>
+            <div class="link-card-info">
+                <div class="link-card-title">${post.title}</div>
+                <div class="link-card-desc">${post.content.substring(0, 50)}...</div>
+                <div class="link-card-footer">
+                    <span>${post.authorName}</span>
+                    <span>阅读 ></span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 1. 存入用户消息
+    const userMsg = {
+        role: 'user',
+        content: cardHtml, // 聊天界面显示的（卡片）
+        timestamp: Date.now(),
+        // 🔥 关键：埋入完整数据供 AI 读取
+        hiddenContext: {
+            type: "share_fanfic",
+            title: post.title,
+            content: post.content,
+            comments: JSON.stringify(post.comments)
+        }
+    };
+    
+    char.messages.push(userMsg);
+    saveData();
+    
+    closeModal('modal-share-fic');
+    closeFicDetail(); // 关掉详情页
+    
+    // 跳转聊天
+    activeContactId = targetCharId;
+    navigateTo('page-chat');
+    
+    // 触发 AI 回复 (需要修改 triggerAI 来识别 hiddenContext)
+    triggerAI();
+}
     </script>
 </body>
 </html>
+
 
 
 
