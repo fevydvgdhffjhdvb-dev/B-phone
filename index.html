@@ -1166,6 +1166,37 @@ select.x-input option {
     flex: 1; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
     color: white; padding: 10px 15px; border-radius: 20px; backdrop-filter: blur(10px); outline: none;
 }
+        /* --- 书架删除模式专用样式 --- */
+.book-cover.shake {
+    animation: bookShake 0.25s infinite linear;
+    border: 2px solid #ff3b30; /* 删除模式下加个红框提示 */
+}
+
+.book-delete-badge {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    width: 24px;
+    height: 24px;
+    background: #ff3b30;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    z-index: 10;
+}
+
+@keyframes bookShake {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(1deg); }
+    50% { transform: rotate(0deg); }
+    75% { transform: rotate(-1deg); }
+    100% { transform: rotate(0deg); }
+}
     </style>
 </head>
 <body>
@@ -1893,7 +1924,10 @@ select.x-input option {
     <div class="app-header">
         <button class="btn-icon-text" onclick="goHome()">‹ 桌面</button>
         <span class="app-title">共读空间</span>
-        <button class="btn-icon-only" onclick="document.getElementById('bookFileInput').click()">+</button>
+        <!-- 新增：管理/删除按钮 -->
+<button class="btn-icon-only" id="btn-manage-books" onclick="toggleBookDeleteMode()" style="font-size: 18px; margin-right: 10px;">🗑️</button>
+<!-- 原有的导入按钮 -->
+<button class="btn-icon-only" onclick="document.getElementById('bookFileInput').click()">+</button>
         <input type="file" id="bookFileInput" accept=".txt" hidden onchange="handleBookImport(event)">
     </div>
     <div class="content-scroll">
@@ -5830,6 +5864,18 @@ async function saveBookToDB(bookObj) {
         tx.onerror = () => reject(tx.error);
     });
 }
+        // --- 新增：从 IndexedDB 删除书籍 ---
+async function deleteBookFromDB(id) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        const request = store.delete(id); // 根据 ID 删除
+        
+        tx.oncomplete = () => resolve();
+        tx.onerror = (e) => reject(e.target.error);
+    });
+}
 
 async function getBookFromDB(id) {
     const db = await openDB();
@@ -5866,22 +5912,81 @@ function loadLibrary() {
     if(saved) libraryMeta = JSON.parse(saved);
     renderBookshelf();
 }
+        // --- 新增：删除模式状态 ---
+let isBookDeleteMode = false;
 
-// 渲染书架
+function toggleBookDeleteMode() {
+    isBookDeleteMode = !isBookDeleteMode;
+    const btn = document.getElementById('btn-manage-books');
+    
+    if (isBookDeleteMode) {
+        btn.innerText = "完成"; // 变成完成按钮
+        btn.style.color = "#ff3b30"; // 变红
+    } else {
+        btn.innerText = "🗑️"; // 变回垃圾桶
+        btn.style.color = "#007AFF"; // 变回蓝色
+    }
+    
+    // 重新渲染书架以应用样式
+    renderBookshelf();
+}
+
+async function confirmDeleteBook(bookId, bookTitle) {
+    if (confirm(`确定要永久删除书籍《${bookTitle}》吗？\n这将释放存储空间且无法恢复。`)) {
+        try {
+            // 1. 从 IndexedDB 删除大文件
+            await deleteBookFromDB(bookId);
+            
+            // 2. 从 LocalStorage (metadata) 删除
+            libraryMeta = libraryMeta.filter(b => b.id !== bookId);
+            localStorage.setItem('ai_phone_library', JSON.stringify(libraryMeta));
+            
+            // 3. 刷新界面
+            renderBookshelf();
+            // alert("删除成功"); // 可选
+        } catch (e) {
+            alert("删除失败: " + e.message);
+        }
+    }
+}
+
+// 修改后的渲染书架函数
 function renderBookshelf() {
     const container = document.getElementById('bookshelf-container');
     container.innerHTML = '';
     
+    if (libraryMeta.length === 0) {
+        container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#999; margin-top:50px;">书架是空的<br>点右上角 + 号导入</div>';
+        return;
+    }
+
     libraryMeta.forEach(book => {
         const div = document.createElement('div');
         div.className = 'app-icon-container';
         div.style.width = '100%';
-        div.onclick = () => openBook(book.id);
+        div.style.position = 'relative'; // 为了定位删除角标
         
         // 随机封面色
         const hue = parseInt(book.id) % 360;
+        
+        // 根据是否是删除模式，决定点击行为和样式
+        let actionAttr = '';
+        let badgeHtml = '';
+        let shakeClass = '';
+
+        if (isBookDeleteMode) {
+            // 删除模式：点击触发删除，封面抖动，显示红角标
+            actionAttr = `onclick="confirmDeleteBook('${book.id}', '${book.title}')"`;
+            badgeHtml = `<div class="book-delete-badge">×</div>`;
+            shakeClass = 'shake';
+        } else {
+            // 正常模式：点击打开书
+            actionAttr = `onclick="openBook('${book.id}')"`;
+        }
+
         div.innerHTML = `
-            <div class="book-cover" style="background: hsl(${hue}, 70%, 90%); color: hsl(${hue}, 60%, 30%);">
+            ${badgeHtml}
+            <div class="book-cover ${shakeClass}" ${actionAttr} style="background: hsl(${hue}, 70%, 90%); color: hsl(${hue}, 60%, 30%);">
                 <div style="font-size:24px; margin-bottom:5px;">📖</div>
                 <div class="book-title">${book.title}</div>
                 <div class="book-author" style="margin-top:auto;">读至: ${book.progressIndex + 1}章</div>
@@ -7841,6 +7946,7 @@ async function speakText(text) {
     </script>
 </body>
 </html>
+
 
 
 
