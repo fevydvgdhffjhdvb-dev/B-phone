@@ -2690,6 +2690,7 @@ select.x-input option {
             <div class="t-tab" onclick="switchTheaterTab('tab-presets')">预设</div>
             <div class="t-tab" onclick="switchTheaterTab('tab-styles')">文风</div>
             <div class="t-tab" onclick="switchTheaterTab('tab-modules')">剧场</div>
+            <div class="t-tab" onclick="switchTheaterTab('tab-world')">世界</div>
         </div>
 
         <div class="modal-body" style="background: #111; padding: 15px;">
@@ -2733,6 +2734,15 @@ select.x-input option {
                 <div class="t-group-title">特殊剧场模式 (开关)</div>
                 <div id="t-module-list" class="t-toggle-list">
                     <div style="color:#666; font-size:12px;">请先在“预设”页导入文件...</div>
+                </div>
+            </div>
+            <div id="tab-world" class="t-tab-content">
+                <div class="t-group-title">世界书词条 (点击文字=强制激活)</div>
+                <div style="font-size:10px; color:#666; margin-bottom:10px;">
+                    灰色=未启用 | 白色=待机 | <span style="color:#34c759">绿色=已触发</span> | <span style="color:#ffcc00">黄色=强制常驻</span>
+                </div>
+                <div id="t-world-list" class="t-toggle-list" style="max-height:300px; overflow-y:auto;">
+                    <div class="t-tip">请先在“预设”页导入包含 World Info 的文件...</div>
                 </div>
             </div>
 
@@ -9987,7 +9997,8 @@ function parseSillyTavernJSON(json, fileName) {
         styles: [],
         modules: [],
         activeStyleId: null,
-        activeModules: []
+        activeModules: [],      // <--- 注意这里加个逗号
+        worldInfo: []
     };
 
     // 检查 prompts 数组
@@ -10025,6 +10036,27 @@ function parseSillyTavernJSON(json, fileName) {
             }
         }
     });
+    // === ✨ 新增：解析世界书 (World Info) ===
+    // 兼容标准酒馆格式，通常在 entries 数组里
+    if (json.entries && Array.isArray(json.entries)) {
+        json.entries.forEach(entry => {
+            // 提取关键词 (兼容字符串或数组)
+            let keys = [];
+            if (Array.isArray(entry.key)) keys = entry.key;
+            else if (typeof entry.key === 'string') keys = entry.key.split(',').map(k => k.trim());
+            // 有些格式是用 keys 字段
+            if (entry.keys && Array.isArray(entry.keys)) keys = entry.keys;
+
+            theaterState.preset.worldInfo.push({
+                id: entry.uid || 'wi_' + Math.random(),
+                comment: entry.comment || entry.name || '未命名条目', // 条目名
+                keys: keys,           // 触发关键词数组
+                content: entry.content || '', // 条目内容
+                enabled: entry.enabled !== false, // 默认开启
+                isActive: false       // 运行时状态：是否被本次对话触发
+            });
+        });
+    }
 
     // 默认选中第一个文风 (如果有的话)
     if (theaterState.preset.styles.length > 0) {
@@ -10089,6 +10121,46 @@ function renderConsoleUI() {
         `;
         moduleList.appendChild(div);
     });
+    // --- D. 渲染世界书列表 ---
+const worldList = document.getElementById('t-world-list');
+worldList.innerHTML = '';
+if (!p.worldInfo || p.worldInfo.length === 0) {
+    worldList.innerHTML = '<div class="t-tip">未导入包含 World Info 的预设</div>';
+} else {
+    p.worldInfo.forEach((item, index) => {
+        // 样式逻辑：
+        // 灰色 = 未启用 (enabled=false)
+        // 白色 = 启用但未触发
+        // 绿色 = 当前已触发 (isActive=true)
+        // 黄色 = 强制激活 (forceActive=true)
+        
+        let color = '#888';
+        if (item.enabled) color = '#fff';
+        if (item.isActive) color = '#34c759'; // 绿
+        if (item.forceActive) color = '#ffcc00'; // 黄
+
+        const div = document.createElement('div');
+        div.className = 't-item-row';
+        div.style.cursor = 'pointer';
+        // 点击切换“强制激活”状态
+        div.onclick = () => toggleWorldInfoForce(index);
+
+        div.innerHTML = `
+            <div style="flex:1; overflow:hidden;">
+                <div class="t-item-name" style="color:${color}; font-weight:${item.isActive||item.forceActive?'bold':'normal'}">
+                    ${item.comment}
+                </div>
+                <div style="font-size:10px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    Keys: ${item.keys.join(', ')}
+                </div>
+            </div>
+            <div onclick="event.stopPropagation(); toggleWorldInfoEnable(${index})" 
+                 style="width:10px; height:10px; border-radius:50%; background:${item.enabled ? '#34c759':'#333'}; border:1px solid #555;">
+            </div>
+        `;
+        worldList.appendChild(div);
+    });
+}
 }
 
 // 4. 交互逻辑
@@ -10260,6 +10332,16 @@ function assembleSystemPrompt(char) {
         res = res.replace(/{{char}}/gi, charName).replace(/{{char}}/g, charName);
         return res;
     };
+    // === ✨ 新增：第一层 - 世界书 (World Info) ===
+    // 获取用户当前输入框里的文字
+    const inputEl = document.getElementById('theater-input');
+    const currentInput = inputEl ? inputEl.value : "";
+    
+    // 扫描并获取激活的词条
+    const worldInfoContext = scanWorldInfo(currentInput, char);
+    if (worldInfoContext) {
+        parts.push(worldInfoContext);
+    }
 
     // --- 第二层：核心规则 (Core) ---
     // 这些是必须带上的 (比如小说家设定、去八股)
@@ -10305,7 +10387,77 @@ function assembleSystemPrompt(char) {
     // 将所有积木用换行符连接
     return parts.join('\n\n');
 }
+        // === 🌍 世界书核心引擎 ===
+
+// 扫描并获取激活的世界书内容
+function scanWorldInfo(userText, char) {
+    const p = theaterState.preset;
+    if (!p.worldInfo || p.worldInfo.length === 0) return "";
+
+    let activeEntries = [];
+    
+    // 1. 准备扫描文本：用户的新消息 + 最近 2 条历史记录
+    // (这样即使你没提关键词，只要上下文里有，AI也能记得)
+    let textToScan = userText.toLowerCase();
+    const recentLogs = theaterState.logs.slice(-2);
+    recentLogs.forEach(l => textToScan += " " + l.content.toLowerCase());
+
+    // 2. 遍历所有启用的条目
+    p.worldInfo.forEach(entry => {
+        if (!entry.enabled) return;
+
+        // 检查是否手动强制激活 (稍后在UI里做这个功能)
+        if (entry.forceActive) {
+            activeEntries.push(entry);
+            return;
+        }
+
+        // 关键词匹配
+        // 只要有一个关键词出现在文本中，就激活该条目
+        const isHit = entry.keys.some(key => {
+            if(!key) return false;
+            return textToScan.includes(key.toLowerCase());
+        });
+
+        if (isHit) {
+            entry.isActive = true; // 标记为活跃，方便UI展示
+            activeEntries.push(entry);
+        } else {
+            entry.isActive = false;
+        }
+    });
+
+    if (activeEntries.length === 0) return "";
+
+    // 3. 组装 Prompt
+    // 按照酒馆惯例，世界书通常放在最前面或最后面。这里我们处理一下占位符。
+    const worldInfoText = activeEntries.map(e => e.content).join('\n\n');
+    
+    // 简单的占位符替换
+    const userName = char.userName || "我";
+    const charName = char.name || "AI";
+    let finalInfo = worldInfoText.replace(/{{user}}/gi, userName).replace(/{{char}}/gi, charName);
+
+    return `\n【世界书/知识库 (World Info)】:\n${finalInfo}\n`;
+}
+        function toggleWorldInfoForce(index) {
+    const item = theaterState.preset.worldInfo[index];
+    if (!item.enabled) return; // 没开启的不能强制
+    item.forceActive = !item.forceActive;
+    saveTheaterState();
+    renderConsoleUI();
+}
+
+function toggleWorldInfoEnable(index) {
+    const item = theaterState.preset.worldInfo[index];
+    item.enabled = !item.enabled;
+    // 如果禁用了，也顺便取消强制
+    if (!item.enabled) item.forceActive = false;
+    saveTheaterState();
+    renderConsoleUI();
+}
     </script>
 </body>
 </html>
+
 
