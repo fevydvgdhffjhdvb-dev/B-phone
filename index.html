@@ -9830,9 +9830,17 @@ let theaterState = {
         apiKey: "",
         model: ""
     },
-    // 临时存放解析后的数据
-    currentPreset: null, 
-    // 当前聊天记录 (独立于主聊天)
+    // ✨ 新增：预设数据仓
+    preset: {
+        name: "未加载",
+        core: [],     // 核心规则 (如：去八股、人设)
+        styles: [],   // 文风 (如：古风、港风)
+        modules: [],  // 小剧场 (如：论坛体、日记)
+        
+        // 当前选中的状态
+        activeStyleId: null, // 单选
+        activeModules: []    // 多选 (存 ID)
+    },
     logs: [] 
 };
 
@@ -9920,16 +9928,202 @@ function appendTheaterLog(role, text) {
     stage.scrollTop = stage.scrollHeight;
 }
 
-// --- 占位：文件导入函数 (下一阶段重点写这个) ---
-function handleTheaterImport(e) {
+// ==========================================
+// --- 21. 剧场模式：核心解析器 (Parser) ---
+// ==========================================
+
+// 1. 文件导入入口
+async function handleTheaterImport(e) {
     const file = e.target.files[0];
     if(!file) return;
+
+    try {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        
+        // 开始解析
+        parseSillyTavernJSON(json, file.name);
+        
+        // 保存并刷新
+        saveTheaterState();
+        renderConsoleUI();
+        
+        alert(`✅ 成功导入预设：${file.name}\n已自动识别出文风和小剧场模块！`);
+        
+    } catch(err) {
+        alert("解析失败: " + err.message);
+        console.error(err);
+    } finally {
+        e.target.value = ''; // 清空input以便下次选同名文件
+    }
+}
+
+// 2. 核心：JSON 榨汁机
+function parseSillyTavernJSON(json, fileName) {
+    // 重置当前数据
+    theaterState.preset = {
+        name: fileName.replace('.json', ''),
+        core: [],
+        styles: [],
+        modules: [],
+        activeStyleId: null,
+        activeModules: []
+    };
+
+    // 检查 prompts 数组
+    if (!json.prompts || !Array.isArray(json.prompts)) {
+        throw new Error("这不是标准的酒馆预设文件 (找不到 prompts 列表)");
+    }
+
+    // 遍历并分类
+    json.prompts.forEach(p => {
+        // 这里的 p 是每一条 prompt 对象
+        const item = {
+            id: p.identifier || 'id_' + Math.random(),
+            name: p.name || '未命名',
+            content: p.content || '',
+            enabled: p.enabled // 默认开启状态
+        };
+
+        // --- 智能分类逻辑 ---
+        
+        if (item.name.includes("文风") || item.name.includes("WritingStyle")) {
+            // A. 归类为【文风】 (单选)
+            theaterState.preset.styles.push(item);
+            
+        } else if (item.name.includes("小剧场") || item.name.includes("Theater")) {
+            // B. 归类为【小剧场】 (开关)
+            // 默认全部关闭，等用户想玩的时候再开
+            item.enabled = false; 
+            theaterState.preset.modules.push(item);
+            
+        } else {
+            // C. 归类为【核心规则】 (常驻)
+            // 只有原文件里 enabled=true 的才放进来
+            if (p.enabled) {
+                theaterState.preset.core.push(item);
+            }
+        }
+    });
+
+    // 默认选中第一个文风 (如果有的话)
+    if (theaterState.preset.styles.length > 0) {
+        theaterState.preset.activeStyleId = theaterState.preset.styles[0].id;
+    }
+}
+
+// 3. UI 渲染器：把数据画到控制台里
+function renderConsoleUI() {
+    const p = theaterState.preset;
+    document.getElementById('t-current-preset-name').innerText = p.name;
+
+    // --- A. 渲染核心列表 (只读展示) ---
+    const coreList = document.getElementById('t-core-list');
+    coreList.innerHTML = '';
+    p.core.forEach(item => {
+        coreList.innerHTML += `
+            <div class="t-item-row" style="opacity:0.7;">
+                <span class="t-item-name" style="font-size:12px;">🔒 ${item.name}</span>
+                <span style="font-size:10px; color:#34c759;">已装载</span>
+            </div>`;
+    });
+
+    // --- B. 渲染文风列表 (单选 Radio) ---
+    const styleList = document.getElementById('t-style-list');
+    styleList.innerHTML = '';
+    if(p.styles.length === 0) styleList.innerHTML = '<div class="t-tip">无文风选项</div>';
     
-    alert("文件已选中！\n下一阶段我们将编写【JSON解析器】来榨取这个文件的精华。\n请继续指令！");
+    p.styles.forEach(item => {
+        const isActive = (item.id === p.activeStyleId);
+        const div = document.createElement('div');
+        div.className = `t-item-row ${isActive ? 'active' : ''}`;
+        div.onclick = () => selectTheaterStyle(item.id);
+        div.innerHTML = `
+            <span class="t-item-name">${item.name}</span>
+            <div class="t-radio-check"></div>
+        `;
+        styleList.appendChild(div);
+    });
+
+    // --- C. 渲染小剧场列表 (开关 Toggle) ---
+    const moduleList = document.getElementById('t-module-list');
+    moduleList.innerHTML = '';
+    if(p.modules.length === 0) moduleList.innerHTML = '<div class="t-tip">无小剧场模块</div>';
+
+    p.modules.forEach(item => {
+        // 检查这个 ID 是否在激活列表里
+        const isActive = p.activeModules.includes(item.id);
+        const div = document.createElement('div');
+        div.className = 't-item-row';
+        div.onclick = () => toggleTheaterModule(item.id);
+        
+        // 简单的开关样式
+        const toggleColor = isActive ? '#34c759' : '#444';
+        const togglePos = isActive ? '22px' : '2px';
+        
+        div.innerHTML = `
+            <span class="t-item-name" style="${isActive ? 'color:#fff' : ''}">${item.name}</span>
+            <div style="width:40px; height:22px; background:${toggleColor}; border-radius:11px; position:relative; transition:0.2s;">
+                <div style="width:18px; height:18px; background:#fff; border-radius:50%; position:absolute; top:2px; left:${togglePos}; transition:0.2s;"></div>
+            </div>
+        `;
+        moduleList.appendChild(div);
+    });
+}
+
+// 4. 交互逻辑
+function selectTheaterStyle(id) {
+    theaterState.preset.activeStyleId = id;
+    saveTheaterState();
+    renderConsoleUI();
+}
+
+function toggleTheaterModule(id) {
+    const list = theaterState.preset.activeModules;
+    if (list.includes(id)) {
+        // 如果有，就删掉 (关闭)
+        const idx = list.indexOf(id);
+        list.splice(idx, 1);
+    } else {
+        // 如果没有，就加上 (开启)
+        list.push(id);
+    }
+    saveTheaterState();
+    renderConsoleUI();
+}
+
+// 5. 数据持久化
+function saveTheaterState() {
+    // 保存配置
+    localStorage.setItem('theater_config', JSON.stringify(theaterState.config));
+    // 保存预设数据
+    localStorage.setItem('theater_preset_data', JSON.stringify(theaterState.preset));
+}
+
+// 页面加载时恢复数据
+function loadTheaterState() {
+    const c = localStorage.getItem('theater_config');
+    if(c) theaterState.config = JSON.parse(c);
+    
+    const p = localStorage.getItem('theater_preset_data');
+    if(p) {
+        theaterState.preset = JSON.parse(p);
+        renderConsoleUI(); // 恢复后立即渲染
+    }
+}
+
+// 把这个加到 initTheaterMode 里
+const originalInit = initTheaterMode;
+initTheaterMode = function() {
+    navigateTo('page-theater');
+    loadTheaterConfig();
+    loadTheaterState(); // 新增：加载预设状态
+    // renderTheaterLogs(); // 暂时注释掉，因为还没写 logs 存储
 }
     </script>
 </body>
 </html>
+
 
 
 
