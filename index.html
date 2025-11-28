@@ -1363,6 +1363,97 @@ select.x-input option {
     0% { transform: rotateX(0) rotateY(0); }
     100% { transform: rotateX(360deg) rotateY(360deg); }
 }
+        /* ============ 剧场模式专属样式 ============ */
+
+/* 头部 */
+.theater-header {
+    position: absolute; top: 0; left: 0; width: 100%; height: 60px;
+    padding-top: 20px; padding-left:15px; padding-right:15px;
+    display: flex; justify-content: space-between; align-items: center;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+    z-index: 10;
+}
+.theater-title { font-family: 'Songti SC', serif; font-size: 18px; letter-spacing: 2px; text-shadow: 0 2px 4px black; }
+
+/* 舞台 (正文区) */
+.theater-stage {
+    flex: 1; overflow-y: auto; 
+    padding: 80px 25px 100px 25px; /* 上下留白大一点 */
+    font-family: 'Songti SC', 'Georgia', serif; /* 衬线体，更有文学感 */
+    font-size: 17px;
+    line-height: 1.8;
+    color: #d0d0d0;
+    scroll-behavior: smooth;
+}
+
+/* 消息块 - 不再是气泡，而是段落 */
+.t-msg-block {
+    margin-bottom: 25px;
+    opacity: 0; animation: fadeIn 0.5s forwards;
+}
+.t-role-label {
+    font-size: 12px; color: #666; margin-bottom: 5px;
+    letter-spacing: 1px; font-weight: bold;
+}
+.t-text {
+    white-space: pre-wrap; /* 保留换行 */
+    text-align: justify;   /* 两端对齐，像书一样 */
+}
+.t-text.user { color: #888; border-left: 2px solid #444; padding-left: 10px; } /* 用户的话稍微灰一点，加个引用线 */
+.t-text.ai { color: #e0e0e0; }
+
+/* 底部输入栏 */
+.theater-input-area {
+    position: absolute; bottom: 0; width: 100%;
+    background: #111; border-top: 1px solid #333;
+    padding: 15px; display: flex; align-items: flex-end; gap: 10px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+#theater-input {
+    flex: 1; background: #222; border: 1px solid #444; color: #fff;
+    border-radius: 8px; padding: 10px; font-size: 16px;
+    resize: none; outline: none; max-height: 120px;
+    font-family: sans-serif; /* 输入框还是用黑体看清楚点 */
+}
+.theater-send-btn {
+    background: #007AFF; color: #fff; border: none; width: 40px; height: 40px;
+    border-radius: 50%; font-size: 18px; cursor: pointer; flex-shrink: 0;
+}
+
+/* 导演控制台样式 */
+.theater-tabs {
+    display: flex; border-bottom: 1px solid #444; background: #1a1a1a;
+}
+.t-tab {
+    flex: 1; text-align: center; padding: 12px; font-size: 14px; color: #888; cursor: pointer;
+}
+.t-tab.active { color: #fff; border-bottom: 2px solid #007AFF; }
+.t-tab-content { display: none; padding-top: 10px; }
+
+.t-input {
+    width: 100%; background: #333; border: 1px solid #444; 
+    color: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px;
+}
+.t-group-title { font-size: 12px; color: #007AFF; margin: 15px 0 5px; text-transform: uppercase; letter-spacing: 1px;}
+.t-tip { font-size: 10px; color: #666; }
+
+.t-upload-box {
+    border: 2px dashed #444; border-radius: 8px; padding: 20px;
+    text-align: center; color: #888; cursor: pointer; transition: 0.2s;
+}
+.t-upload-box:active { background: #333; }
+
+/* 开关列表 */
+.t-item-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px; border-bottom: 1px solid #333;
+}
+.t-item-name { font-size: 14px; color: #ccc; }
+.t-radio-check { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #666; }
+.t-item-row.active .t-radio-check { background: #007AFF; border-color: #007AFF; }
+.t-item-row.active .t-item-name { color: #fff; font-weight: bold; }
+
+@keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
     </style>
 </head>
 <body>
@@ -1461,6 +1552,11 @@ select.x-input option {
 <div class="app-icon-container" onclick="openLudoSelectChar()">
     <div class="app-icon" id="app-icon-ludo" style="background: linear-gradient(to bottom, #ff9a9e, #fad0c4);">🎲</div>
     <div class="app-name">飞行棋</div>
+</div>
+                <!-- 16. 剧场模式 (Theater / 异世界) -->
+<div class="app-icon-container" onclick="initTheaterMode()">
+    <div class="app-icon" id="app-icon-theater" style="background: linear-gradient(to bottom, #2b2b2b, #000000); border:1px solid #444;">🎭</div>
+    <div class="app-name">剧场</div>
 </div>
             </div>
         </div>
@@ -2547,6 +2643,99 @@ select.x-input option {
         </div>
         <div class="modal-footer">
             <button class="modal-btn" onclick="closeModal('modal-ludo-select')">取消</button>
+        </div>
+    </div>
+</div>
+        <!-- ============ 19. 剧场模式 (Theater Mode) ============ -->
+<div class="page" id="page-theater" style="background-color: #1a1a1a; color: #d0d0d0;">
+    
+    <!-- 沉浸式背景层 -->
+    <div id="theater-bg-layer" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:-1; background-size:cover; background-position:center; opacity:0.3;"></div>
+
+    <!-- 顶部导演栏 -->
+    <div class="theater-header">
+        <button class="btn-icon-only" onclick="goHome()" style="color:#999;">‹ 退出</button>
+        <span class="theater-title" id="theater-title">未命名剧本</span>
+        <button class="btn-icon-only" onclick="openTheaterConsole()" style="color:#007AFF;">🎬</button>
+    </div>
+
+    <!-- 剧本阅读区 (取代聊天框) -->
+    <div class="theater-stage" id="theater-stage">
+        <div class="theater-start-tip">
+            <p>这里是异世界。</p>
+            <p>没有气泡，没有边界。</p>
+            <p>请点击右上角配置你的剧本。</p>
+        </div>
+    </div>
+
+    <!-- 底部输入区 -->
+    <div class="theater-input-area">
+        <textarea id="theater-input" rows="1" placeholder="书写你的故事..." oninput="autoResizeTextArea(this)"></textarea>
+        <button class="theater-send-btn" onclick="sendTheaterMsg()">✒️</button>
+    </div>
+</div>
+
+<!-- ============ 导演控制台弹窗 ============ -->
+<div class="modal-overlay" id="modal-theater-console">
+    <div class="modal-box" style="height: 85%; background: #222; color: #eee; border: 1px solid #444;">
+        <div class="modal-header" style="border-bottom: 1px solid #444; background: #222;">
+            <button onclick="closeModal('modal-theater-console')" style="color:#999;">关闭</button>
+            <span style="color:#fff;">导演控制台</span>
+            <button onclick="saveTheaterSettings()" style="color:#007AFF;">保存</button>
+        </div>
+        
+        <!-- 简单的 Tab 切换 -->
+        <div class="theater-tabs">
+            <div class="t-tab active" onclick="switchTheaterTab('tab-connect')">连接</div>
+            <div class="t-tab" onclick="switchTheaterTab('tab-presets')">预设</div>
+            <div class="t-tab" onclick="switchTheaterTab('tab-styles')">文风</div>
+            <div class="t-tab" onclick="switchTheaterTab('tab-modules')">剧场</div>
+        </div>
+
+        <div class="modal-body" style="background: #111; padding: 15px;">
+            
+            <!-- Tab 1: 独立连接 -->
+            <div id="tab-connect" class="t-tab-content" style="display:block;">
+                <div class="t-group-title">独立 API 设置 (仅剧场生效)</div>
+                <input type="text" id="t-api-url" class="t-input" placeholder="API URL (例如: https://api.openai.com/v1)">
+                <input type="password" id="t-api-key" class="t-input" placeholder="sk-...">
+                <input type="text" id="t-model" class="t-input" placeholder="Model ID (推荐 Claude 3.5 / GPT-4)">
+                <div class="t-tip">* 如果留空，将默认使用手机全局设置。</div>
+            </div>
+
+            <!-- Tab 2: 预设导入 (核心) -->
+            <div id="tab-presets" class="t-tab-content">
+                <div class="t-group-title">导入酒馆预设 (JSON)</div>
+                <div class="t-upload-box" onclick="document.getElementById('theaterPresetInput').click()">
+                    点击上传 .json 文件
+                </div>
+                <input type="file" id="theaterPresetInput" accept=".json" hidden onchange="handleTheaterImport(event)">
+                
+                <div class="t-group-title">当前加载</div>
+                <div id="t-current-preset-name" style="color:#007AFF; margin-bottom:10px;">无</div>
+                
+                <div class="t-group-title">核心规则 (Core)</div>
+                <div id="t-core-list" class="t-toggle-list">
+                    <!-- JS 动态生成 -->
+                </div>
+            </div>
+
+            <!-- Tab 3: 文风选择 -->
+            <div id="tab-styles" class="t-tab-content">
+                <div class="t-group-title">文风滤镜 (单选)</div>
+                <div id="t-style-list" class="t-radio-list">
+                    <div style="color:#666; font-size:12px;">请先在“预设”页导入文件...</div>
+                </div>
+            </div>
+
+            <!-- Tab 4: 小剧场开关 -->
+            <div id="tab-modules" class="t-tab-content">
+                <div class="t-group-title">特殊剧场模式 (开关)</div>
+                <div id="t-module-list" class="t-toggle-list">
+                    <div style="color:#666; font-size:12px;">请先在“预设”页导入文件...</div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -9631,9 +9820,117 @@ function deleteBank(index) {
         renderLudoLibraryList();
     }
 }
+        // ==========================================
+// --- 20. 剧场模式 (Theater Mode) 基础逻辑 ---
+// ==========================================
+
+let theaterState = {
+    config: {
+        apiUrl: "",
+        apiKey: "",
+        model: ""
+    },
+    // 临时存放解析后的数据
+    currentPreset: null, 
+    // 当前聊天记录 (独立于主聊天)
+    logs: [] 
+};
+
+// 1. 初始化入口
+function initTheaterMode() {
+    navigateTo('page-theater');
+    loadTheaterConfig();
+    renderTheaterLogs();
+}
+
+function loadTheaterConfig() {
+    const s = localStorage.getItem('theater_config');
+    if(s) theaterState.config = JSON.parse(s);
+    
+    // 恢复UI
+    document.getElementById('t-api-url').value = theaterState.config.apiUrl || "";
+    document.getElementById('t-api-key').value = theaterState.config.apiKey || "";
+    document.getElementById('t-model').value = theaterState.config.model || "";
+}
+
+// 2. 导演台 UI 逻辑
+function openTheaterConsole() {
+    openModal('modal-theater-console');
+}
+
+function switchTheaterTab(tabId) {
+    document.querySelectorAll('.t-tab').forEach(t => t.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    
+    document.querySelectorAll('.t-tab-content').forEach(c => c.style.display = 'none');
+    document.getElementById(tabId).style.display = 'block';
+}
+
+function saveTheaterSettings() {
+    theaterState.config.apiUrl = document.getElementById('t-api-url').value.trim();
+    theaterState.config.apiKey = document.getElementById('t-api-key').value.trim();
+    theaterState.config.model = document.getElementById('t-model').value.trim();
+    
+    localStorage.setItem('theater_config', JSON.stringify(theaterState.config));
+    closeModal('modal-theater-console');
+    alert("剧场配置已保存");
+}
+
+// 3. 简单的输入框自适应
+function autoResizeTextArea(el) {
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight) + 'px';
+}
+
+// 4. 临时发送逻辑 (只上屏，暂不接API，下一阶段写解析器)
+function sendTheaterMsg() {
+    const input = document.getElementById('theater-input');
+    const txt = input.value.trim();
+    if(!txt) return;
+    
+    appendTheaterLog('user', txt);
+    input.value = '';
+    input.style.height = 'auto';
+    
+    // 模拟 AI 回复 (Placeholder)
+    setTimeout(() => {
+        appendTheaterLog('ai', '（系统提示：剧本解析引擎尚未启动，请等待第二阶段部署...）');
+    }, 500);
+}
+
+function appendTheaterLog(role, text) {
+    const stage = document.getElementById('theater-stage');
+    
+    // 如果是第一条消息，清空那个提示语
+    if(document.querySelector('.theater-start-tip')) {
+        stage.innerHTML = '';
+    }
+
+    const div = document.createElement('div');
+    div.className = 't-msg-block';
+    
+    const name = role === 'user' ? '我' : 'AI'; // 以后会读卡片名字
+    
+    div.innerHTML = `
+        <div class="t-role-label">${name}</div>
+        <div class="t-text ${role}">${text}</div>
+    `;
+    
+    stage.appendChild(div);
+    stage.scrollTop = stage.scrollHeight;
+}
+
+// --- 占位：文件导入函数 (下一阶段重点写这个) ---
+function handleTheaterImport(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+    
+    alert("文件已选中！\n下一阶段我们将编写【JSON解析器】来榨取这个文件的精华。\n请继续指令！");
+}
     </script>
 </body>
 </html>
+
 
 
 
