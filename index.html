@@ -9845,10 +9845,11 @@ let theaterState = {
 };
 
 // 1. 初始化入口
-function initTheaterMode() {
+initTheaterMode = function() {
     navigateTo('page-theater');
     loadTheaterConfig();
-    renderTheaterLogs();
+    loadTheaterState(); // 加载预设
+    loadTheaterLogs();  // ✨ 新增：加载历史聊天
 }
 
 function loadTheaterConfig() {
@@ -9891,42 +9892,61 @@ function autoResizeTextArea(el) {
 }
 
 // 4. 临时发送逻辑 (只上屏，暂不接API，下一阶段写解析器)
-function sendTheaterMsg() {
+async function sendTheaterMsg() {
     const input = document.getElementById('theater-input');
     const txt = input.value.trim();
     if(!txt) return;
     
-    appendTheaterLog('user', txt);
+    // 获取当前角色 (如果没有在外面选人，就默认第一个)
+    // 剧场模式需要一个主角，我们借用主应用的 activeContactId
+    let char = contacts.find(c => c.id === activeContactId);
+    if (!char && contacts.length > 0) char = contacts[0];
+    if (!char) return alert("请先在【信息】APP里创建一个角色！");
+
+    // 上屏用户消息
+    appendTheaterLog('user', txt, "我"); // 这里的"我"以后可以用 userName 变量
+    
+    // 保存到历史记录
+    theaterState.logs.push({ role: 'user', content: txt });
+    saveTheaterLogs();
+
+    // 清空输入框
     input.value = '';
     input.style.height = 'auto';
-    
-    // 模拟 AI 回复 (Placeholder)
-    setTimeout(() => {
-        appendTheaterLog('ai', '（系统提示：剧本解析引擎尚未启动，请等待第二阶段部署...）');
-    }, 500);
+
+    // 🚀 触发 AI 逻辑
+    await triggerTheaterAI(char);
 }
 
-function appendTheaterLog(role, text) {
+
+function appendTheaterLog(role, text, name) {
     const stage = document.getElementById('theater-stage');
     
-    // 如果是第一条消息，清空那个提示语
-    if(document.querySelector('.theater-start-tip')) {
-        stage.innerHTML = '';
-    }
+    // 移除初始提示
+    const tip = document.querySelector('.theater-start-tip');
+    if(tip) tip.remove();
 
     const div = document.createElement('div');
     div.className = 't-msg-block';
     
-    const name = role === 'user' ? '我' : 'AI'; // 以后会读卡片名字
+    // 格式化文本 (换行转<br>)
+    const formattedText = text.replace(/\n/g, '<br>');
     
     div.innerHTML = `
         <div class="t-role-label">${name}</div>
-        <div class="t-text ${role}">${text}</div>
+        <div class="t-text ${role}">${formattedText}</div>
     `;
     
     stage.appendChild(div);
-    stage.scrollTop = stage.scrollHeight;
+    
+    // 自动滚动到底部
+    setTimeout(() => {
+        stage.scrollTop = stage.scrollHeight;
+    }, 100);
+    
+    return div.querySelector('.t-text'); // 返回文本容器引用，方便流式输出
 }
+
 
 // ==========================================
 // --- 21. 剧场模式：核心解析器 (Parser) ---
@@ -10098,6 +10118,7 @@ function saveTheaterState() {
     localStorage.setItem('theater_config', JSON.stringify(theaterState.config));
     // 保存预设数据
     localStorage.setItem('theater_preset_data', JSON.stringify(theaterState.preset));
+    localStorage.setItem('theater_chat_logs', JSON.stringify(theaterState.logs));
 }
 
 // 页面加载时恢复数据
@@ -10120,9 +10141,181 @@ initTheaterMode = function() {
     loadTheaterState(); // 新增：加载预设状态
     // renderTheaterLogs(); // 暂时注释掉，因为还没写 logs 存储
 }
+        function loadTheaterLogs() {
+    const s = localStorage.getItem('theater_chat_logs');
+    if(s) {
+        theaterState.logs = JSON.parse(s);
+        // 重新渲染历史
+        const stage = document.getElementById('theater-stage');
+        stage.innerHTML = ''; // 清空
+        // 获取角色名
+        let char = contacts.find(c => c.id === activeContactId) || (contacts[0] || {name:"AI"});
+        
+        theaterState.logs.forEach(log => {
+            const name = log.role === 'user' ? (char.userName || "我") : char.name;
+            appendTheaterLog(log.role, log.content, name);
+        });
+    }
+}
+        // 4. 核心：AI 触发器
+async function triggerTheaterAI(char) {
+    // A. 准备 API 配置
+    // 优先使用剧场独立配置，如果没有，则“借用”全局配置
+    let apiUrl = theaterState.config.apiUrl || globalConfig.apiUrl;
+    let apiKey = theaterState.config.apiKey || globalConfig.apiKey;
+    let model = theaterState.config.model || globalConfig.model;
+
+    if (!apiKey) return alert("请先配置 API Key");
+
+    // UI 变为思考状态
+    const btn = document.querySelector('.theater-send-btn');
+    btn.innerText = "⏳";
+    
+    // 预先创建一个空的 AI 消息框用于流式输出
+    const aiUiBox = appendTheaterLog('ai', '...', char.name);
+
+    try {
+        // B. 拼装 System Prompt (这是最关键的一步!)
+        const systemPrompt = assembleSystemPrompt(char);
+        
+        // C. 准备历史记录
+        // 为了省钱/防遗忘，我们取最近 20 条剧场记录
+        // 注意：我们不读外面的短信记录，只读 theaterState.logs，实现数据隔离
+        const contextMessages = theaterState.logs.slice(-20).map(l => ({
+            role: l.role,
+            content: l.content
+        }));
+
+        // D. 组合最终请求体
+        const messagesToSend = [
+            { role: "system", content: systemPrompt },
+            ...contextMessages
+        ];
+
+        // E. 发送请求 (支持流式)
+        const res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authorization": "Bearer " + apiKey 
+            },
+            body: JSON.stringify({
+                model: model,
+                messages: messagesToSend,
+                temperature: 1.1, // 剧场模式稍微高一点，更有创造力
+                stream: true
+            })
+        });
+
+        if (!res.ok) throw new Error("API Error: " + res.status);
+
+        // F. 处理流式响应
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                    try {
+                        const json = JSON.parse(line.replace('data: ', ''));
+                        const delta = json.choices[0].delta.content || "";
+                        if (delta) {
+                            fullText += delta;
+                            // 实时更新 UI (替换掉 ...)
+                            aiUiBox.innerText = fullText; 
+                            // 保持滚动到底部
+                            const stage = document.getElementById('theater-stage');
+                            stage.scrollTop = stage.scrollHeight;
+                        }
+                    } catch (e) { }
+                }
+            }
+        }
+
+        // G. 完成后保存
+        theaterState.logs.push({ role: 'assistant', content: fullText });
+        saveTheaterLogs();
+
+    } catch (e) {
+        aiUiBox.innerText = "生成失败: " + e.message;
+        console.error(e);
+    } finally {
+        btn.innerText = "✒️";
+    }
+}
+
+// 5. 核心：积木拼装师 (Assembler)
+function assembleSystemPrompt(char) {
+    const p = theaterState.preset;
+    let parts = [];
+
+    // --- 第一层：占位符替换函数 ---
+    // 把 {{user}} 换成玩家名，{{char}} 换成角色名
+    const process = (text) => {
+        if(!text) return "";
+        let res = text;
+        // 简单的全局替换
+        const userName = char.userName || "我";
+        const charName = char.name || "AI";
+        res = res.replace(/{{user}}/ji, userName).replace(/{{user}}/g, userName); // 兼容大小写
+        res = res.replace(/{{char}}/ji, charName).replace(/{{char}}/g, charName);
+        return res;
+    };
+
+    // --- 第二层：核心规则 (Core) ---
+    // 这些是必须带上的 (比如小说家设定、去八股)
+    p.core.forEach(item => {
+        parts.push(process(item.content));
+    });
+
+    // --- 第三层：文风 (Style) ---
+    // 只有选中的那个文风才会被加入
+    if (p.activeStyleId) {
+        const style = p.styles.find(s => s.id === p.activeStyleId);
+        if (style) {
+            parts.push(`\n【当前激活文风】：\n` + process(style.content));
+        }
+    }
+
+    // --- 第四层：角色卡信息 (Persona) ---
+    // 这是从我们 App 的 contacts 里读来的基础设定
+    parts.push(`
+    <CharSetting>
+    Name: ${char.name}
+    Persona: ${char.systemPrompt}
+    </CharSetting>
+    <UserSetting>
+    Name: ${char.userName || "用户"}
+    Persona: ${char.userPersona || "无"}
+    </UserSetting>
+    `);
+
+    // --- 第五层：小剧场模块 (Modules) ---
+    // 只有开关打开的剧场指令才会被加入
+    // 比如你开了“论坛体”，这里就会加入论坛体的 Prompt
+    if (p.activeModules.length > 0) {
+        parts.push(`\n【特殊剧场模式已开启】：\n`);
+        p.activeModules.forEach(mid => {
+            const mod = p.modules.find(m => m.id === mid);
+            if (mod) {
+                parts.push(process(mod.content));
+            }
+        });
+    }
+
+    // 将所有积木用换行符连接
+    return parts.join('\n\n');
+}
     </script>
 </body>
 </html>
+
 
 
 
