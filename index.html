@@ -9293,7 +9293,7 @@ function performRoll(who) {
         // 设定骰子面朝向 (简单的 transform 修改)
         const transforms = [
             'rotateX(0) rotateY(0)',   // 1
-            'rotateX(90deg) rotateY(0)', // 2 (bottom) - incorrect in basic logic but ok visually
+            'rotateX(90deg) rotateY(0)', // 2 (bottom) 
             'rotateY(-90deg)', // 3
             'rotateY(90deg)',  // 4
             'rotateX(-90deg)', // 5
@@ -10256,8 +10256,8 @@ function assembleSystemPrompt(char) {
         // 简单的全局替换
         const userName = char.userName || "我";
         const charName = char.name || "AI";
-        res = res.replace(/{{user}}/ji, userName).replace(/{{user}}/g, userName); // 兼容大小写
-        res = res.replace(/{{char}}/ji, charName).replace(/{{char}}/g, charName);
+        res = res.replace(/{{user}}/gi, userName).replace(/{{user}}/g, userName); // 兼容大小写
+        res = res.replace(/{{char}}/gi, charName).replace(/{{char}}/g, charName);
         return res;
     };
 
@@ -10308,3 +10308,4 @@ function assembleSystemPrompt(char) {
     </script>
 </body>
 </html>
+
