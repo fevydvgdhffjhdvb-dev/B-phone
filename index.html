@@ -10081,7 +10081,7 @@ async function handleWorldImport(e) {
     }
 }
 
-// 2. 独立导入正则脚本 (全格式兼容版)
+// 2. 独立导入正则脚本 (防报错 + 全格式兼容版)
 async function handleRegexImport(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -10090,42 +10090,39 @@ async function handleRegexImport(e) {
         const text = await file.text();
         const json = JSON.parse(text);
         let count = 0;
-
         let scripts = [];
         
-        // --- 1. 格式识别区 ---
+        // 1. 格式识别
         if (Array.isArray(json)) {
-            // 情况A: 纯数组
             scripts = json;
         } else if (json.regex_scripts && Array.isArray(json.regex_scripts)) {
-            // 情况B: 标准酒馆包
             scripts = json.regex_scripts;
         } else if (json.scripts && Array.isArray(json.scripts)) {
-            // 情况C: 变体包
             scripts = json.scripts;
         } else {
-            // 情况D: 单个对象 (就是你这次上传的情况)
-            // 只要满足任意一种命名规范，就认为是合法的
             if ((json.regex && json.replacement) || (json.findRegex && json.replaceString)) {
                 scripts = [json];
             } else {
-                throw new Error("无法识别的正则文件格式 (找不到 regex 或 findRegex)");
+                throw new Error("无法识别的正则文件格式");
             }
         }
 
-        // --- 2. 数据清洗区 ---
+        // 🔥🔥🔥 核心修复在这里 🔥🔥🔥
+        // 如果系统发现 regexScripts 不存在（被旧缓存覆盖了），立刻原地新建一个空数组
+        if (!theaterState.preset.regexScripts) {
+            theaterState.preset.regexScripts = [];
+        }
+        // 🔥🔥🔥 修复结束 🔥🔥🔥
+
+        // 2. 数据清洗与存入
         scripts.forEach(r => {
             theaterState.preset.regexScripts.push({
                 id: r.id || 'reg_' + Math.random(),
                 scriptName: r.scriptName || '导入脚本',
-                
-                // 🔥 核心修复：兼容两种字段名
+                // 兼容不同字段名
                 regex: r.regex || r.findRegex, 
                 replacement: r.replacement || r.replaceString,
-                
-                // 兼容 placement
                 placement: r.placement || [1, 2],
-                
                 disabled: r.disabled || false
             });
             count++;
@@ -10721,6 +10718,7 @@ function runRegex(text, placementType) {
     </script>
 </body>
 </html>
+
 
 
 
