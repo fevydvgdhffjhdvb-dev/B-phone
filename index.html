@@ -9849,7 +9849,9 @@ let theaterState = {
         
         // 当前选中的状态
         activeStyleId: null, // 单选
-        activeModules: []    // 多选 (存 ID)
+        activeModules: [],
+        worldInfo: [],      // 这是你上次加的世界书
+        regexScripts: []    // 多选 (存 ID)
     },
     logs: [] 
 };
@@ -10062,6 +10064,21 @@ function parseSillyTavernJSON(json, fileName) {
     if (theaterState.preset.styles.length > 0) {
         theaterState.preset.activeStyleId = theaterState.preset.styles[0].id;
     }
+    // === ✨ 新增：解析正则脚本 (Regex Scripts) ===
+    // 兼容酒馆格式，规则通常存在 regex_scripts 数组里
+    if (json.regex_scripts && Array.isArray(json.regex_scripts)) {
+        json.regex_scripts.forEach(r => {
+            theaterState.preset.regexScripts.push({
+                id: r.id || 'reg_' + Math.random(),
+                scriptName: r.scriptName || '未命名脚本',
+                regex: r.regex,             // 匹配规则 (字符串)
+                replacement: r.replacement, // 替换内容
+                // placement: 1=Input(用户发送前), 2=Output(AI回复后)
+                placement: r.placement || [1, 2], 
+                disabled: r.disabled || false
+            });
+        });
+    }
 }
 
 // 3. UI 渲染器：把数据画到控制台里
@@ -10242,20 +10259,28 @@ async function triggerTheaterAI(char) {
     try {
         // B. 拼装 System Prompt (这是最关键的一步!)
         const systemPrompt = assembleSystemPrompt(char);
+        // === ✨ 正则处理：用户输入 (Input) ===
+    // 获取用户刚刚发的最后一条消息
+    let userLastMsg = theaterState.logs[theaterState.logs.length - 1].content;
+    // 经过正则清洗，变成发给 AI 的实际内容
+    // (注意：界面上显示的还是原话，但发给 AI 的是被正则改过的)
+    let finalUserContent = runRegex(userLastMsg, 'input');
         
         // C. 准备历史记录
-        // 为了省钱/防遗忘，我们取最近 20 条剧场记录
-        // 注意：我们不读外面的短信记录，只读 theaterState.logs，实现数据隔离
-        const contextMessages = theaterState.logs.slice(-20).map(l => ({
-            role: l.role,
-            content: l.content
-        }));
+            // ⚠️ 关键修改：我们要先用 slice(0, -1) 排除掉刚才发的那条最新消息(原话)
+            // 因为我们要手动把正则处理过的版本(finalUserContent)加在最后
+            const contextMessages = theaterState.logs.slice(0, -1).slice(-20).map(l => ({
+                role: l.role,
+                content: l.content
+            }));
 
-        // D. 组合最终请求体
-        const messagesToSend = [
-            { role: "system", content: systemPrompt },
-            ...contextMessages
-        ];
+            // D. 组合最终请求体
+            const messagesToSend = [
+                { role: "system", content: systemPrompt },
+                ...contextMessages,
+                // 🔥 这里！必须显式地把正则处理过的“最终内容”发给 AI
+                { role: "user", content: finalUserContent }
+            ];
 
         // E. 发送请求 (支持流式)
         const res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
@@ -10302,6 +10327,15 @@ async function triggerTheaterAI(char) {
                 }
             }
         }
+        // ... (流式接收循环结束) ...
+
+        // === ✨ 正则处理：AI 回复 (Output) ===
+        fullText = runRegex(fullText, 'output');
+        
+        // 再次更新 UI，确保用户看到的是清洗后的干净文本
+        aiUiBox.innerHTML = fullText.replace(/\n/g, '<br>');
+
+        // ... (然后才是保存到 logs) ...
 
         // G. 完成后保存
         theaterState.logs.push({ role: 'assistant', content: fullText });
@@ -10456,8 +10490,43 @@ function toggleWorldInfoEnable(index) {
     saveTheaterState();
     renderConsoleUI();
 }
+        // === 🧩 正则处理引擎 ===
+function runRegex(text, placementType) {
+    const scripts = theaterState.preset.regexScripts;
+    if (!scripts || scripts.length === 0) return text;
+
+    let processedText = text;
+
+    scripts.forEach(script => {
+        // 1. 检查开关
+        if (script.disabled) return;
+        
+        // 2. 检查作用域 (输入还是输出?)
+        // 这里我们定义: 'input'=1, 'output'=2
+        const targetEnum = placementType === 'input' ? 1 : 2;
+        
+        // 如果脚本的作用域包含当前环节，就执行
+        if (script.placement && script.placement.includes(targetEnum)) {
+            try {
+                // 3. 执行替换
+                // g=全局替换, i=忽略大小写, m=多行模式
+                const re = new RegExp(script.regex, 'gim');
+                // 如果 replacement 是 null/undefined，就替换为空字符串
+                const replaceStr = script.replacement === undefined ? "" : script.replacement;
+                
+                processedText = processedText.replace(re, replaceStr);
+                
+            } catch (e) {
+                console.warn(`正则脚本 [${script.scriptName}] 执行出错:`, e);
+            }
+        }
+    });
+
+    return processedText;
+}
     </script>
 </body>
 </html>
+
 
 
