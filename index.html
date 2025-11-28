@@ -2691,6 +2691,7 @@ select.x-input option {
             <div class="t-tab" onclick="switchTheaterTab('tab-styles')">文风</div>
             <div class="t-tab" onclick="switchTheaterTab('tab-modules')">剧场</div>
             <div class="t-tab" onclick="switchTheaterTab('tab-world')">世界</div>
+            <div class="t-tab" onclick="switchTheaterTab('tab-regex')">正则</div>
         </div>
 
         <div class="modal-body" style="background: #111; padding: 15px;">
@@ -2743,6 +2744,15 @@ select.x-input option {
                 </div>
                 <div id="t-world-list" class="t-toggle-list" style="max-height:300px; overflow-y:auto;">
                     <div class="t-tip">请先在“预设”页导入包含 World Info 的文件...</div>
+                </div>
+            </div>
+            <div id="tab-regex" class="t-tab-content">
+                <div class="t-group-title">正则脚本 (Regex Scripts)</div>
+                <div style="font-size:10px; color:#666; margin-bottom:10px;">
+                    跟随预设自动导入。用于清洗文本或替换关键词。
+                </div>
+                <div id="t-regex-list" class="t-toggle-list" style="max-height:300px; overflow-y:auto;">
+                    <div class="t-tip">暂无脚本</div>
                 </div>
             </div>
 
@@ -10178,6 +10188,47 @@ if (!p.worldInfo || p.worldInfo.length === 0) {
         worldList.appendChild(div);
     });
 }
+    // --- E. 渲染正则列表 ---
+    const regList = document.getElementById('t-regex-list');
+    if (regList) { // 确保元素存在防报错
+        regList.innerHTML = '';
+        if (!p.regexScripts || p.regexScripts.length === 0) {
+            regList.innerHTML = '<div class="t-tip">当前预设未包含正则脚本</div>';
+        } else {
+            p.regexScripts.forEach((item, index) => {
+                // 判断作用域标签
+                let tags = [];
+                // 兼容 placement 为空的情况
+                let pl = item.placement || [1, 2];
+                if(pl.includes(1)) tags.push("输入"); // Input
+                if(pl.includes(2)) tags.push("输出"); // Output
+                
+                const div = document.createElement('div');
+                div.className = 't-item-row';
+                // 点击开关
+                div.onclick = () => toggleRegexScript(index);
+
+                div.innerHTML = `
+                    <div style="flex:1; overflow:hidden;">
+                        <div class="t-item-name" style="color:${item.disabled ? '#888' : '#fff'};">
+                            ${item.scriptName}
+                        </div>
+                        <div style="font-size:10px; color:#666;">
+                            [${tags.join('/')}] <code>${item.regex.substring(0, 15)}...</code>
+                        </div>
+                    </div>
+                    <div style="width:10px; height:10px; border-radius:50%; background:${item.disabled ? '#333' : '#34c759'}; border:1px solid #555;"></div>
+                `;
+                regList.appendChild(div);
+            });
+        }
+    }
+}
+        function toggleRegexScript(index) {
+    const item = theaterState.preset.regexScripts[index];
+    item.disabled = !item.disabled; // 切换禁用状态
+    saveTheaterState();
+    renderConsoleUI();
 }
 
 // 4. 交互逻辑
@@ -10527,6 +10578,7 @@ function runRegex(text, placementType) {
     </script>
 </body>
 </html>
+
 
 
 
