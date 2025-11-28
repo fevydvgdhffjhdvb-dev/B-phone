@@ -1429,9 +1429,17 @@ select.x-input option {
                 <div class="ios-group-title">API 连接</div>
                 <div class="ios-list">
                     <div class="ios-item">
-                        <span class="ios-label">API URL</span>
-                        <input type="text" id="apiUrl" class="ios-input" placeholder="https://api.openai.com/v1" onchange="saveGlobalConfig()">
-                    </div>
+        <span class="ios-label">供应商</span>
+        <select id="apiProvider" class="ios-input" style="direction: rtl;" onchange="toggleApiProvider()">
+            <option value="custom">自定义 (OpenAI/反代)</option>
+            <option value="google">Google AI Studio</option>
+        </select>
+    </div>
+                     <!-- 原有的 API URL (加了 id="apiUrlContainer" 方便控制样式) -->
+    <div class="ios-item" id="apiUrlContainer">
+        <span class="ios-label">API URL</span>
+        <input type="text" id="apiUrl" class="ios-input" placeholder="https://api.openai.com/v1" onchange="saveGlobalConfig()">
+    </div>
                     <div class="ios-item">
                         <span class="ios-label">API Key</span>
                         <input type="password" id="apiKey" class="ios-input" placeholder="sk-..." onchange="saveGlobalConfig()">
@@ -2592,6 +2600,7 @@ select.x-input option {
     <script>
         // --- 核心数据结构 ---
         let globalConfig = {
+            provider: "custom",
             apiUrl: "https://api.openai.com/v1",
             apiKey: "",
             model: "gpt-3.5-turbo",
@@ -3236,7 +3245,16 @@ let globalAudioPass = new Audio();
 
         // --- 5. 全局设置逻辑 ---
         function updateGlobalSettingsUI() {
-            document.getElementById('apiUrl').value = globalConfig.apiUrl;
+            const provider = globalConfig.provider || "custom"; // 兼容旧数据
+    document.getElementById('apiProvider').value = provider;
+    
+    // 执行一次切换逻辑来设置输入框的锁定状态
+    const urlInput = document.getElementById('apiUrl');
+    const isGoogle = provider === 'google';
+    
+    urlInput.value = globalConfig.apiUrl;
+    urlInput.disabled = isGoogle;
+    urlInput.style.color = isGoogle ? "#999" : "#007AFF";
             document.getElementById('apiKey').value = globalConfig.apiKey;
             document.getElementById('modelId').value = globalConfig.model;
             document.getElementById('tempVal').value = globalConfig.temp;
@@ -3247,6 +3265,7 @@ let globalAudioPass = new Audio();
         }
         
         function saveGlobalConfig() {
+            globalConfig.provider = document.getElementById('apiProvider').value;
             globalConfig.apiUrl = document.getElementById('apiUrl').value;
             globalConfig.apiKey = document.getElementById('apiKey').value;
             globalConfig.model = document.getElementById('modelId').value;
@@ -3257,6 +3276,34 @@ let globalAudioPass = new Audio();
             globalConfig.xiModelId = document.getElementById('xiModelId').value;
             saveData();
         }
+        // --- ✨ 新增：切换 API 供应商逻辑 ✨ ---
+function toggleApiProvider() {
+    const provider = document.getElementById('apiProvider').value;
+    const urlInput = document.getElementById('apiUrl');
+    const urlContainer = document.getElementById('apiUrlContainer');
+
+    if (provider === 'google') {
+        // Google 的 OpenAI 兼容端点
+        urlInput.value = "https://generativelanguage.googleapis.com/v1beta/openai";
+        // 锁定输入框，提示用户不用填
+        urlInput.disabled = true;
+        urlInput.style.color = "#999"; 
+        // 也可以给用户一个提示占位符
+        document.getElementById('apiKey').placeholder = "粘贴 AI Studio 的 Key";
+    } else {
+        // 自定义模式：解锁
+        urlInput.disabled = false;
+        urlInput.style.color = "#007AFF";
+        // 如果切回自定义，且当前填的是 Google 的地址，就恢复默认提示
+        if (urlInput.value.includes("googleapis.com")) {
+            urlInput.value = "https://api.openai.com/v1";
+        }
+        document.getElementById('apiKey').placeholder = "sk-...";
+    }
+    
+    // 切换后自动保存一下设置
+    saveGlobalConfig();
+}
         // --- 美化/主题系统 (终极版: 图标+字体+壁纸) ---
     let themeConfig = {
             icons: { msg: "", mem: "", set: "", theme: "", diary: "", pomo: "", cal: "", sched: "", book: "" },
@@ -8400,6 +8447,7 @@ function confirmShare(targetCharId) {
     </script>
 </body>
 </html>
+
 
 
 
