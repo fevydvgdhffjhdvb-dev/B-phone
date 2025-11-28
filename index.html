@@ -2476,7 +2476,7 @@ select.x-input option {
         <span class="app-title" style="color:#ff6b81;">情侣飞行棋</span>
         <button class="btn-icon-only" onclick="document.getElementById('ludoTaskInput').click()">📂</button>
         <!-- 隐藏的文件上传，用于导入题库 -->
-        <input type="file" id="ludoTaskInput" accept=".json" hidden onchange="importLudoTasks(event)">
+        <input type="file" id="ludoTaskInput" accept=".json, .txt, text/plain" hidden onchange="importLudoTasks(event)">
     </div>
 
     <!-- 上半部分：棋盘区 -->
@@ -9454,6 +9454,7 @@ async function loadLudoTasksFromDB() {
     </script>
 </body>
 </html>
+
 
 
 
