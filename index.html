@@ -10012,6 +10012,7 @@ async function handleTheaterImport(e) {
 // ==========================================
 
 // 1. 独立导入世界书
+// 1. 独立导入世界书 (终极兼容版：支持数组和对象格式)
 async function handleWorldImport(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -10020,31 +10021,49 @@ async function handleWorldImport(e) {
         const text = await file.text();
         const json = JSON.parse(text);
         let count = 0;
-
-        // 兼容性处理：有时候导出的只是一个 entries 数组，有时候是包含 entries 的对象
         let entries = [];
+
+        // --- 1. 格式识别区 (核心修复) ---
         if (Array.isArray(json)) {
-            entries = json; // 纯数组格式
-        } else if (json.entries && Array.isArray(json.entries)) {
-            entries = json.entries; // 标准格式
-        } else {
-            throw new Error("无法识别的世界书格式 (找不到 entries)");
+            // 情况A: 根目录就是数组
+            entries = json;
+        } else if (json.entries) {
+            if (Array.isArray(json.entries)) {
+                // 情况B: 标准数组格式
+                entries = json.entries;
+            } else if (typeof json.entries === 'object') {
+                // 🔥 情况C: 你的文件就是这种！(字典对象格式)
+                // 我们用 Object.values 把它强行转成数组
+                entries = Object.values(json.entries);
+            }
+        } 
+        
+        if (entries.length === 0) {
+            throw new Error("未找到有效的词条数据 (entries 为空)");
         }
 
-        // 追加到现有列表
+        // --- 2. 数据清洗区 ---
         entries.forEach(entry => {
-            // 提取关键词
+            // 提取关键词 (兼容各种奇葩写法)
             let keys = [];
-            if (Array.isArray(entry.key)) keys = entry.key;
-            else if (typeof entry.key === 'string') keys = entry.key.split(',').map(k => k.trim());
-            if (entry.keys && Array.isArray(entry.keys)) keys = entry.keys;
+            // 优先找 key (数组), 其次找 keys, 最后找 string 格式
+            const rawKey = entry.key || entry.keys; 
+            
+            if (Array.isArray(rawKey)) {
+                keys = rawKey;
+            } else if (typeof rawKey === 'string') {
+                keys = rawKey.split(',').map(k => k.trim());
+            }
 
+            // 存入系统
             theaterState.preset.worldInfo.push({
                 id: entry.uid || 'wi_' + Math.random(),
                 comment: entry.comment || entry.name || '导入条目',
                 keys: keys,
                 content: entry.content || '',
-                enabled: entry.enabled !== false,
+                enabled: entry.enabled !== false, // 默认开启，除非明确写了 false
+                // 处理你的文件里那种 forceActive 或者 constant 属性
+                forceActive: entry.constant || false, 
                 isActive: false
             });
             count++;
@@ -10058,11 +10077,11 @@ async function handleWorldImport(e) {
         alert("导入失败: " + err.message);
         console.error(err);
     } finally {
-        e.target.value = ''; // 清空，允许重复导入
+        e.target.value = ''; // 清空 input
     }
 }
 
-// 2. 独立导入正则脚本
+// 2. 独立导入正则脚本 (全格式兼容版)
 async function handleRegexImport(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -10072,27 +10091,41 @@ async function handleRegexImport(e) {
         const json = JSON.parse(text);
         let count = 0;
 
-        // 兼容性处理：数组 vs 对象
         let scripts = [];
+        
+        // --- 1. 格式识别区 ---
         if (Array.isArray(json)) {
+            // 情况A: 纯数组
             scripts = json;
         } else if (json.regex_scripts && Array.isArray(json.regex_scripts)) {
+            // 情况B: 标准酒馆包
             scripts = json.regex_scripts;
         } else if (json.scripts && Array.isArray(json.scripts)) {
-            scripts = json.scripts; // 某些变体
+            // 情况C: 变体包
+            scripts = json.scripts;
         } else {
-            // 尝试读取单个对象
-            if (json.regex && json.replacement) scripts = [json];
-            else throw new Error("无法识别的正则文件格式");
+            // 情况D: 单个对象 (就是你这次上传的情况)
+            // 只要满足任意一种命名规范，就认为是合法的
+            if ((json.regex && json.replacement) || (json.findRegex && json.replaceString)) {
+                scripts = [json];
+            } else {
+                throw new Error("无法识别的正则文件格式 (找不到 regex 或 findRegex)");
+            }
         }
 
+        // --- 2. 数据清洗区 ---
         scripts.forEach(r => {
             theaterState.preset.regexScripts.push({
                 id: r.id || 'reg_' + Math.random(),
                 scriptName: r.scriptName || '导入脚本',
-                regex: r.regex,
-                replacement: r.replacement,
+                
+                // 🔥 核心修复：兼容两种字段名
+                regex: r.regex || r.findRegex, 
+                replacement: r.replacement || r.replaceString,
+                
+                // 兼容 placement
                 placement: r.placement || [1, 2],
+                
                 disabled: r.disabled || false
             });
             count++;
@@ -10688,6 +10721,7 @@ function runRegex(text, placementType) {
     </script>
 </body>
 </html>
+
 
 
 
