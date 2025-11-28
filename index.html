@@ -3473,36 +3473,57 @@ if(iconBook) iconBook.value = themeConfig.icons.book || "";
     }
 
         async function fetchModels() {
-            if(!globalConfig.apiKey) return alert("请先填写 API Key");
-            const btn = event.target;
-            btn.innerText = "加载中...";
-            try {
-                const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/models', {
-                    headers: { "Authorization": "Bearer " + globalConfig.apiKey }
-                });
-                const data = await res.json();
-                const select = document.getElementById('modelSelect');
-                select.innerHTML = '<option value="" disabled selected>请选择模型</option>';
-                
-                // 兼容 OpenAI 和 兼容接口的返回格式
-                const list = data.data || data; 
-                if(Array.isArray(list)) {
-                    list.sort((a,b) => a.id.localeCompare(b.id));
-                    list.forEach(m => {
-                        const opt = document.createElement('option');
-                        opt.value = m.id;
-                        opt.innerText = m.id;
-                        select.appendChild(opt);
-                    });
-                    document.getElementById('modelSelectContainer').style.display = 'flex';
-                } else {
-                    alert("API 返回格式未能识别");
+    if(!globalConfig.apiKey) return alert("请先填写 API Key");
+    
+    // 获取当前选中的供应商
+    const provider = document.getElementById('apiProvider').value; 
+    
+    const btn = event.target;
+    btn.innerText = "加载中...";
+    try {
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/models', {
+            headers: { "Authorization": "Bearer " + globalConfig.apiKey }
+        });
+        
+        if (!res.ok) throw new Error("API 请求失败: " + res.status);
+
+        const data = await res.json();
+        const select = document.getElementById('modelSelect');
+        select.innerHTML = '<option value="" disabled selected>请选择模型</option>';
+        
+        // 兼容 OpenAI 标准 (data.data) 和 Google 原生列表 (data.models 或 data)
+        let list = data.data || data.models || data; 
+        
+        if(Array.isArray(list)) {
+            // 排序
+            list.sort((a,b) => a.id.localeCompare(b.id));
+            
+            list.forEach(m => {
+                let cleanId = m.id;
+
+                // ✨✨✨ 核心修复：如果是 Google，去掉 models/ 前缀 ✨✨✨
+                if (provider === 'google' && cleanId.startsWith('models/')) {
+                    cleanId = cleanId.replace('models/', '');
                 }
-            } catch(e) {
-                alert("获取模型失败: " + e.message);
-            }
-            btn.innerText = "⬇️ 拉取模型列表";
+
+                // 过滤掉一些肯定不能用来聊天的模型 (可选优化)
+                // 比如 embedding (嵌入模型) 或 aqa (问答模型)
+                if (cleanId.includes('embedding') || cleanId.includes('aqa')) return;
+
+                const opt = document.createElement('option');
+                opt.value = cleanId;
+                opt.innerText = cleanId; // 显示干净的名字
+                select.appendChild(opt);
+            });
+            document.getElementById('modelSelectContainer').style.display = 'flex';
+        } else {
+            alert("API 返回格式未能识别");
         }
+    } catch(e) {
+        alert("获取模型失败: " + e.message);
+    }
+    btn.innerText = "⬇️ 拉取模型列表";
+}
 
         function resetAll() {
             if(confirm("警告：这将清除所有聊天记录和设置！")) {
@@ -8447,6 +8468,7 @@ function confirmShare(targetCharId) {
     </script>
 </body>
 </html>
+
 
 
 
