@@ -1366,19 +1366,24 @@ select.x-input option {
         /* ============ 剧场模式专属样式 ============ */
 
 /* 头部 */
+/* 修改后的剧场顶部栏 */
 .theater-header {
-    position: absolute; top: 0; left: 0; width: 100%; height: 60px;
-    padding-top: 20px; padding-left:15px; padding-right:15px;
+    position: absolute;
+    top: 0; left: 0; width: 100%; 
+    height: 100px; /* 👈 加高，给刘海留位置 */
+    padding-top: 50px; /* 👈 核心：内容下移，避开状态栏 */
+    padding-left: 20px; 
+    padding-right: 20px;
     display: flex; justify-content: space-between; align-items: center;
     background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
-    z-index: 10;
+    z-index: 50; /* 提高层级，确保能点到 */
 }
 .theater-title { font-family: 'Songti SC', serif; font-size: 18px; letter-spacing: 2px; text-shadow: 0 2px 4px black; }
 
 /* 舞台 (正文区) */
 .theater-stage {
     flex: 1; overflow-y: auto; 
-    padding: 80px 25px 100px 25px; /* 上下留白大一点 */
+    padding: 120px 25px 100px 25px; /* 上下留白大一点 */
     font-family: 'Songti SC', 'Georgia', serif; /* 衬线体，更有文学感 */
     font-size: 17px;
     line-height: 1.8;
@@ -4073,7 +4078,7 @@ if(iconLudo) iconLudo.value = themeConfig.icons.ludo || "";
         if (themeConfig.customFont && themeConfig.customFont.trim() !== "") {
             const fontRule = `
                 @font-face { font-family: 'UserCustomFont'; src: url('${themeConfig.customFont}'); font-display: swap; }
-                body, button, input, textarea, select, .clock-time, .app-title, .chat-contact-name { font-family: 'UserCustomFont', -apple-system, sans-serif !important; }
+                body, button, input, textarea, select, .clock-time, .app-title, .chat-contact-name, .theater-stage, .t-text { font-family: 'UserCustomFont', -apple-system, sans-serif !important; }
             `;
             finalCss = fontRule + "\n" + finalCss;
         }
@@ -10718,6 +10723,7 @@ function runRegex(text, placementType) {
     </script>
 </body>
 </html>
+
 
 
 
