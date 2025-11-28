@@ -9260,44 +9260,56 @@ async function triggerLudoAI(userContent, contextType) {
     const char = getLudoChar();
     if(!globalConfig.apiKey) return;
 
-    // 1. 构建游戏状态描述
-    const boardStatus = `
-    [当前游戏状态]
-    你的位置：${ludoState.aiPos === -1 ? '停机坪' : '第'+(ludoState.aiPos+1)+'格'}。
-    用户位置：${ludoState.userPos === -1 ? '停机坪' : '第'+(ludoState.userPos+1)+'格'}。
-    当前回合：${ludoState.turn === 'user' ? '用户' : '你'}。
-    `;
-    
-    // 2. 系统指令
-    let systemInstruction = `
-    你正在和用户玩“飞行棋”游戏。
-    你的角色：${char.name}。人设：${char.systemPrompt}
-    ${boardStatus}
-    
-    请根据 contextType 回复：
-    - "do_task": 轮到你做任务，请执行任务（说话或动作）。完成后末尾加 "[DONE]"。
-    - "crash_victim": 你被撞回起点了，请表现出生气、撒娇或放狠话。
-    - "crash_attacker": 你撞飞了用户，请表现得得意或调侃。
-    - "chat": 正常闲聊。
-    
-    【重要】：请结合你们之前的聊天历史（见上文）来保持语气连贯。
-    `;
-
-    // 3. ✨✨✨ 关键修改：获取主聊天记录 (最近15条) ✨✨✨
-    // 这样 AI 就知道你们刚才在聊什么了
-    const mainHistory = char.messages.slice(-15).map(m => ({
+    // 1. 获取主聊天记录 (最近10条即可，太多容易干扰)
+    const mainHistory = char.messages.slice(-10).map(m => ({
         role: m.role,
         content: m.content
     }));
 
-    // 4. 获取游戏内的即时记录 (防止上下文丢失)
-    const gameLogs = ludoState.logs.slice(-6).map(l => `[游戏内-${l.role}]: ${l.content}`).join('\n');
+    // 2. 构建游戏状态描述
+    const boardStatus = `
+    [当前游戏实时状态]
+    你的位置：${ludoState.aiPos === -1 ? '停机坪' : '第'+(ludoState.aiPos+1)+'格'}。
+    用户位置：${ludoState.userPos === -1 ? '停机坪' : '第'+(ludoState.userPos+1)+'格'}。
+    当前回合：${ludoState.turn === 'user' ? '用户' : '你'}。
+    `;
+
+    // 3. 获取游戏内的即时记录
+    const gameLogs = ludoState.logs.slice(-6).map(l => `[刚刚发生了]: ${l.content}`).join('\n');
     
-    // 5. 组装最终的消息列表
+    // 4. 核心系统指令 (强逻辑版)
+    let systemInstruction = `
+    你正在和用户玩“飞行棋”游戏。你的角色：${char.name}。人设：${char.systemPrompt}
+    
+    ${boardStatus}
+    
+    【回复逻辑指南】：
+    - "do_task": 轮到你做任务，请执行任务（说话或动作）。完成后末尾加 "[DONE]"。
+    - "crash_victim": 你被撞回起点了，请表现出生气、撒娇或放狠话。
+    - "crash_attacker": 你撞飞了用户，请表现得得意或调侃。
+    - "chat": 正常闲聊。
+    `;
+
+    // 5. ✨ 组装最终消息列表 (关键修改：加入明确的时间分割线)
     const apiMessages = [
         { role: "system", content: systemInstruction },
-        ...mainHistory, // 插入主聊天记录
-        { role: "system", content: `[系统提示] 以上是你们的历史聊天。以下是刚刚发生的游戏记录：\n${gameLogs}` },
+        
+        // 插入历史聊天作为背景
+        ...mainHistory, 
+        
+        // 🔥🔥🔥 强力分割线：告诉 AI 上面是过去，下面是现在 🔥🔥🔥
+        { role: "system", content: `
+        -------------------------------------------------------------
+        【系统提示】：
+        以上是之前的聊天记录（仅作为游戏之前的语气和聊天内容参考）。
+        现在，那些对话已经暂停。你们正在进行激烈的飞行棋对战。
+        请立刻进入游戏状态！之前的话题仅在聊到类似话题时一笔带过，专注于当下的游戏互动。
+        -------------------------------------------------------------
+        【游戏内最新动态】：
+        ${gameLogs}
+        `},
+        
+        // 用户的最新发言
         { role: "user", content: userContent }
     ];
 
@@ -9307,7 +9319,7 @@ async function triggerLudoAI(userContent, contextType) {
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
                 model: globalConfig.model,
-                messages: apiMessages, // 发送包含完整记忆的列表
+                messages: apiMessages,
                 temperature: 0.8
             })
         });
@@ -9322,7 +9334,6 @@ async function triggerLudoAI(userContent, contextType) {
 
         addLudoLog('ai', reply);
         
-        // 自动过回合逻辑
         if (contextType === "do_task" || isTaskDone) {
              setTimeout(nextTurn, 2000); 
         }
@@ -9454,6 +9465,7 @@ async function loadLudoTasksFromDB() {
     </script>
 </body>
 </html>
+
 
 
 
