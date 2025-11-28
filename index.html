@@ -10133,14 +10133,7 @@ function loadTheaterState() {
     }
 }
 
-// 把这个加到 initTheaterMode 里
-const originalInit = initTheaterMode;
-initTheaterMode = function() {
-    navigateTo('page-theater');
-    loadTheaterConfig();
-    loadTheaterState(); // 新增：加载预设状态
-    // renderTheaterLogs(); // 暂时注释掉，因为还没写 logs 存储
-}
+
         function loadTheaterLogs() {
     const s = localStorage.getItem('theater_chat_logs');
     if(s) {
@@ -10315,6 +10308,7 @@ function assembleSystemPrompt(char) {
     </script>
 </body>
 </html>
+
 
 
 
