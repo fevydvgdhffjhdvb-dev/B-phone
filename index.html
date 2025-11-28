@@ -3272,24 +3272,51 @@ let globalAudioPass = new Audio();
 
         // --- 5. 全局设置逻辑 ---
         function updateGlobalSettingsUI() {
-            const provider = globalConfig.provider || "custom"; // 兼容旧数据
+    // 1. 还原供应商选择
+    const provider = globalConfig.provider || "custom";
     document.getElementById('apiProvider').value = provider;
     
-    // 执行一次切换逻辑来设置输入框的锁定状态
+    // 2. 获取相关 DOM 元素
     const urlInput = document.getElementById('apiUrl');
-    const isGoogle = provider === 'google';
-    
-    urlInput.value = globalConfig.apiUrl;
-    urlInput.disabled = isGoogle;
-    urlInput.style.color = isGoogle ? "#999" : "#007AFF";
-            document.getElementById('apiKey').value = globalConfig.apiKey;
-            document.getElementById('modelId').value = globalConfig.model;
-            document.getElementById('tempVal').value = globalConfig.temp;
-            document.getElementById('historyLimit').value = globalConfig.historyLimit || 20;
-            document.getElementById('xiApiKey').value = globalConfig.xiApiKey || "";
+    const googleMgr = document.getElementById('googleKeyManager');
+    // 获取单 Key 输入框的外层容器 (整行)，以便隐藏
+    const singleKeyContainer = document.getElementById('apiKey').closest('.ios-item');
+
+    // 3. 根据供应商切换界面状态
+    if (provider === 'google') {
+        // --- Google 模式 ---
+        // 锁定 URL
+        urlInput.value = "https://generativelanguage.googleapis.com/v1beta/openai";
+        urlInput.disabled = true;
+        urlInput.style.color = "#999";
+        
+        // ✨✨✨ 关键修改：显示钥匙包，隐藏单 Key ✨✨✨
+        googleMgr.style.display = 'block';
+        singleKeyContainer.style.display = 'none';
+        
+        // ✨✨✨ 关键修改：必须调用渲染函数，否则列表是空的 ✨✨✨
+        renderGoogleKeyList(); 
+    } else {
+        // --- 自定义模式 ---
+        // 恢复 URL
+        urlInput.value = globalConfig.apiUrl;
+        urlInput.disabled = false;
+        urlInput.style.color = "#007AFF";
+        
+        // 隐藏钥匙包，显示单 Key
+        googleMgr.style.display = 'none';
+        singleKeyContainer.style.display = 'flex';
+    }
+
+    // 4. 还原其他通用设置 (保持不变)
+    document.getElementById('apiKey').value = globalConfig.apiKey;
+    document.getElementById('modelId').value = globalConfig.model;
+    document.getElementById('tempVal').value = globalConfig.temp;
+    document.getElementById('historyLimit').value = globalConfig.historyLimit || 20;
+    document.getElementById('xiApiKey').value = globalConfig.xiApiKey || "";
     document.getElementById('xiVoiceId').value = globalConfig.xiVoiceId || "";
-            document.getElementById('xiModelId').value = globalConfig.xiModelId || "eleven_multilingual_v2";
-        }
+    document.getElementById('xiModelId').value = globalConfig.xiModelId || "eleven_multilingual_v2";
+}
         
         function saveGlobalConfig() {
             globalConfig.provider = document.getElementById('apiProvider').value;
@@ -3338,11 +3365,21 @@ function renderGoogleKeyList() {
     });
 }
 
-// 2. 添加 Key (带验证)
+// 2. 添加 Key (防崩溃修复版)
 async function addGoogleKey() {
     const input = document.getElementById('newGoogleKeyInput');
     const key = input.value.trim();
-    if (!key) return;
+    
+    if (!key) {
+        alert("请输入 Key！");
+        return;
+    }
+
+    // --- 核心修复：防止数组不存在导致崩溃 ---
+    if (!globalConfig.googleKeys) {
+        globalConfig.googleKeys = [];
+    }
+    // ------------------------------------
 
     // 简单查重
     if (globalConfig.googleKeys.find(k => k.key === key)) {
@@ -3353,16 +3390,16 @@ async function addGoogleKey() {
     // 先添加到列表，状态设为 checking
     const newObj = { key: key, status: 'checking' };
     
-    // 确保数组存在
-    if(!globalConfig.googleKeys) globalConfig.googleKeys = [];
-    
     globalConfig.googleKeys.push(newObj);
+    
+    // 保存数据（这一步很重要，防止刷新丢失）
+    saveGlobalConfig(); 
+
     input.value = ''; // 清空输入
     renderGoogleKeyList(); // 刷新界面
 
     // 开始验证有效性
     try {
-        // 尝试请求 models 列表，只取1个，最小开销
         const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/models?limit=1", {
             headers: { "Authorization": "Bearer " + key }
         });
@@ -3371,14 +3408,14 @@ async function addGoogleKey() {
             newObj.status = 'valid';
         } else {
             newObj.status = 'invalid';
-            alert(`Key 添加失败：Google 拒绝了该 Key (状态码 ${res.status})`);
+            // 不弹窗干扰了，直接标红即可
+            console.log(`Key 验证失败: ${res.status}`);
         }
     } catch (e) {
         newObj.status = 'invalid';
-        alert("网络错误，无法验证 Key");
     }
 
-    saveGlobalConfig(); // 保存结果
+    saveGlobalConfig(); // 保存验证后的状态
     renderGoogleKeyList(); // 再次刷新状态
 }
 
@@ -8662,6 +8699,7 @@ async function fetchWithRetry(url, bodyObject) {
     </script>
 </body>
 </html>
+
 
 
 
