@@ -2739,6 +2739,10 @@ select.x-input option {
             </div>
             <div id="tab-world" class="t-tab-content">
                 <div class="t-group-title">世界书词条 (点击文字=强制激活)</div>
+                <div class="t-upload-box" style="margin-bottom:10px; padding:10px; font-size:12px;" onclick="document.getElementById('importWorldInput').click()">
+                    📂 导入世界书 (.json)
+                </div>
+                <input type="file" id="importWorldInput" accept=".json" hidden onchange="handleWorldImport(event)">
                 <div style="font-size:10px; color:#666; margin-bottom:10px;">
                     灰色=未启用 | 白色=待机 | <span style="color:#34c759">绿色=已触发</span> | <span style="color:#ffcc00">黄色=强制常驻</span>
                 </div>
@@ -2748,6 +2752,10 @@ select.x-input option {
             </div>
             <div id="tab-regex" class="t-tab-content">
                 <div class="t-group-title">正则脚本 (Regex Scripts)</div>
+                <div class="t-upload-box" style="margin-bottom:10px; padding:10px; font-size:12px;" onclick="document.getElementById('importRegexInput').click()">
+                    📂 导入正则脚本 (.json)
+                </div>
+                <input type="file" id="importRegexInput" accept=".json" hidden onchange="handleRegexImport(event)">
                 <div style="font-size:10px; color:#666; margin-bottom:10px;">
                     跟随预设自动导入。用于清洗文本或替换关键词。
                 </div>
@@ -9999,6 +10007,108 @@ async function handleTheaterImport(e) {
         e.target.value = ''; // 清空input以便下次选同名文件
     }
 }
+        // ==========================================
+// --- 📂 独立导入功能 (世界书 & 正则) ---
+// ==========================================
+
+// 1. 独立导入世界书
+async function handleWorldImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        let count = 0;
+
+        // 兼容性处理：有时候导出的只是一个 entries 数组，有时候是包含 entries 的对象
+        let entries = [];
+        if (Array.isArray(json)) {
+            entries = json; // 纯数组格式
+        } else if (json.entries && Array.isArray(json.entries)) {
+            entries = json.entries; // 标准格式
+        } else {
+            throw new Error("无法识别的世界书格式 (找不到 entries)");
+        }
+
+        // 追加到现有列表
+        entries.forEach(entry => {
+            // 提取关键词
+            let keys = [];
+            if (Array.isArray(entry.key)) keys = entry.key;
+            else if (typeof entry.key === 'string') keys = entry.key.split(',').map(k => k.trim());
+            if (entry.keys && Array.isArray(entry.keys)) keys = entry.keys;
+
+            theaterState.preset.worldInfo.push({
+                id: entry.uid || 'wi_' + Math.random(),
+                comment: entry.comment || entry.name || '导入条目',
+                keys: keys,
+                content: entry.content || '',
+                enabled: entry.enabled !== false,
+                isActive: false
+            });
+            count++;
+        });
+
+        saveTheaterState();
+        renderConsoleUI();
+        alert(`成功导入 ${count} 条世界书设定！`);
+
+    } catch (err) {
+        alert("导入失败: " + err.message);
+        console.error(err);
+    } finally {
+        e.target.value = ''; // 清空，允许重复导入
+    }
+}
+
+// 2. 独立导入正则脚本
+async function handleRegexImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        let count = 0;
+
+        // 兼容性处理：数组 vs 对象
+        let scripts = [];
+        if (Array.isArray(json)) {
+            scripts = json;
+        } else if (json.regex_scripts && Array.isArray(json.regex_scripts)) {
+            scripts = json.regex_scripts;
+        } else if (json.scripts && Array.isArray(json.scripts)) {
+            scripts = json.scripts; // 某些变体
+        } else {
+            // 尝试读取单个对象
+            if (json.regex && json.replacement) scripts = [json];
+            else throw new Error("无法识别的正则文件格式");
+        }
+
+        scripts.forEach(r => {
+            theaterState.preset.regexScripts.push({
+                id: r.id || 'reg_' + Math.random(),
+                scriptName: r.scriptName || '导入脚本',
+                regex: r.regex,
+                replacement: r.replacement,
+                placement: r.placement || [1, 2],
+                disabled: r.disabled || false
+            });
+            count++;
+        });
+
+        saveTheaterState();
+        renderConsoleUI();
+        alert(`成功导入 ${count} 个正则脚本！`);
+
+    } catch (err) {
+        alert("导入失败: " + err.message);
+        console.error(err);
+    } finally {
+        e.target.value = '';
+    }
+}
 
 // 2. 核心：JSON 榨汁机
 function parseSillyTavernJSON(json, fileName) {
@@ -10578,6 +10688,7 @@ function runRegex(text, placementType) {
     </script>
 </body>
 </html>
+
 
 
 
