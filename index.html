@@ -1254,6 +1254,115 @@ select.x-input option {
 .key-status.checking { background: #e6f7ff; color: #007bff; }
 .btn-del-key { color: #999; cursor: pointer; padding: 5px; font-weight: bold; font-size: 16px; margin-left: 10px;}
 .btn-del-key:hover { color: #ff3b30; }
+        /* --- 飞行棋专属样式 --- */
+.ludo-board-container {
+    height: 55%; /* 上半屏 */
+    background: #fff5f7;
+    display: flex; flex-direction: column;
+    padding: 10px;
+    border-bottom: 2px dashed #ffccd5;
+    overflow: hidden;
+}
+
+/* 停机坪 */
+.ludo-base {
+    height: 70px; display: flex; justify-content: center; align-items: center; gap: 30px;
+    margin-bottom: 10px;
+}
+.ludo-base-spot {
+    width: 60px; height: 60px; border-radius: 50%;
+    border: 3px dashed #ddd; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative; font-size: 10px; color: #999;
+}
+.ludo-base-spot.active { border-color: #ff6b81; background: rgba(255,107,129,0.1); }
+.ludo-vs { font-weight: bold; color: #ffccd5; font-style: italic; }
+
+/* 棋盘网格 (S型布局) */
+.ludo-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4列 */
+    grid-template-rows: repeat(6, 1fr);    /* 6行 = 24格 */
+    gap: 8px;
+    padding: 5px;
+}
+.ludo-cell {
+    background: #ffdde1; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; color: #fff; font-size: 14px;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    position: relative;
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,0.1);
+}
+.ludo-cell:nth-child(2n) { background: #ffc4cf; } /* 格子颜色交替 */
+/* 特殊格子：终点 */
+.ludo-cell.finish { background: linear-gradient(135deg, #f6d365, #fda085); font-size: 18px; }
+
+/* 棋子 */
+.ludo-pawn {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    position: absolute; z-index: 10;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); /* 弹跳动画 */
+    object-fit: cover;
+}
+.ludo-pawn.user { border-color: #007AFF; transform: scale(0.9); }
+.ludo-pawn.ai { border-color: #ff2d55; transform: scale(0.9) translate(2px, -2px); } /* 稍微错开一点，防止完全重叠 */
+
+/* 下半部分：控制区 */
+.ludo-control-panel {
+    height: 45%; background: #fff;
+    display: flex; flex-direction: column;
+}
+.ludo-log-area {
+    flex: 1; overflow-y: auto; padding: 15px;
+    background: #fafafa; font-size: 14px; line-height: 1.5;
+}
+.ludo-msg { margin-bottom: 8px; }
+.ludo-msg.system { color: #888; font-style: italic; text-align: center; font-size: 12px; }
+.ludo-msg.user { color: #007AFF; text-align: right; }
+.ludo-msg.ai { color: #ff2d55; text-align: left; }
+.ludo-msg.task { 
+    background: #fff0f3; padding: 10px; border-radius: 8px; 
+    border-left: 3px solid #ff6b81; color: #333; margin: 10px 0; font-weight: 500;
+}
+
+/* 操作栏 */
+.ludo-action-bar {
+    height: 70px; display: flex; align-items: center; padding: 0 20px;
+    border-top: 1px solid #eee; gap: 15px;
+}
+.ludo-status-text { flex: 1; font-weight: bold; color: #555; font-size: 14px; }
+.ludo-btn-finish {
+    background: #34c759; color: white; border: none; 
+    padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 13px;
+}
+
+/* 3D 骰子 */
+.ludo-dice {
+    width: 40px; height: 40px; position: relative;
+    transform-style: preserve-3d; transition: transform 1s; cursor: pointer;
+}
+.dice-face {
+    position: absolute; width: 40px; height: 40px;
+    background: #fff; border: 1px solid #ddd; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 18px; color: #333;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+}
+.dice-face.front  { transform: translateZ(20px); }
+.dice-face.back   { transform: rotateY(180deg) translateZ(20px); }
+.dice-face.right  { transform: rotateY(90deg) translateZ(20px); }
+.dice-face.left   { transform: rotateY(-90deg) translateZ(20px); }
+.dice-face.top    { transform: rotateX(90deg) translateZ(20px); }
+.dice-face.bottom { transform: rotateX(-90deg) translateZ(20px); }
+
+/* 骰子旋转动画类 */
+.dice-rolling { animation: spinDice 0.5s infinite linear; }
+@keyframes spinDice {
+    0% { transform: rotateX(0) rotateY(0); }
+    100% { transform: rotateX(360deg) rotateY(360deg); }
+}
     </style>
 </head>
 <body>
@@ -1347,6 +1456,11 @@ select.x-input option {
 <div class="app-icon-container" onclick="navigateTo('page-forum'); renderForumFeed();">
     <div class="app-icon" id="app-icon-forum" style="background: linear-gradient(to bottom, #ff2d55, #ff5e3a);">✒️</div>
     <div class="app-name">粮仓</div>
+</div>
+                <!-- 15. 情侣飞行棋 (Ludo) -->
+<div class="app-icon-container" onclick="openLudoSelectChar()">
+    <div class="app-icon" id="app-icon-ludo" style="background: linear-gradient(to bottom, #ff9a9e, #fad0c4);">🎲</div>
+    <div class="app-name">飞行棋</div>
 </div>
             </div>
         </div>
@@ -2349,6 +2463,86 @@ select.x-input option {
             </div>
         </div>
     </div>
+        <!-- ============ 18. 情侣飞行棋 (Ludo) ============ -->
+<div class="page" id="page-ludo" style="background: #fff5f7;">
+    <!-- 顶部栏 -->
+    <div class="app-header" style="background: rgba(255,245,247,0.9);">
+        <button class="btn-icon-text" onclick="goHome()">‹ 结束</button>
+        <span class="app-title" style="color:#ff6b81;">情侣飞行棋</span>
+        <button class="btn-icon-only" onclick="document.getElementById('ludoTaskInput').click()">📂</button>
+        <!-- 隐藏的文件上传，用于导入题库 -->
+        <input type="file" id="ludoTaskInput" accept=".json" hidden onchange="importLudoTasks(event)">
+    </div>
+
+    <!-- 上半部分：棋盘区 -->
+    <div class="ludo-board-container">
+        <!-- 起点区域 (停机坪) -->
+        <div class="ludo-base">
+            <div class="ludo-base-spot user" id="base-user" onclick="tryTakeOff('user')">
+                <div class="ludo-avatar-holder" id="pawn-user-base"></div>
+                <span>我</span>
+            </div>
+            <div class="ludo-vs">VS</div>
+            <div class="ludo-base-spot ai" id="base-ai">
+                <div class="ludo-avatar-holder" id="pawn-ai-base"></div>
+                <span>Ta</span>
+            </div>
+        </div>
+        
+        <!-- 24格 S型棋盘 -->
+        <div class="ludo-grid" id="ludo-grid">
+            <!-- JS 动态生成 24 个格子 -->
+        </div>
+    </div>
+
+    <!-- 下半部分：控制与互动区 -->
+    <div class="ludo-control-panel">
+        <!-- 滚动日志/题目显示区 -->
+        <div class="ludo-log-area" id="ludo-log">
+            <div class="ludo-msg system">欢迎来到情侣飞行棋！<br>规则：投出 6 点才能起飞。相遇会把对方撞回起点。<br>点击右上方 📂 导入题库，否则默认为空。</div>
+        </div>
+
+        <!-- 骰子与操作栏 -->
+        <div class="ludo-action-bar">
+            <!-- 骰子 -->
+            <div id="ludo-dice" class="ludo-dice" onclick="userRollDice()">
+                <div class="dice-face front">1</div>
+                <div class="dice-face back">6</div>
+                <div class="dice-face right">3</div>
+                <div class="dice-face left">4</div>
+                <div class="dice-face top">5</div>
+                <div class="dice-face bottom">2</div>
+            </div>
+            
+            <!-- 状态提示文字 -->
+            <div class="ludo-status-text" id="ludo-status">点骰子开始</div>
+            
+            <!-- 结束本题按钮 (默认隐藏，做任务时显示) -->
+            <button id="btn-finish-task" class="ludo-btn-finish" onclick="finishCurrentTask()" style="display:none;">完成本题</button>
+        </div>
+
+        <!-- 对话输入框 (始终存在) -->
+        <div class="input-area" style="padding: 10px; background: transparent; border-top: 1px solid rgba(0,0,0,0.05);">
+            <div class="input-toolbar">
+                <input type="text" id="ludoInput" placeholder="回应任务或和Ta聊天..." style="flex:1; padding:10px; border-radius:20px; border:1px solid #ffccd5; background:rgba(255,255,255,0.8);">
+                <button class="btn-send" onclick="sendLudoMsg()" style="color:#ff6b81;">⬆</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 选人弹窗 (进入游戏前) -->
+<div class="modal-overlay" id="modal-ludo-select">
+    <div class="modal-box" style="height:auto;">
+        <div class="modal-header">选择游戏对象</div>
+        <div class="modal-body" style="padding:0;">
+            <div id="ludo-contact-list" class="ios-list" style="margin:0;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-ludo-select')">取消</button>
+        </div>
+    </div>
+</div>
 
         <!-- ============ 弹窗组件 ============ -->
 
@@ -6235,7 +6429,7 @@ const storeName = "books";
 
 function openDB() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(dbName, 3);
+        const request = indexedDB.open(dbName, 4);
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
             if (!db.objectStoreNames.contains(storeName)) {
@@ -6243,6 +6437,10 @@ function openDB() {
             }
             if (!db.objectStoreNames.contains(musicStoreName)) {
                 db.createObjectStore(musicStoreName, { keyPath: "id" });
+            }
+            if (!db.objectStoreNames.contains("ludo_tasks")) {
+                // keyPath: "id" 表示每一条题目都有一个唯一的 id
+                db.createObjectStore("ludo_tasks", { keyPath: "id" });
             }
         };
         request.onsuccess = (event) => resolve(event.target.result);
@@ -8715,9 +8913,538 @@ async function fetchWithRetry(url, bodyObject) {
     // 如果循环结束还没返回，说明所有 Key 都挂了
     throw new Error("所有 Google Key 都已耗尽或无效！" + (lastError ? lastError.message : ""));
 }
+        // ==========================================
+// --- 19. 情侣飞行棋 (Ludo) 核心逻辑 ---
+// ==========================================
+
+// --- 状态管理 ---
+let ludoState = {
+    charId: null,       // 当前一起玩的角色ID
+    turn: 'user',       // 'user' 或 'ai'
+    status: 'idle',     // 'idle'(待投掷), 'moving'(移动中), 'task'(做任务中)
+    userPos: -1,        // -1 代表在停机坪，0-23 代表棋盘格子
+    aiPos: -1,
+    tasks: [],          // 题库
+    logs: [],           // 游戏记录文本
+    hasRolled6: { user: false, ai: false } // 记录是否已经投出过6(起飞)
+};
+
+// 题库数据库存储名
+const ludoStoreName = "ludo_tasks";
+
+// 初始化 IndexedDB (Ludo) - 这一步需要合并到原来的 openDB 函数里
+// 请修改上面的 openDB 函数，加入 ludoStoreName 的创建逻辑：
+/*
+    if (!db.objectStoreNames.contains("ludo_tasks")) {
+        db.createObjectStore("ludo_tasks", { keyPath: "id", autoIncrement: true });
+    }
+*/
+// (为了方便，我在下面写了一个辅助函数来处理题库加载)
+
+// 1. 入口：打开选人弹窗
+function openLudoSelectChar() {
+    const list = document.getElementById('ludo-contact-list');
+    list.innerHTML = '';
+    
+    if(contacts.length === 0) return alert("请先创建一个角色！");
+
+    contacts.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'ios-item';
+        div.onclick = () => startLudoGame(c.id);
+        div.innerHTML = `
+            <img src="${c.avatar}" style="width:30px;height:30px;border-radius:50%;margin-right:10px;">
+            <span class="ios-label" style="flex:1">${c.name}</span>
+            <span style="color:#007AFF;">开始游戏</span>
+        `;
+        list.appendChild(div);
+    });
+    openModal('modal-ludo-select');
+}
+
+// 2. 开始游戏
+async function startLudoGame(charId) {
+    closeModal('modal-ludo-select');
+    ludoState.charId = charId;
+    ludoState.userPos = -1;
+    ludoState.aiPos = -1;
+    ludoState.turn = 'user';
+    ludoState.status = 'idle';
+    ludoState.logs = [];
+    ludoState.hasRolled6 = { user: false, ai: false };
+
+    // 加载题库
+    ludoState.tasks = await loadLudoTasksFromDB();
+
+    navigateTo('page-ludo');
+    renderLudoBoard();
+    updateLudoUI();
+    addLudoLog('system', `游戏开始！你和 ${getLudoChar().name} 都在起点。点击骰子开始你的回合。记得：只有投出 6 点才能起飞哦！`);
+}
+
+function getLudoChar() { return contacts.find(c => c.id === ludoState.charId); }
+
+// 3. 渲染棋盘 (生成24个格子)
+function renderLudoBoard() {
+    const grid = document.getElementById('ludo-grid');
+    grid.innerHTML = '';
+
+    // 生成 S 型路径的坐标映射
+    // 4列 6行
+    // Row 0: 0->1->2->3
+    // Row 1: 7<-6<-5<-4
+    // Row 2: 8->9->10->11 ...
+    
+    for(let i=0; i<24; i++) {
+        const div = document.createElement('div');
+        div.className = 'ludo-cell';
+        div.id = `cell-${i}`;
+        div.innerText = i + 1; // 显示数字
+        if(i === 23) {
+            div.classList.add('finish');
+            div.innerText = "终";
+        }
+        
+        // 计算 CSS Grid 的位置，实现 S 型排列
+        const row = Math.floor(i / 4);
+        let col = i % 4;
+        
+        // 奇数行(1,3,5)需要反向
+        if (row % 2 === 1) {
+            col = 3 - col; // 0->3, 1->2, 2->1, 3->0
+        }
+
+        // grid-column/row 是从1开始的
+        div.style.gridRow = row + 1;
+        div.style.gridColumn = col + 1;
+
+        grid.appendChild(div);
+    }
+
+    // 渲染停机坪头像
+    const char = getLudoChar();
+    document.getElementById('pawn-user-base').innerHTML = `<img src="${char.userAvatar}" class="ludo-pawn user" id="pawn-user" style="position:static;">`;
+    document.getElementById('pawn-ai-base').innerHTML = `<img src="${char.avatar}" class="ludo-pawn ai" id="pawn-ai" style="position:static;">`;
+}
+
+// 4. 骰子逻辑
+function userRollDice() {
+    if(ludoState.turn !== 'user' || ludoState.status !== 'idle') return;
+    performRoll('user');
+}
+
+function aiRollDice() {
+    setTimeout(() => {
+        performRoll('ai');
+    }, 1500); // AI 思考时间
+}
+
+function performRoll(who) {
+    ludoState.status = 'rolling';
+    const dice = document.getElementById('ludo-dice');
+    
+    // 动画
+    dice.classList.add('dice-rolling');
+    
+    // 随机结果
+    setTimeout(() => {
+        dice.classList.remove('dice-rolling');
+        const point = Math.floor(Math.random() * 6) + 1;
+        
+        // 设定骰子面朝向 (简单的 transform 修改)
+        const transforms = [
+            'rotateX(0) rotateY(0)',   // 1
+            'rotateX(90deg) rotateY(0)', // 2 (bottom) - incorrect in basic logic but ok visually
+            'rotateY(-90deg)', // 3
+            'rotateY(90deg)',  // 4
+            'rotateX(-90deg)', // 5
+            'rotateX(180deg)'  // 6
+        ];
+        // 简单映射，实际3D骰子面需要精细对应，这里简化处理，只保证旋转停止
+        // 为了方便，我们直接把点数写在正面的 div 上，然后转回正面
+        dice.querySelector('.front').innerText = point;
+        dice.style.transform = 'rotateX(0) rotateY(0)'; 
+
+        handleRollResult(who, point);
+
+    }, 800);
+}
+
+function handleRollResult(who, point) {
+    const name = who === 'user' ? '你' : getLudoChar().name;
+    addLudoLog('system', `${name} 掷出了 ${point} 点`);
+
+    const currentPos = ludoState[who + 'Pos'];
+    const hasTakenOff = ludoState.hasRolled6[who];
+
+    // 规则 1: 未起飞时，必须投 6
+    if (!hasTakenOff) {
+        if (point === 6) {
+            ludoState.hasRolled6[who] = true;
+            ludoState[who + 'Pos'] = 0; // 移动到起点 (第1格)
+            addLudoLog('system', `✈️ ${name} 起飞成功！移动到第 1 格。`);
+            updatePawnPosition();
+            checkTileTask(who, 0); // 检查起点有没有任务（通常没有，但为了逻辑统一）
+        } else {
+            addLudoLog('system', `❌ 没投到 6，无法起飞。轮空。`);
+            nextTurn();
+        }
+        return;
+    }
+
+    // 规则 2: 已起飞，正常移动
+    let newPos = currentPos + point;
+
+    // 规则 3: 到达终点 (>= 23)
+    if (newPos >= 23) {
+        ludoState[who + 'Pos'] = 23;
+        updatePawnPosition();
+        endGame(who);
+        return;
+    }
+
+    // 移动动画
+    ludoState[who + 'Pos'] = newPos;
+    updatePawnPosition();
+
+    // 规则 4: 撞车检测
+    const other = who === 'user' ? 'ai' : 'user';
+    if (ludoState[other + 'Pos'] === newPos) {
+        // 撞车了！
+        const otherName = who === 'user' ? getLudoChar().name : '你';
+        addLudoLog('system', `撞车了！${otherName} 被撞回了停机坪！`);
+        
+        ludoState[other + 'Pos'] = -1;
+        ludoState.hasRolled6[other] = false; // 惨，要重新投6
+        updatePawnPosition();
+        
+        // 触发撞车后的特殊对话
+        if(who === 'user') {
+            // 我撞了AI，AI生气
+            triggerLudoAI(`我把你撞回起点了！哈哈！`, "crash_victim");
+        } else {
+            // AI撞了我，AI得意
+            triggerLudoAI(`我把你撞回起点了！不好意思啦~`, "crash_attacker");
+        }
+    }
+
+    // 触发格子任务
+    setTimeout(() => checkTileTask(who, newPos), 500);
+}
+
+// 5. 任务触发逻辑
+function checkTileTask(who, pos) {
+    // 从题库获取题目，如果题库空，就随机生成一个简单的
+    let taskContent = "";
+    if(ludoState.tasks.length > 0) {
+        // 简单的哈希映射：用格子序号取模
+        const taskObj = ludoState.tasks[pos % ludoState.tasks.length];
+        taskContent = taskObj.content || taskObj.text;
+    } else {
+        taskContent = "自由发挥：说一句土味情话";
+    }
+
+    addLudoLog('task', `[第 ${pos+1} 格任务]: ${taskContent}`);
+    ludoState.status = 'task';
+    
+    updateLudoUI(); // 显示“完成任务”按钮
+
+    // 如果是 AI 的回合，AI 自动执行任务
+    if(who === 'ai') {
+        // 延迟一下，模拟思考
+        setTimeout(() => {
+            triggerLudoAI(`我现在在第 ${pos+1} 格。任务是：${taskContent}。请执行这个任务。`, "do_task");
+        }, 1500);
+    } else {
+        // 如果是用户的回合，等待用户在输入框输入
+        addLudoLog('system', '请在下方输入框完成任务，或与对方互动。完成后点击“完成本题”。');
+    }
+}
+
+// 6. 切换回合
+function nextTurn() {
+    ludoState.status = 'idle';
+    ludoState.turn = ludoState.turn === 'user' ? 'ai' : 'user';
+    updateLudoUI();
+    
+    if(ludoState.turn === 'ai') {
+        aiRollDice();
+    }
+}
+
+function updateLudoUI() {
+    const statusDiv = document.getElementById('ludo-status');
+    const finishBtn = document.getElementById('btn-finish-task');
+    
+    if (ludoState.status === 'task') {
+        statusDiv.innerText = "等待执行任务...";
+        finishBtn.style.display = 'block';
+        
+        // 如果是 AI 回合，按钮变灰（因为AI会自动完成）
+        if(ludoState.turn === 'ai') {
+             finishBtn.disabled = true;
+             finishBtn.innerText = "Ta 正在执行...";
+        } else {
+             finishBtn.disabled = false;
+             finishBtn.innerText = "完成本题";
+        }
+    } else {
+        finishBtn.style.display = 'none';
+        if(ludoState.turn === 'user') {
+            statusDiv.innerText = "轮到你了！点击骰子";
+        } else {
+            statusDiv.innerText = "等待 Ta 投掷...";
+        }
+    }
+}
+
+function finishCurrentTask() {
+    if(ludoState.status !== 'task') return;
+    
+    // 如果是用户点击完成
+    if(ludoState.turn === 'user') {
+        addLudoLog('system', '你完成了任务。');
+        nextTurn();
+    }
+}
+
+// 7. 更新棋子位置 UI
+function updatePawnPosition() {
+    const userPawn = document.getElementById('pawn-user');
+    const aiPawn = document.getElementById('pawn-ai');
+    
+    // 辅助：把棋子移动到指定容器
+    const move = (pawn, pos, type) => {
+        if (pos === -1) {
+            // 回到停机坪
+            document.getElementById(`pawn-${type}-base`).appendChild(pawn);
+        } else {
+            // 放到格子里
+            const cell = document.getElementById(`cell-${pos}`);
+            if(cell) {
+                cell.appendChild(pawn);
+                // 设为 relative/absolute 配合 CSS 动画，这里简单 appendChild 会自动定位
+            }
+        }
+    };
+
+    move(userPawn, ludoState.userPos, 'user');
+    move(aiPawn, ludoState.aiPos, 'ai');
+}
+
+// 8. 聊天与 AI 互动
+async function sendLudoMsg() {
+    const input = document.getElementById('ludoInput');
+    const txt = input.value.trim();
+    if(!txt) return;
+
+    addLudoLog('user', txt);
+    input.value = '';
+
+    // 触发 AI 回复
+    triggerLudoAI(txt, "chat");
+}
+
+// --- 升级版 AI 互动函数 (带主聊天记忆) ---
+async function triggerLudoAI(userContent, contextType) {
+    const char = getLudoChar();
+    if(!globalConfig.apiKey) return;
+
+    // 1. 构建游戏状态描述
+    const boardStatus = `
+    [当前游戏状态]
+    你的位置：${ludoState.aiPos === -1 ? '停机坪' : '第'+(ludoState.aiPos+1)+'格'}。
+    用户位置：${ludoState.userPos === -1 ? '停机坪' : '第'+(ludoState.userPos+1)+'格'}。
+    当前回合：${ludoState.turn === 'user' ? '用户' : '你'}。
+    `;
+    
+    // 2. 系统指令
+    let systemInstruction = `
+    你正在和用户玩“飞行棋”游戏。
+    你的角色：${char.name}。人设：${char.systemPrompt}
+    ${boardStatus}
+    
+    请根据 contextType 回复：
+    - "do_task": 轮到你做任务，请执行任务（说话或动作）。完成后末尾加 "[DONE]"。
+    - "crash_victim": 你被撞回起点了，请表现出生气、撒娇或放狠话。
+    - "crash_attacker": 你撞飞了用户，请表现得得意或调侃。
+    - "chat": 正常闲聊。
+    
+    【重要】：请结合你们之前的聊天历史（见上文）来保持语气连贯。
+    `;
+
+    // 3. ✨✨✨ 关键修改：获取主聊天记录 (最近15条) ✨✨✨
+    // 这样 AI 就知道你们刚才在聊什么了
+    const mainHistory = char.messages.slice(-15).map(m => ({
+        role: m.role,
+        content: m.content
+    }));
+
+    // 4. 获取游戏内的即时记录 (防止上下文丢失)
+    const gameLogs = ludoState.logs.slice(-6).map(l => `[游戏内-${l.role}]: ${l.content}`).join('\n');
+    
+    // 5. 组装最终的消息列表
+    const apiMessages = [
+        { role: "system", content: systemInstruction },
+        ...mainHistory, // 插入主聊天记录
+        { role: "system", content: `[系统提示] 以上是你们的历史聊天。以下是刚刚发生的游戏记录：\n${gameLogs}` },
+        { role: "user", content: userContent }
+    ];
+
+    try {
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: apiMessages, // 发送包含完整记忆的列表
+                temperature: 0.8
+            })
+        });
+        const data = await res.json();
+        let reply = data.choices[0].message.content;
+        
+        let isTaskDone = false;
+        if (reply.includes("[DONE]")) {
+            isTaskDone = true;
+            reply = reply.replace("[DONE]", "").trim();
+        }
+
+        addLudoLog('ai', reply);
+        
+        // 自动过回合逻辑
+        if (contextType === "do_task" || isTaskDone) {
+             setTimeout(nextTurn, 2000); 
+        }
+
+    } catch(e) {
+        console.error(e);
+        addLudoLog('system', 'AI 掉线了...');
+        if (contextType === "do_task") nextTurn(); 
+    }
+}
+
+function addLudoLog(role, text) {
+    const container = document.getElementById('ludo-log');
+    const div = document.createElement('div');
+    div.className = `ludo-msg ${role}`;
+    
+    // 如果是任务，加个标题样式
+    if(role === 'task') {
+        div.innerHTML = text;
+    } else if (role === 'ai') {
+        const char = getLudoChar();
+        div.innerHTML = `<b>${char.name}:</b> ${text}`;
+    } else if (role === 'user') {
+        div.innerHTML = `<b>我:</b> ${text}`;
+    } else {
+        div.innerHTML = text;
+    }
+    
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    
+    // 存入内存记录
+    ludoState.logs.push({ role, content: text });
+}
+
+// 增强版：游戏结束结算
+async function endGame(winner) {
+    const char = getLudoChar();
+    const winnerName = winner === 'user' ? '我' : char.name;
+    const loserName = winner === 'user' ? char.name : '我';
+    
+    alert(`🎉 游戏结束！${winnerName} 获胜！`);
+
+    // 1. 整理游戏过程中的高光时刻（从日志里提取）
+    // 过滤出做任务(task)和撞车(system包含"撞")的记录，最多取 3 条
+    const highlights = ludoState.logs
+        .filter(l => l.role === 'task' || (l.role === 'system' && l.content.includes('撞')))
+        .slice(-3)
+        .map(l => l.content)
+        .join('; ');
+
+    // 2. 生成一段像样的总结报告
+    const summary = `
+🎮【飞行棋对战战报】
+------------------
+🏆 胜方：${winnerName}
+😭 败方：${loserName}
+📝 精彩回顾：${highlights || "这是一场和平的比赛"}
+------------------
+(系统提示：请${char.name}根据胜负结果，对用户发表获胜感言或撒娇耍赖求安慰。)
+    `.trim();
+
+    // 3. 存入主聊天记录 (作为 user 消息发给 AI，诱导它回复)
+    char.messages.push({
+        role: 'user', 
+        content: summary,
+        timestamp: Date.now()
+    });
+    saveData();
+
+    // 4. 返回主页
+    goHome();
+    
+    // 5. 让 AI 在聊天界面回复你
+    // 因为我们刚才 push 了一条消息，现在切换回聊天界面，AI 会看到战报并回复
+    activeContactId = char.id;
+    navigateTo('page-chat');
+    triggerAI(); 
+}
+
+// 9. 题库导入逻辑
+async function importLudoTasks(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+    
+    try {
+        const text = await file.text();
+        let json = [];
+        // 支持 JSON 或 TXT
+        if(file.name.endsWith('.json')) {
+            json = JSON.parse(text);
+        } else {
+            // TXT 一行一个
+            json = text.split('\n').filter(line => line.trim()).map(line => ({ content: line.trim() }));
+        }
+
+        // 存入 IndexedDB
+        const db = await openDB();
+        const tx = db.transaction("ludo_tasks", "readwrite");
+        const store = tx.objectStore("ludo_tasks");
+        
+        // 先清空旧的？或者追加？这里选择追加
+        json.forEach(item => {
+            store.put({ id: Date.now() + Math.random(), content: item.content || item.text });
+        });
+        
+        alert(`成功导入 ${json.length} 个题目！`);
+        // 刷新当前内存题库
+        ludoState.tasks = await loadLudoTasksFromDB();
+
+    } catch(err) {
+        alert("导入失败: " + err.message);
+    }
+}
+
+async function loadLudoTasksFromDB() {
+    const db = await openDB();
+    // 检查 store 是否存在
+    if (!db.objectStoreNames.contains("ludo_tasks")) return [];
+    
+    return new Promise(resolve => {
+        const tx = db.transaction("ludo_tasks", "readonly");
+        const store = tx.objectStore("ludo_tasks");
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve([]);
+    });
+}
     </script>
 </body>
 </html>
+
 
 
 
