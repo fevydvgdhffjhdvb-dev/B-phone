@@ -2780,22 +2780,40 @@ select.x-input option {
         </div>
     </div>
 </div>
-    <!-- ============ 题库管理弹窗 (新增) ============ -->
+    <!-- ============ 题库管理弹窗 (优化版) ============ -->
 <div class="modal-overlay" id="modal-ludo-library">
     <div class="modal-box" style="height: 60%;">
-        <div class="modal-header">
-            <button onclick="closeModal('modal-ludo-library')">关闭</button>
-            <span style="font-weight:bold;">选择题库</span>
-            <!-- 右上角的 + 号，点击触发文件上传 -->
-            <button onclick="document.getElementById('ludoTaskInput').click()" style="font-size:24px;">+</button>
+        <!-- 头部：Flex布局，左中右排列 -->
+        <div class="modal-header" style="display:flex; align-items:center; justify-content:space-between; padding: 15px;">
+            
+            <!-- 左边：+号 (导入新题库) -->
+            <!-- 样式：透明背景，蓝色大字，无边框 -->
+            <button onclick="document.getElementById('ludoTaskInput').click()" 
+                    style="background:transparent; border:none; font-size:28px; color:#007AFF; font-weight:300; padding:0; width:30px; text-align:left;">
+                +
+            </button>
+
+            <!-- 中间：标题 -->
+            <span style="font-weight:bold; font-size:17px; color:#000;">选择题库</span>
+
+            <!-- 右边：关闭按钮 (×) -->
+            <!-- 样式：透明背景，灰色图标，无边框 -->
+            <button onclick="closeModal('modal-ludo-library')" 
+                    style="background:transparent; border:none; font-size:24px; color:#999; padding:0; width:40px; text-align:right;">
+                ×
+            </button>
         </div>
+
         <div class="modal-body" style="padding:0; background:#f2f2f7;">
             <div class="ios-group-title">我的题库列表</div>
+            
+            <!-- 列表容器 -->
             <div id="ludo-library-list" class="ios-list" style="margin-top:0;">
-                <!-- 动态生成列表 -->
+                <!-- JS 动态生成 -->
             </div>
+
             <div style="padding:20px; text-align:center; color:#999; font-size:12px;">
-                点击列表即可应用题库<br>点击右上角 + 号导入新文件
+                点击左上角 + 号导入新文件<br>点击列表项即可应用
             </div>
         </div>
     </div>
@@ -9475,25 +9493,33 @@ function openLudoLibrary() {
     openModal('modal-ludo-library');
 }
 
-// 3. 渲染列表
+// 3. 渲染列表 (优化版：删除按钮在右侧)
 function renderLudoLibraryList() {
     const list = document.getElementById('ludo-library-list');
     list.innerHTML = '';
 
     if(savedBanks.length === 0) {
-        list.innerHTML = `<div style="padding:15px; text-align:center; color:#999;">暂无题库，请点击右上角导入</div>`;
+        list.innerHTML = `<div style="padding:15px; text-align:center; color:#999;">暂无题库，请点击左上角 + 导入</div>`;
         return;
     }
 
     savedBanks.forEach((bank, index) => {
         const div = document.createElement('div');
-        div.className = 'ios-item';
+        div.className = 'ios-item'; // 这个类本身就是 flex 布局，支持左右对齐
+        
+        // 核心修改：
+        // 左边 div (flex:1) 占据大部分空间，点击应用
+        // 右边 button (width:auto) 放垃圾桶图标
         div.innerHTML = `
-            <div style="flex:1; cursor:pointer;" onclick="applyBank(${index})">
-                <div style="font-weight:600; font-size:16px;">${bank.name}</div>
-                <div style="font-size:12px; color:#999;">共 ${bank.tasks.length} 题</div>
+            <div style="flex:1; cursor:pointer; min-width:0;" onclick="applyBank(${index})">
+                <div style="font-weight:600; font-size:16px; color:#000; margin-bottom:2px;">${bank.name}</div>
+                <div style="font-size:12px; color:#8e8e93;">共 ${bank.tasks.length} 题</div>
             </div>
-            <div class="btn-del-mem" onclick="deleteBank(${index})" style="padding:10px;">×</div>
+            
+            <button onclick="deleteBank(${index})" 
+                    style="background:transparent; border:none; font-size:18px; padding:10px; color:#ff3b30; cursor:pointer; margin-left:10px;">
+                x
+            </button>
         `;
         list.appendChild(div);
     });
@@ -9608,6 +9634,7 @@ function deleteBank(index) {
     </script>
 </body>
 </html>
+
 
 
 
