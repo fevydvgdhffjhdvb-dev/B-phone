@@ -1711,6 +1711,11 @@ select.x-input option {
     <span class="ios-label">共读图标</span>
     <input type="text" id="iconInput-book" class="ios-input" placeholder="http://..." onchange="saveTheme()">
 </div>
+                    <!-- 新增：飞行棋图标设置 -->
+<div class="ios-item">
+    <span class="ios-label">飞行棋图标</span>
+    <input type="text" id="iconInput-ludo" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+</div>
                     <!-- 原有的共读图标设置在上面，把下面这段加在它后面 -->
 <div class="ios-item">
     <span class="ios-label">记账图标</span>
@@ -3723,6 +3728,9 @@ if(iconBook) iconBook.value = themeConfig.icons.book || "";
             const iconForum = document.getElementById('iconInput-forum');
             if(iconForum) iconForum.value = themeConfig.icons.forum || "";
 
+            const iconLudo = document.getElementById('iconInput-ludo');
+if(iconLudo) iconLudo.value = themeConfig.icons.ludo || "";
+
             // 2. 恢复CSS和字体
             const cssInput = document.getElementById('customCssInput');
             if(cssInput) cssInput.value = themeConfig.customCss || "";
@@ -3757,6 +3765,7 @@ if(iconBook) iconBook.value = themeConfig.icons.book || "";
         themeConfig.icons.book = document.getElementById('iconInput-book')?.value || "";
         themeConfig.icons.wallet = document.getElementById('iconInput-wallet')?.value || "";
         themeConfig.icons.forum = document.getElementById('iconInput-forum')?.value || "";
+        themeConfig.icons.ludo = document.getElementById('iconInput-ludo')?.value || "";
         
         themeConfig.customCss = document.getElementById('customCssInput')?.value || "";
         themeConfig.bubbleCss = document.getElementById('bubbleCssInput')?.value || ""; // 气泡美化
@@ -3784,6 +3793,7 @@ if(iconBook) iconBook.value = themeConfig.icons.book || "";
         updateAppIcon('app-icon-book', themeConfig.icons.book);
         updateAppIcon('app-icon-wallet', themeConfig.icons.wallet);
         updateAppIcon('app-icon-forum', themeConfig.icons.forum);
+        updateAppIcon('app-icon-ludo', themeConfig.icons.ludo);
 
         // B. 应用壁纸
         const homePage = document.getElementById('page-home');
@@ -9444,6 +9454,7 @@ async function loadLudoTasksFromDB() {
     </script>
 </body>
 </html>
+
 
 
 
