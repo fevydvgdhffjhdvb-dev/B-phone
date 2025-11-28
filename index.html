@@ -1242,6 +1242,18 @@ select.x-input option {
 .link-card-title { font-weight: bold; font-size: 14px; margin-bottom: 4px; color: #000; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;}
 .link-card-desc { font-size: 12px; color: #666; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .link-card-footer { font-size: 10px; color: #999; margin-top: 5px; display: flex; justify-content: space-between; align-items: center;}
+        /* Google Key 列表样式 */
+.key-tag-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fff; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid #ddd; font-size: 13px;
+}
+.key-status { font-size: 10px; padding: 2px 4px; border-radius: 4px; margin-left: 5px;}
+.key-status.valid { background: #e6ffec; color: #28a745; border: 1px solid #28a745;}
+.key-status.invalid { background: #ffe6e6; color: #dc3545; border: 1px solid #dc3545;}
+.key-status.checking { background: #e6f7ff; color: #007bff; }
+.btn-del-key { color: #999; cursor: pointer; padding: 5px; font-weight: bold; font-size: 16px; margin-left: 10px;}
+.btn-del-key:hover { color: #ff3b30; }
     </style>
 </head>
 <body>
@@ -1435,6 +1447,24 @@ select.x-input option {
             <option value="google">Google AI Studio</option>
         </select>
     </div>
+                    <!-- === ✨ Google 多 Key 管理器 (默认隐藏) ✨ === -->
+<div id="googleKeyManager" style="display:none; background:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:15px; border:1px solid #e5e5ea;">
+    <div style="font-size:12px; color:#666; margin-bottom:5px;">Google Key 钥匙包 (自动轮询)</div>
+    
+    <!-- 添加输入框 -->
+    <div style="display:flex; gap:5px; margin-bottom:10px;">
+        <input type="password" id="newGoogleKeyInput" class="ios-input" placeholder="粘贴新的 Key..." style="background:#fff; flex:1; font-size:14px;">
+        <button onclick="addGoogleKey()" style="border:none; background:#007AFF; color:white; border-radius:8px; padding:0 12px; font-weight:bold;">添加</button>
+    </div>
+
+    <!-- Key 列表容器 -->
+    <div id="googleKeyList" style="display:flex; flex-direction:column; gap:8px;">
+        <!-- 动态生成 -->
+    </div>
+</div>
+
+<!-- 下面接原来的 API URL 输入框 -->
+<div class="ios-item" id="apiUrlContainer"> ... </div>
                      <!-- 原有的 API URL (加了 id="apiUrlContainer" 方便控制样式) -->
     <div class="ios-item" id="apiUrlContainer">
         <span class="ios-label">API URL</span>
@@ -2601,6 +2631,7 @@ select.x-input option {
         // --- 核心数据结构 ---
         let globalConfig = {
             provider: "custom",
+            googleKeys: [],
             apiUrl: "https://api.openai.com/v1",
             apiKey: "",
             model: "gpt-3.5-turbo",
@@ -3001,16 +3032,12 @@ let globalAudioPass = new Audio();
     let fullText = "";
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: apiMsgs,
-                temperature: parseFloat(globalConfig.temp),
-                stream: true
-            })
-        });
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: apiMsgs,
+    temperature: parseFloat(globalConfig.temp),
+    stream: true
+});
 
         if (!res.ok) throw new Error(res.statusText);
 
@@ -3276,32 +3303,126 @@ let globalAudioPass = new Audio();
             globalConfig.xiModelId = document.getElementById('xiModelId').value;
             saveData();
         }
+        // --- Google Key 管理系统 ---
+
+// 1. 渲染列表
+function renderGoogleKeyList() {
+    const con = document.getElementById('googleKeyList');
+    con.innerHTML = '';
+    
+    if (!globalConfig.googleKeys || globalConfig.googleKeys.length === 0) {
+        con.innerHTML = '<div style="text-align:center;color:#999;font-size:12px;">暂无 Key，请添加</div>';
+        return;
+    }
+
+    globalConfig.googleKeys.forEach((kObj, index) => {
+        // 隐藏 Key 的中间部分
+        const maskKey = kObj.key.substring(0, 6) + "......" + kObj.key.substring(kObj.key.length - 4);
+        
+        // 状态标签
+        let statusHtml = '';
+        if (kObj.status === 'valid') statusHtml = '<span class="key-status valid">可用</span>';
+        else if (kObj.status === 'invalid') statusHtml = '<span class="key-status invalid">无效</span>';
+        else statusHtml = '<span class="key-status checking">检测中</span>';
+
+        const div = document.createElement('div');
+        div.className = 'key-tag-item';
+        div.innerHTML = `
+            <div style="display:flex; align-items:center;">
+                <span style="font-family:monospace; color:#333;">${maskKey}</span>
+                ${statusHtml}
+            </div>
+            <div class="btn-del-key" onclick="removeGoogleKey(${index})">×</div>
+        `;
+        con.appendChild(div);
+    });
+}
+
+// 2. 添加 Key (带验证)
+async function addGoogleKey() {
+    const input = document.getElementById('newGoogleKeyInput');
+    const key = input.value.trim();
+    if (!key) return;
+
+    // 简单查重
+    if (globalConfig.googleKeys.find(k => k.key === key)) {
+        alert("这个 Key 已经添加过了");
+        return;
+    }
+
+    // 先添加到列表，状态设为 checking
+    const newObj = { key: key, status: 'checking' };
+    
+    // 确保数组存在
+    if(!globalConfig.googleKeys) globalConfig.googleKeys = [];
+    
+    globalConfig.googleKeys.push(newObj);
+    input.value = ''; // 清空输入
+    renderGoogleKeyList(); // 刷新界面
+
+    // 开始验证有效性
+    try {
+        // 尝试请求 models 列表，只取1个，最小开销
+        const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/models?limit=1", {
+            headers: { "Authorization": "Bearer " + key }
+        });
+        
+        if (res.ok) {
+            newObj.status = 'valid';
+        } else {
+            newObj.status = 'invalid';
+            alert(`Key 添加失败：Google 拒绝了该 Key (状态码 ${res.status})`);
+        }
+    } catch (e) {
+        newObj.status = 'invalid';
+        alert("网络错误，无法验证 Key");
+    }
+
+    saveGlobalConfig(); // 保存结果
+    renderGoogleKeyList(); // 再次刷新状态
+}
+
+// 3. 删除 Key
+function removeGoogleKey(index) {
+    if (confirm("确定删除这个 Key 吗？")) {
+        globalConfig.googleKeys.splice(index, 1);
+        saveGlobalConfig();
+        renderGoogleKeyList();
+    }
+}
         // --- ✨ 新增：切换 API 供应商逻辑 ✨ ---
 function toggleApiProvider() {
     const provider = document.getElementById('apiProvider').value;
     const urlInput = document.getElementById('apiUrl');
-    const urlContainer = document.getElementById('apiUrlContainer');
+    // 获取原来的单 Key 输入框，Google 模式下我们要隐藏它
+    const singleKeyContainer = document.getElementById('apiKey').closest('.ios-item');
+    const googleMgr = document.getElementById('googleKeyManager');
 
     if (provider === 'google') {
-        // Google 的 OpenAI 兼容端点
+        // Google 模式
         urlInput.value = "https://generativelanguage.googleapis.com/v1beta/openai";
-        // 锁定输入框，提示用户不用填
         urlInput.disabled = true;
         urlInput.style.color = "#999"; 
-        // 也可以给用户一个提示占位符
-        document.getElementById('apiKey').placeholder = "粘贴 AI Studio 的 Key";
+        
+        // 显示多Key管理器，隐藏单Key输入框
+        googleMgr.style.display = 'block';
+        singleKeyContainer.style.display = 'none';
+        
+        // 渲染列表
+        renderGoogleKeyList();
     } else {
-        // 自定义模式：解锁
+        // 自定义模式
         urlInput.disabled = false;
         urlInput.style.color = "#007AFF";
-        // 如果切回自定义，且当前填的是 Google 的地址，就恢复默认提示
         if (urlInput.value.includes("googleapis.com")) {
             urlInput.value = "https://api.openai.com/v1";
         }
+        
+        // 隐藏多Key管理器，显示单Key输入框
+        googleMgr.style.display = 'none';
+        singleKeyContainer.style.display = 'flex';
         document.getElementById('apiKey').placeholder = "sk-...";
     }
-    
-    // 切换后自动保存一下设置
     saveGlobalConfig();
 }
         // --- 美化/主题系统 (终极版: 图标+字体+壁纸) ---
@@ -3481,9 +3602,19 @@ if(iconBook) iconBook.value = themeConfig.icons.book || "";
     const btn = event.target;
     btn.innerText = "加载中...";
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/models', {
-            headers: { "Authorization": "Bearer " + globalConfig.apiKey }
-        });
+        let headers = {};
+if(globalConfig.provider === 'google' && globalConfig.googleKeys.length > 0) {
+    // Google 模式：随便拿第一个可用的 Key 即可，或者稍微写个简易轮询
+    // 这里简单起见，找第一个 valid 的
+    const validKey = globalConfig.googleKeys.find(k => k.status !== 'invalid') || globalConfig.googleKeys[0];
+    headers["Authorization"] = "Bearer " + validKey.key;
+} else {
+    headers["Authorization"] = "Bearer " + globalConfig.apiKey;
+}
+
+const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/models', {
+    headers: headers
+});
         
         if (!res.ok) throw new Error("API 请求失败: " + res.status);
 
@@ -8465,9 +8596,73 @@ function confirmShare(targetCharId) {
     // 触发 AI 回复 (需要修改 triggerAI 来识别 hiddenContext)
     triggerAI();
 }
+        // 轮询调用函数
+async function fetchWithRetry(url, bodyObject) {
+    // 1. 如果是自定义模式，直接发，不轮询
+    if (globalConfig.provider !== 'google') {
+        return fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify(bodyObject)
+        });
+    }
+
+    // 2. Google 模式：开始轮询
+    const keys = globalConfig.googleKeys || [];
+    // 过滤出状态不是 'invalid' 的 key (checking的也试试)
+    const validKeys = keys.filter(k => k.status !== 'invalid');
+
+    if (validKeys.length === 0) {
+        throw new Error("没有可用的 Google Key，请在设置里添加！");
+    }
+
+    let lastError = null;
+
+    // 遍历尝试
+    for (let i = 0; i < validKeys.length; i++) {
+        const kObj = validKeys[i];
+        try {
+            console.log(`正在尝试第 ${i+1} 个 Key...`);
+            
+            const res = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + kObj.key },
+                body: JSON.stringify(bodyObject)
+            });
+
+            // 如果成功 (200 OK)，或者是一些非 429/401 的业务错误，直接返回 res
+            // 429 = 限额, 401 = Key失效
+            if (res.ok) {
+                return res; 
+            } else if (res.status === 429 || res.status === 401 || res.status === 403) {
+                // 限额了或Key废了，记录日志，继续下一个循环
+                console.warn(`Key ${i+1} 失败 (Code ${res.status})，切换下一个...`);
+                // 可选：如果是 401，可以自动把 status 标为 invalid 并保存
+                if (res.status === 401) { 
+                    kObj.status = 'invalid'; 
+                    saveData(); // 默默保存一下状态
+                }
+                lastError = new Error(`Key ${i+1}: ${res.statusText}`);
+                continue; 
+            } else {
+                // 其他错误 (比如 500 服务器崩了)，通常换 Key 也没用，直接抛出
+                return res;
+            }
+
+        } catch (e) {
+            // 网络断了等异常，继续下一个
+            console.warn(`Key ${i+1} 网络异常，切换下一个...`);
+            lastError = e;
+        }
+    }
+
+    // 如果循环结束还没返回，说明所有 Key 都挂了
+    throw new Error("所有 Google Key 都已耗尽或无效！" + (lastError ? lastError.message : ""));
+}
     </script>
 </body>
 </html>
+
 
 
 
