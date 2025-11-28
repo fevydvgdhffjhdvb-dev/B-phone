@@ -2474,9 +2474,11 @@ select.x-input option {
     <div class="app-header" style="background: rgba(255,245,247,0.9);">
         <button class="btn-icon-text" onclick="goHome()">‹ 结束</button>
         <span class="app-title" style="color:#ff6b81;">情侣飞行棋</span>
-        <button class="btn-icon-only" onclick="document.getElementById('ludoTaskInput').click()">📂</button>
-        <!-- 隐藏的文件上传，用于导入题库 -->
-        <input type="file" id="ludoTaskInput" accept=".json, .txt, text/plain" hidden onchange="importLudoTasks(event)">
+        <!-- 修改：点击按钮不再直接选文件，而是打开弹窗 -->
+<button class="btn-icon-only" onclick="openLudoLibrary()">📂</button>
+
+<!-- input 保持隐身，但在 JS 里我们会改它的 onchange -->
+<input type="file" id="ludoTaskInput" accept=".json, .txt, text/plain" hidden onchange="handleNewBankImport(event)">
     </div>
 
     <!-- 上半部分：棋盘区 -->
@@ -2775,6 +2777,26 @@ select.x-input option {
         </div>
         <div class="modal-footer">
             <button class="modal-btn" onclick="closeModal('modal-share-fic')">取消</button>
+        </div>
+    </div>
+</div>
+    <!-- ============ 题库管理弹窗 (新增) ============ -->
+<div class="modal-overlay" id="modal-ludo-library">
+    <div class="modal-box" style="height: 60%;">
+        <div class="modal-header">
+            <button onclick="closeModal('modal-ludo-library')">关闭</button>
+            <span style="font-weight:bold;">选择题库</span>
+            <!-- 右上角的 + 号，点击触发文件上传 -->
+            <button onclick="document.getElementById('ludoTaskInput').click()" style="font-size:24px;">+</button>
+        </div>
+        <div class="modal-body" style="padding:0; background:#f2f2f7;">
+            <div class="ios-group-title">我的题库列表</div>
+            <div id="ludo-library-list" class="ios-list" style="margin-top:0;">
+                <!-- 动态生成列表 -->
+            </div>
+            <div style="padding:20px; text-align:center; color:#999; font-size:12px;">
+                点击列表即可应用题库<br>点击右上角 + 号导入新文件
+            </div>
         </div>
     </div>
 </div>
@@ -9414,40 +9436,7 @@ async function endGame(winner) {
     triggerAI(); 
 }
 
-// 9. 题库导入逻辑
-async function importLudoTasks(e) {
-    const file = e.target.files[0];
-    if(!file) return;
-    
-    try {
-        const text = await file.text();
-        let json = [];
-        // 支持 JSON 或 TXT
-        if(file.name.endsWith('.json')) {
-            json = JSON.parse(text);
-        } else {
-            // TXT 一行一个
-            json = text.split('\n').filter(line => line.trim()).map(line => ({ content: line.trim() }));
-        }
 
-        // 存入 IndexedDB
-        const db = await openDB();
-        const tx = db.transaction("ludo_tasks", "readwrite");
-        const store = tx.objectStore("ludo_tasks");
-        
-        // 先清空旧的？或者追加？这里选择追加
-        json.forEach(item => {
-            store.put({ id: Date.now() + Math.random(), content: item.content || item.text });
-        });
-        
-        alert(`成功导入 ${json.length} 个题目！`);
-        // 刷新当前内存题库
-        ludoState.tasks = await loadLudoTasksFromDB();
-
-    } catch(err) {
-        alert("导入失败: " + err.message);
-    }
-}
 
 async function loadLudoTasksFromDB() {
     const db = await openDB();
@@ -9462,9 +9451,164 @@ async function loadLudoTasksFromDB() {
         req.onerror = () => resolve([]);
     });
 }
+        // ==========================================
+// --- 飞行棋题库管理系统 (升级版) ---
+// ==========================================
+
+let savedBanks = []; // 存储所有题库 [{name: "热恋版", tasks: [...]}]
+
+// 1. 初始化加载
+function loadSavedBanks() {
+    const s = localStorage.getItem('ludo_saved_banks');
+    if(s) savedBanks = JSON.parse(s);
+}
+// 页面加载时运行
+window.addEventListener('load', loadSavedBanks);
+
+function saveBanksToStorage() {
+    localStorage.setItem('ludo_saved_banks', JSON.stringify(savedBanks));
+}
+
+// 2. 打开题库弹窗
+function openLudoLibrary() {
+    renderLudoLibraryList();
+    openModal('modal-ludo-library');
+}
+
+// 3. 渲染列表
+function renderLudoLibraryList() {
+    const list = document.getElementById('ludo-library-list');
+    list.innerHTML = '';
+
+    if(savedBanks.length === 0) {
+        list.innerHTML = `<div style="padding:15px; text-align:center; color:#999;">暂无题库，请点击右上角导入</div>`;
+        return;
+    }
+
+    savedBanks.forEach((bank, index) => {
+        const div = document.createElement('div');
+        div.className = 'ios-item';
+        div.innerHTML = `
+            <div style="flex:1; cursor:pointer;" onclick="applyBank(${index})">
+                <div style="font-weight:600; font-size:16px;">${bank.name}</div>
+                <div style="font-size:12px; color:#999;">共 ${bank.tasks.length} 题</div>
+            </div>
+            <div class="btn-del-mem" onclick="deleteBank(${index})" style="padding:10px;">×</div>
+        `;
+        list.appendChild(div);
+    });
+}
+
+// 4. 处理新文件导入 (点击+号选完文件后触发)
+async function handleNewBankImport(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+
+    try {
+        const text = await file.text();
+        let tasks = [];
+        
+        // 解析文件
+        if(file.name.endsWith('.json')) {
+            const raw = JSON.parse(text);
+            // 兼容性处理：把各种格式统一清洗为 {content: "xxx"}
+            tasks = raw.map(item => ({ content: item.content || item.text || item }));
+        } else {
+            // TXT 处理
+            tasks = text.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0)
+                .map(line => ({ content: line }));
+        }
+
+        if(tasks.length === 0) throw new Error("文件里好像没有内容？");
+
+        // 询问题库名字
+        const bankName = prompt(`成功识别 ${tasks.length} 道题！\n请给这个题库起个名字：`, file.name.replace(/\.(json|txt)$/i, ""));
+        
+        if(!bankName) return; // 用户取消
+
+        // 保存到列表
+        savedBanks.push({
+            id: Date.now(),
+            name: bankName,
+            tasks: tasks
+        });
+        saveBanksToStorage();
+        
+        // 刷新列表
+        renderLudoLibraryList();
+        
+        // 询问是否立即应用
+        if(confirm("导入成功！是否立即使用这个题库？")) {
+            applyBank(savedBanks.length - 1);
+        }
+
+    } catch(err) {
+        alert("导入出错: " + err.message);
+    } finally {
+        e.target.value = ''; // 清空 input，允许下次选同名文件
+    }
+}
+
+// 5. 应用题库 (核心功能)
+async function applyBank(index) {
+    const bank = savedBanks[index];
+    if(!bank) return;
+
+    const btn = document.querySelector('#modal-ludo-library .modal-body'); // 随便找个地方显示loading效果不太好做，直接弹窗吧
+    
+    try {
+        // 1. 获取数据库
+        const db = await openDB();
+        const tx = db.transaction("ludo_tasks", "readwrite");
+        const store = tx.objectStore("ludo_tasks");
+
+        // 2. 清空当前的“激活题库”
+        await new Promise((resolve, reject) => {
+            const req = store.clear();
+            req.onsuccess = resolve;
+            req.onerror = reject;
+        });
+
+        // 3. 写入新题库
+        // 这里必须再开一个事务，或者接着用上面的？为了稳妥，我们在循环里复用
+        // 注意：IndexedDB 的 clear() 是异步的，要在 success 后再 add
+        // 简单写法：直接用上面的 tx 应该没问题，因为是串行的
+        
+        bank.tasks.forEach(task => {
+            store.put({ id: Date.now() + Math.random(), content: task.content });
+        });
+
+        // 4. 等待事务完成
+        tx.oncomplete = async () => {
+            // 5. 刷新游戏内存里的 tasks 变量
+            ludoState.tasks = await loadLudoTasksFromDB();
+            
+            // 6. UI 反馈
+            closeModal('modal-ludo-library');
+            addLudoLog('system', `已切换题库为：《${bank.name}》`);
+            alert(`应用成功！当前使用：《${bank.name}》`);
+        };
+
+    } catch(e) {
+        console.error(e);
+        alert("应用失败：" + e.message);
+    }
+}
+
+// 6. 删除题库
+function deleteBank(index) {
+    if(confirm("确定删除这个题库吗？")) {
+        savedBanks.splice(index, 1);
+        saveBanksToStorage();
+        renderLudoLibraryList();
+    }
+}
     </script>
 </body>
 </html>
+
 
 
 
