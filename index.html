@@ -1448,7 +1448,7 @@ select.x-input option {
         </select>
     </div>
                     <!-- === ✨ Google 多 Key 管理器 (默认隐藏) ✨ === -->
-<div id="googleKeyManager" style="display:none; background:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:15px; border:1px solid #e5e5ea;">
+                    <div id="googleKeyManager" style="display:none; background:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:15px; border:1px solid #e5e5ea;">
     <div style="font-size:12px; color:#666; margin-bottom:5px;">Google Key 钥匙包 (自动轮询)</div>
     
     <!-- 添加输入框 -->
@@ -3365,58 +3365,77 @@ function renderGoogleKeyList() {
     });
 }
 
-// 2. 添加 Key (防崩溃修复版)
+// 2. 添加 Key (修复验证版)
 async function addGoogleKey() {
     const input = document.getElementById('newGoogleKeyInput');
     const key = input.value.trim();
     
-    if (!key) {
-        alert("请输入 Key！");
-        return;
-    }
+    if (!key) return alert("请输入 Key！");
 
-    // --- 核心修复：防止数组不存在导致崩溃 ---
-    if (!globalConfig.googleKeys) {
-        globalConfig.googleKeys = [];
-    }
-    // ------------------------------------
+    if (!globalConfig.googleKeys) globalConfig.googleKeys = [];
 
-    // 简单查重
     if (globalConfig.googleKeys.find(k => k.key === key)) {
-        alert("这个 Key 已经添加过了");
-        return;
+        return alert("这个 Key 已经添加过了");
     }
 
-    // 先添加到列表，状态设为 checking
     const newObj = { key: key, status: 'checking' };
-    
     globalConfig.googleKeys.push(newObj);
     
-    // 保存数据（这一步很重要，防止刷新丢失）
     saveGlobalConfig(); 
+    input.value = ''; 
+    renderGoogleKeyList(); 
 
-    input.value = ''; // 清空输入
-    renderGoogleKeyList(); // 刷新界面
-
-    // 开始验证有效性
+    // --- 修复后的验证逻辑 ---
     try {
-        const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/models?limit=1", {
+        // 去掉 ?limit=1，直接请求 models，这是最稳的
+        const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/models", {
             headers: { "Authorization": "Bearer " + key }
         });
         
         if (res.ok) {
             newObj.status = 'valid';
+            console.log("Key 验证成功");
         } else {
+            // 即便验证失败，也打印一下原因
+            console.warn("Key 验证失败 status:", res.status);
             newObj.status = 'invalid';
-            // 不弹窗干扰了，直接标红即可
-            console.log(`Key 验证失败: ${res.status}`);
         }
     } catch (e) {
+        console.error("验证出错:", e);
         newObj.status = 'invalid';
     }
+    // ----------------------
 
-    saveGlobalConfig(); // 保存验证后的状态
-    renderGoogleKeyList(); // 再次刷新状态
+    saveGlobalConfig(); 
+    renderGoogleKeyList(); 
+}
+        // --- ✨ 新增：一键重新检测所有 Key ✨ ---
+async function revalidateAllKeys() {
+    if (!globalConfig.googleKeys || globalConfig.googleKeys.length === 0) return;
+
+    const btn = event.target; // 获取点击的按钮
+    const oldText = btn.innerText;
+    btn.innerText = "检测中...";
+
+    // 遍历所有 Key 并重新验证
+    for (let kObj of globalConfig.googleKeys) {
+        kObj.status = 'checking'; // 先变成检测中状态
+        renderGoogleKeyList();    // 刷新UI让用户看到变化
+        
+        try {
+            const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/models", {
+                headers: { "Authorization": "Bearer " + kObj.key }
+            });
+            kObj.status = res.ok ? 'valid' : 'invalid';
+        } catch (e) {
+            kObj.status = 'invalid';
+        }
+    }
+
+    saveGlobalConfig();
+    renderGoogleKeyList();
+    btn.innerText = oldText;
+    alert("所有 Key 已重新检测完毕！");
 }
 
 // 3. 删除 Key
@@ -8699,6 +8718,7 @@ async function fetchWithRetry(url, bodyObject) {
     </script>
 </body>
 </html>
+
 
 
 
