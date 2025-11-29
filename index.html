@@ -9952,25 +9952,28 @@ async function sendTheaterMsg() {
     const input = document.getElementById('theater-input');
     const txt = input.value.trim();
     if(!txt) return;
-    
-    // 获取当前角色 (如果没有在外面选人，就默认第一个)
-    // 剧场模式需要一个主角，我们借用主应用的 activeContactId
+
+    // 1. 获取当前角色 (防错：没选人就默认用第一个)
     let char = contacts.find(c => c.id === activeContactId);
     if (!char && contacts.length > 0) char = contacts[0];
-    if (!char) return alert("请先在【信息】APP里创建一个角色！");
+    if (!char) return alert("请先在【信息】列表创建一个角色！");
 
-    // 上屏用户消息
-    appendTheaterLog('user', txt, "我"); // 这里的"我"以后可以用 userName 变量
+    // 2. 补丁：防止历史记录数组不存在导致报错
+    if (!theaterState.logs) theaterState.logs = [];
+
+    // 3. UI 上屏
+    appendTheaterLog('user', txt, char.userName || "我");
     
-    // 保存到历史记录
+    // 4. 存入历史
     theaterState.logs.push({ role: 'user', content: txt });
     saveTheaterLogs();
 
-    // 清空输入框
+    // 5. 关键：先清空输入框，再叫 AI！
+    // (之前可能卡在这里，导致字消不掉)
     input.value = '';
-    input.style.height = 'auto';
+    if(typeof autoResizeTextArea === 'function') autoResizeTextArea(input);
 
-    // 🚀 触发 AI 逻辑
+    // 6. 召唤 AI (加了 await 保证顺序)
     await triggerTheaterAI(char);
 }
 
@@ -10472,8 +10475,7 @@ function loadTheaterState() {
         });
     }
 }
-        // 4. 核心：AI 触发器
-async function triggerTheaterAI(char) {
+        async function triggerTheaterAI(char) {
     // A. 准备 API 配置
     // 优先使用剧场独立配置，如果没有，则“借用”全局配置
     let apiUrl = theaterState.config.apiUrl || globalConfig.apiUrl;
@@ -10581,6 +10583,7 @@ async function triggerTheaterAI(char) {
         btn.innerText = "✒️";
     }
 }
+
 
 // 5. 核心：积木拼装师 (Assembler)
 function assembleSystemPrompt(char) {
@@ -10869,6 +10872,7 @@ async function testTheaterConnection() {
     </script>
 </body>
 </html>
+
 
 
 
