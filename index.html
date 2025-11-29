@@ -1541,6 +1541,76 @@ select.x-input option {
     border: none;
 }
 .btn-del-script:hover { color: #ff3b30; }
+        /* --- 剧场模式：剧情总结卡片样式 --- */
+.t-msg-block.system {
+    text-align: center;
+    margin: 30px 0;
+    opacity: 0.9;
+}
+
+.t-system-card {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.08); /* 深色背景下的微透白 */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 15px 20px;
+    text-align: left;
+    max-width: 90%;
+    color: #a0a0a0;
+    font-size: 14px;
+    font-family: sans-serif; /* 用黑体显得更像系统文字 */
+    line-height: 1.6;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.t-system-header {
+    color: #FF9500; /* 橙色标题 */
+    font-weight: bold;
+    font-size: 12px;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.t-system-header::before {
+    content: '💾';
+}
+        /* 剧场模式 - 楼层号样式 */
+.t-floor-tag {
+    position: absolute;
+    left: -25px; /* 放在气泡左侧外面 */
+    top: 0;
+    font-size: 10px;
+    color: #555;
+    font-family: monospace;
+    opacity: 0.5;
+}
+/* 给消息块加相对定位，以便放楼层号 */
+.t-msg-block {
+    position: relative; 
+    margin-left: 10px; /* 给左边留点空放楼层号 */
+}
+
+/* 档案列表样式 */
+.archive-card {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+.archive-header {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: #FF9500; font-weight: bold; margin-bottom: 5px;
+}
+.archive-body {
+    font-size: 13px; color: #ccc; line-height: 1.5;
+    max-height: 80px; overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+}
     </style>
 </head>
 <body>
@@ -2756,8 +2826,15 @@ select.x-input option {
     <!-- 顶部导演栏 -->
     <div class="theater-header">
         <button class="btn-icon-only" onclick="goHome()" style="color:#999;">‹ 退出</button>
+        
         <span class="theater-title" id="theater-title">未命名剧本</span>
-        <button class="btn-icon-only" onclick="openTheaterConsole()" style="color:#007AFF;">🎬</button>
+        
+        <div style="display:flex; gap:15px;">
+            <button class="btn-icon-only" onclick="openArchiveModal()" style="color:#d4a373; font-size:20px;">📜</button>
+            <button class="btn-icon-only" onclick="generateTheaterSummary()" style="color:#FF9500; font-size:20px;">✨</button>
+            
+            <button class="btn-icon-only" onclick="openTheaterConsole()" style="color:#007AFF;">🎬</button>
+        </div>
     </div>
 
     <!-- 剧本阅读区 (取代聊天框) -->
@@ -10282,30 +10359,40 @@ function saveTheaterLogs() {
 
 function appendTheaterLog(role, text, name) {
     const stage = document.getElementById('theater-stage');
-    
-    // 移除初始提示
     const tip = document.querySelector('.theater-start-tip');
     if(tip) tip.remove();
 
+    // 计算楼层：当前 DOM 里的 .t-msg-block 数量 + 1
+    const floor = stage.querySelectorAll('.t-msg-block').length + 1;
+
     const div = document.createElement('div');
     div.className = 't-msg-block';
-    
-    // 格式化文本 (换行转<br>)
+    if(role === 'system') div.classList.add('system');
+
+    // 格式化文本
     const formattedText = text.replace(/\n/g, '<br>');
-    
-    div.innerHTML = `
-        <div class="t-role-label">${name}</div>
-        <div class="t-text ${role}">${formattedText}</div>
-    `;
+
+    // 如果是系统消息，用特殊卡片 (之前的逻辑)
+    if (role === 'system') {
+        // 系统消息通常不占楼层号，或者占了但不显示，看你喜好。这里选择显示。
+        div.innerHTML = `
+            <span class="t-floor-tag">#${floor}</span>
+            <div class="t-system-card">
+                <div class="t-system-header">剧情回顾 / 记忆存档</div>
+                <div>${formattedText}</div>
+            </div>`;
+    } else {
+        // 普通对话
+        div.innerHTML = `
+            <span class="t-floor-tag">#${floor}</span>
+            <div class="t-role-label">${name}</div>
+            <div class="t-text ${role}">${formattedText}</div>
+        `;
+    }
     
     stage.appendChild(div);
-    
-    // 自动滚动到底部
-    setTimeout(() => {
-        stage.scrollTop = stage.scrollHeight;
-    }, 100);
-    
-    return div.querySelector('.t-text'); // 返回文本容器引用，方便流式输出
+    setTimeout(() => { stage.scrollTop = stage.scrollHeight; }, 100);
+    return div.querySelector('.t-text');
 }
 
 
@@ -11003,51 +11090,58 @@ async function triggerTheaterAI(char) {
 }
 
 
-// 5. 核心：积木拼装师 (Assembler)
+// 5. 核心：积木拼装师 (Assembler) - 升级版
 function assembleSystemPrompt(char) {
     const p = theaterState.preset;
     let parts = [];
 
-    // --- 第一层：占位符替换函数 ---
-    // 把 {{user}} 换成玩家名，{{char}} 换成角色名
+    // --- 占位符处理 ---
     const process = (text) => {
         if(!text) return "";
         let res = text;
-        // 简单的全局替换
         const userName = char.userName || "我";
         const charName = char.name || "AI";
-        res = res.replace(/{{user}}/gi, userName).replace(/{{user}}/g, userName); // 兼容大小写
+        res = res.replace(/{{user}}/gi, userName).replace(/{{user}}/g, userName);
         res = res.replace(/{{char}}/gi, charName).replace(/{{char}}/g, charName);
         return res;
     };
-    // === ✨ 新增：第一层 - 世界书 (World Info) ===
-    // 获取用户当前输入框里的文字
-    const inputEl = document.getElementById('theater-input');
-    const currentInput = inputEl ? inputEl.value : "";
-    
-    // 扫描并获取激活的词条
-    const worldInfoContext = scanWorldInfo(currentInput, char);
-    if (worldInfoContext) {
-        parts.push(worldInfoContext);
+
+    // 1. 获取当前剧本的【历史剧情存档】 (这就是你要的功能！)
+    if (theaterState.currentScriptId) {
+        const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+        if (script && script.archives && script.archives.length > 0) {
+            // 把所有存档拼接起来
+            const allSummaries = script.archives.map(a => 
+                `[📜 剧情存档 #${a.startFloor}-${a.endFloor}]:\n${a.summary}`
+            ).join('\n\n');
+            
+            parts.push(`
+========== 📜 历史剧情回顾 (Previous Story) ==========
+(以下是之前的剧情摘要，请以此为背景继续扮演)
+${allSummaries}
+====================================================
+`);
+        }
     }
 
-    // --- 第二层：核心规则 (Core) ---
-    // 这些是必须带上的 (比如小说家设定、去八股)
+    // 2. 世界书 (World Info)
+    const inputEl = document.getElementById('theater-input');
+    const currentInput = inputEl ? inputEl.value : "";
+    const worldInfoContext = scanWorldInfo(currentInput, char);
+    if (worldInfoContext) parts.push(worldInfoContext);
+
+    // 3. 核心规则 (Core)
     p.core.forEach(item => {
         parts.push(process(item.content));
     });
 
-    // --- 第三层：文风 (Style) ---
-    // 只有选中的那个文风才会被加入
+    // 4. 文风 (Style)
     if (p.activeStyleId) {
         const style = p.styles.find(s => s.id === p.activeStyleId);
-        if (style) {
-            parts.push(`\n【当前激活文风】：\n` + process(style.content));
-        }
+        if (style) parts.push(`\n【当前激活文风】：\n` + process(style.content));
     }
 
-    // --- 第四层：角色卡信息 (Persona) ---
-    // 这是从我们 App 的 contacts 里读来的基础设定
+    // 5. 角色设定
     parts.push(`
     <CharSetting>
     Name: ${char.name}
@@ -11059,20 +11153,15 @@ function assembleSystemPrompt(char) {
     </UserSetting>
     `);
 
-    // --- 第五层：小剧场模块 (Modules) ---
-    // 只有开关打开的剧场指令才会被加入
-    // 比如你开了“论坛体”，这里就会加入论坛体的 Prompt
+    // 6. 小剧场模块
     if (p.activeModules.length > 0) {
         parts.push(`\n【特殊剧场模式已开启】：\n`);
         p.activeModules.forEach(mid => {
             const mod = p.modules.find(m => m.id === mid);
-            if (mod) {
-                parts.push(process(mod.content));
-            }
+            if (mod) parts.push(process(mod.content));
         });
     }
 
-    // 将所有积木用换行符连接
     return parts.join('\n\n');
 }
         // === 🌍 世界书核心引擎 ===
@@ -11347,9 +11436,337 @@ async function testTheaterConnection() {
     // 插入到 body 末尾
     document.body.insertAdjacentHTML('beforeend', html);
 })();
+        // ==========================================
+// --- 🎭 剧场模式：剧情总结与存档功能 ---
+// ==========================================
+
+async function generateTheaterSummary() {
+    // 1. 安全检查
+    if (!theaterState.currentScriptId) return alert("请先进入一个剧本！");
+    if (!theaterState.logs || theaterState.logs.length === 0) return alert("剧本还是空的，没法总结哦。");
+    if (!globalConfig.apiKey) return alert("请先在设置中配置 API Key。");
+
+    // 2. 准备按钮动画
+    const btn = event.currentTarget; // 获取点击的按钮
+    const oldIcon = btn.innerText;
+    btn.innerText = "⏳"; // 变成漏斗
+    btn.disabled = true;
+
+    try {
+        // 3. 整理全文 (提取纯文本)
+        // 注意：为了省钱和防超长，我们可以限制只取最近的 15000 字，或者全部
+        // 这里默认全部，如果太长可能会被 API 截断
+        const fullStory = theaterState.logs
+            .map(l => {
+                const roleName = l.role === 'user' ? '用户' : '角色';
+                // 过滤掉之前的总结卡片，防止总结套总结
+                if (l.role === 'system') return ""; 
+                return `${roleName}: ${l.content}`;
+            })
+            .join('\n');
+
+        if (fullStory.length < 100) {
+            throw new Error("剧情太短了，还是多聊几句再总结吧！");
+        }
+
+        // 4. 构建 Prompt
+        const prompt = `
+        你是一个专业的剧情记录员。请阅读以下【剧本对话记录】，并生成一份【剧情摘要存档】。
+        
+        【要求】：
+        1. 概括从开头到现在发生的核心事件、关键转折、人物关系进展。
+        2. 忽略无关紧要的闲聊。
+        3. 格式清晰，分段落。
+        4. 字数控制在 300-500 字以内。
+        5. 这是为了让你（AI）在后续扮演中能记得之前的剧情，所以请保留重要细节（如物品、约定、秘密）。
+
+        【对话记录】：
+        ${fullStory.substring(0, 30000)} 
+        `; // 限制 3万字符防止爆 Token
+
+        // 5. 发送请求
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.5 // 总结需要准确，温度低一点
+        });
+
+        if (!res.ok) throw new Error("API 请求失败");
+        
+        const data = await res.json();
+        const summary = data.choices[0].message.content;
+
+        // 6. 构造系统存档消息 (Formatted for AI context)
+        const systemNote = `
+--- 💾 剧情存档点 (${new Date().toLocaleString()}) ---
+${summary}
+---------------------------------------------
+[系统指令]: 以上是截止目前的剧情摘要。请将其作为【长期记忆】纳入考量，保持剧情连贯性。
+`;
+
+        // 7. 写入数据
+        const newLog = { 
+            role: 'system', // 标记为系统消息
+            content: systemNote 
+        };
+        theaterState.logs.push(newLog);
+        saveTheaterLogs();
+
+        // 8. 上屏渲染 (使用我们刚才写的特殊样式)
+        appendSystemCard(systemNote);
+
+        // 9. 滚动到底部
+        const stage = document.getElementById('theater-stage');
+        setTimeout(() => { stage.scrollTop = stage.scrollHeight; }, 100);
+
+    } catch (e) {
+        alert("总结失败: " + e.message);
+    } finally {
+        btn.innerText = oldIcon;
+        btn.disabled = false;
+    }
+}
+
+// 辅助：渲染系统卡片到舞台
+function appendSystemCard(text) {
+    const stage = document.getElementById('theater-stage');
+    const div = document.createElement('div');
+    div.className = 't-msg-block system';
+    
+    // 清洗文本，去掉不需要显示的指令部分，只显示摘要给用户看
+    // 让显示稍微美观一点
+    let displayText = text.replace("[系统指令]: 以上是截止目前的剧情摘要。请将其作为【长期记忆】纳入考量，保持剧情连贯性。", "");
+    displayText = displayText.replace(/\n/g, '<br>');
+
+    div.innerHTML = `
+        <div class="t-system-card">
+            <div class="t-system-header">记忆存档</div>
+            <div>${displayText}</div>
+        </div>
+    `;
+    stage.appendChild(div);
+}
+        (function injectArchiveModal() {
+    if (document.getElementById('modal-theater-archives')) return;
+
+    const html = `
+    <div class="modal-overlay" id="modal-theater-archives" style="z-index: 650;">
+        <div class="modal-box" style="height: 70%; background: #222; color: #eee; border: 1px solid #444;">
+            <div class="modal-header" style="background: #1a1a1a; border-bottom: 1px solid #333; display:flex; justify-content:space-between; align-items:center;">
+                <button onclick="closeModal('modal-theater-archives')" style="color:#999; background:none; border:none;">关闭</button>
+                <span style="color:#fff; font-weight:bold;">剧情档案室</span>
+                <button onclick="openCreateArchiveView()" style="color:#007AFF; font-weight:bold; font-size:24px; background:none; border:none;">+</button>
+            </div>
+            
+            <div id="archive-list-view" class="modal-body" style="padding: 15px; background: #222;">
+                </div>
+
+            <div id="archive-create-view" class="modal-body" style="padding: 20px; background: #222; display:none;">
+                <div class="t-group-title">选择剧情范围 (楼层号)</div>
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <input type="number" id="arc-start" class="t-input" placeholder="开始楼层" style="text-align:center;">
+                    <span style="line-height:40px;">至</span>
+                    <input type="number" id="arc-end" class="t-input" placeholder="结束楼层" style="text-align:center;">
+                </div>
+                <div style="text-align:center; font-size:12px; color:#666; margin-bottom:20px;">
+                    当前共 <span id="arc-total-floors">0</span> 层
+                </div>
+                <button onclick="doGenerateArchive()" class="ios-btn" style="background:#007AFF; color:#fff; border-radius:8px;">AI 生成剧情摘要</button>
+                <button onclick="backToArchiveList()" class="ios-btn" style="background:#333; color:#ccc; border-radius:8px; margin-top:10px;">返回列表</button>
+            </div>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+})();
+        // ==========================================
+// --- 📜 剧场模式：后台档案室逻辑 ---
+// ==========================================
+
+// 1. 打开档案室
+function openArchiveModal() {
+    if (!theaterState.currentScriptId) return alert("请先进入剧本");
+    renderArchiveList();
+    
+    // 重置视图
+    document.getElementById('archive-list-view').style.display = 'block';
+    document.getElementById('archive-create-view').style.display = 'none';
+    
+    openModal('modal-theater-archives');
+}
+
+// 2. 渲染列表 (升级版：带同步功能)
+function renderArchiveList() {
+    const container = document.getElementById('archive-list-view');
+    container.innerHTML = '';
+
+    // 获取当前剧本
+    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+    if (!script.archives) script.archives = [];
+
+    if (script.archives.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#666; margin-top:50px;">暂无存档<br>点击右上角 + 创建阶段性总结</div>';
+        return;
+    }
+
+    // 倒序显示
+    [...script.archives].reverse().forEach((arc, index) => {
+        // 原始索引
+        const realIndex = script.archives.length - 1 - index;
+        
+        const div = document.createElement('div');
+        div.className = 'archive-card';
+        div.innerHTML = `
+            <div class="archive-header">
+                <span>存档: #${arc.startFloor} - #${arc.endFloor}</span>
+                <div style="display:flex; gap:10px;">
+                    <span onclick="syncArchiveToMemory(${realIndex})" style="cursor:pointer; color:#007AFF;" title="同步到平时聊天的记忆库">📤 同步</span>
+                    <span onclick="deleteArchive(${realIndex})" style="cursor:pointer; color:#ff3b30;">×</span>
+                </div>
+            </div>
+            <div class="archive-body" onclick="alert('${arc.summary.replace(/\n/g, '\\n')}')">${arc.summary}</div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// ✨ 新增：同步功能
+function syncArchiveToMemory(index) {
+    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+    if(!script || !script.archives[index]) return;
+
+    const summary = script.archives[index].summary;
+    const charId = script.charId; // 剧本关联的角色ID
+    
+    const char = contacts.find(c => c.id === charId);
+    if (!char) return alert("找不到关联的角色，无法同步！");
+
+    if (!char.memories) char.memories = [];
+
+    // 构造一条记忆
+    const memoryText = `[剧场剧情回忆]: ${summary}`;
+    
+    // 查重：避免重复添加
+    if (char.memories.includes(memoryText)) {
+        return alert("这条存档已经同步过了！");
+    }
+
+    char.memories.push(memoryText);
+    saveData(); // 保存到全局联系人数据
+
+    alert(`✅ 已同步！\n\n现在 "${char.name}" 在平时聊天时，也能记得这段剧情了。`);
+}
+
+// 3. 打开新建视图
+function openCreateArchiveView() {
+    document.getElementById('archive-list-view').style.display = 'none';
+    document.getElementById('archive-create-view').style.display = 'block';
+    
+    // 自动填入楼层建议
+    const total = theaterState.logs.length;
+    document.getElementById('arc-total-floors').innerText = total;
+    
+    // 智能建议：从上次存档的结束位置+1 开始，到最新
+    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+    let suggestStart = 1;
+    if (script && script.archives && script.archives.length > 0) {
+        const lastArc = script.archives[script.archives.length - 1];
+        suggestStart = lastArc.endFloor + 1;
+    }
+    
+    document.getElementById('arc-start').value = Math.min(suggestStart, total);
+    document.getElementById('arc-end').value = total;
+}
+
+function backToArchiveList() {
+    document.getElementById('archive-list-view').style.display = 'block';
+    document.getElementById('archive-create-view').style.display = 'none';
+}
+
+// 4. 执行生成 (AI)
+async function doGenerateArchive() {
+    const start = parseInt(document.getElementById('arc-start').value);
+    const end = parseInt(document.getElementById('arc-end').value);
+    const total = theaterState.logs.length;
+
+    if (isNaN(start) || isNaN(end) || start > end || start < 1) return alert("楼层范围无效");
+    if (end > total) return alert(`目前只有 ${total} 层`);
+
+    const btn = event.target;
+    const oldText = btn.innerText;
+    btn.innerText = "正在阅读并总结...";
+    btn.disabled = true;
+
+    try {
+        // 提取指定范围的文本
+        // logs 索引是 0-based，楼层是 1-based
+        const slice = theaterState.logs.slice(start - 1, end);
+        const contextText = slice.map(l => `${l.role==='user'?'用户': l.role}: ${l.content}`).join('\n');
+
+        const prompt = `
+        你是一个剧本记录员。请阅读以下【${start}楼 到 ${end}楼】的剧情片段。
+        请生成一段详细的【剧情存档总结】。
+        
+        要求：
+        1. 概括这段时间内发生的核心事件、角色情感变化、关键线索。
+        2. 忽略无意义的闲聊，只保留对后续剧情有影响的信息。
+        3. 字数 200-400 字。
+        4. 这是为了存入数据库供后续检索，所以要客观、准确。
+        
+        剧情片段：
+        ${contextText.substring(0, 20000)}
+        `;
+
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.5
+        });
+
+        if (!res.ok) throw new Error("API Error");
+        const data = await res.json();
+        const summary = data.choices[0].message.content;
+
+        // 存入当前剧本的 archives 数组
+        const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+        if (!script.archives) script.archives = [];
+        
+        script.archives.push({
+            id: Date.now(),
+            startFloor: start,
+            endFloor: end,
+            summary: summary,
+            timestamp: Date.now()
+        });
+        
+        // 保存到 localStorage
+        saveAllScripts();
+
+        alert("✅ 存档成功！");
+        backToArchiveList();
+        renderArchiveList();
+
+    } catch(e) {
+        alert("生成失败: " + e.message);
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
+
+function deleteArchive(index) {
+    if(confirm("确定删除这条存档吗？")) {
+        const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+        if(script && script.archives) {
+            script.archives.splice(index, 1);
+            saveAllScripts();
+            renderArchiveList();
+        }
+    }
+}
     </script>
 </body>
 </html>
+
 
 
 
