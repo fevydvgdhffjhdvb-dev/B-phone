@@ -9998,6 +9998,14 @@ async function sendTheaterMsg() {
 
     // 6. 召唤 AI (加了 await 保证顺序)
     await triggerTheaterAI(char);
+    
+}
+        // === 【修复补丁】补充缺失的保存函数 ===
+function saveTheaterLogs() {
+    // 确保 theaterState.logs 存在
+    if (!theaterState.logs) theaterState.logs = [];
+    // 保存到本地存储
+    localStorage.setItem('theater_chat_logs', JSON.stringify(theaterState.logs));
 }
 
 
@@ -10895,6 +10903,7 @@ async function testTheaterConnection() {
     </script>
 </body>
 </html>
+
 
 
 
