@@ -1459,6 +1459,88 @@ select.x-input option {
 .t-item-row.active .t-item-name { color: #fff; font-weight: bold; }
 
 @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        /* --- 剧本列表样式 (仿截图) --- */
+.script-item {
+    display: flex;
+    padding: 15px;
+    background: #fff;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.2s;
+    position: relative;
+    height: 90px; /* 固定高度，保持整齐 */
+}
+.script-item:active {
+    background: #fafafa;
+}
+
+.script-avatar-box {
+    position: relative;
+    margin-right: 12px;
+}
+.script-avatar {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.script-info {
+    flex: 1;
+    min-width: 0; /* 防止文本溢出 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.script-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+}
+
+.script-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+    font-family: 'Songti SC', serif; /* 标题用宋体更有剧场感 */
+}
+
+.script-time {
+    font-size: 12px;
+    color: #999;
+    font-family: sans-serif;
+}
+
+.script-preview {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* 显示两行 */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-family: 'UserCustomFont', sans-serif;
+}
+
+/* 删除按钮 (滑动或长按显示，这里简化为绝对定位的红叉) */
+.btn-del-script {
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+    padding: 10px;
+    color: #ccc;
+    font-size: 18px;
+    background: none;
+    border: none;
+}
+.btn-del-script:hover { color: #ff3b30; }
     </style>
 </head>
 <body>
@@ -2654,6 +2736,16 @@ select.x-input option {
             <button class="modal-btn" onclick="closeModal('modal-ludo-select')">取消</button>
         </div>
     </div>
+</div>
+        <div class="page" id="page-theater-list" style="background: #f5f5f5;">
+    <div class="app-header" style="background: #fff; border-bottom: 1px solid #eee;">
+        <button class="btn-icon-text" onclick="goHome()" style="color:#000;">‹ 桌面</button>
+        <span class="app-title" style="font-size: 18px; color:#000;">我的剧本</span>
+        <button class="btn-icon-only" onclick="createNewScript()" style="font-size: 24px; color:#000;">+</button>
+    </div>
+    
+    <div class="content-scroll" id="theater-list-container" style="background: #f7f7fa; padding: 0;">
+        </div>
 </div>
         <!-- ============ 19. 剧场模式 (Theater Mode) ============ -->
 <div class="page" id="page-theater" style="background-color: #1a1a1a; color: #d0d0d0;">
@@ -9932,12 +10024,199 @@ let theaterState = {
     logs: [] 
 };
 
-// 1. 初始化入口
+// ========================================================
+// 🎭 剧场模式 2.0：多剧本列表版 (数据结构升级)
+// ========================================================
+
+// 1. 新的状态管理
+let theaterState = {
+    config: { apiUrl: "", apiKey: "", model: "" },
+    preset: { name: "未加载", core: [], styles: [], modules: [], activeStyleId: null, activeModules: [], worldInfo: [], regexScripts: [] },
+    
+    // --- 新增：当前正在玩的剧本 ID ---
+    currentScriptId: null, 
+    
+    // 依然保留这个 logs 变量作为“当前运行中的缓存”，方便 API 函数调用
+    logs: [] 
+};
+
+// 所有的剧本数据 (从 localStorage 读取)
+// 格式: [{ id, title, charId, logs: [], lastModified: timestamp }]
+let allScripts = [];
+
+// ========================================================
+// 2. 入口改写
+// ========================================================
+
+// 初始化：不再直接进舞台，而是进列表
 initTheaterMode = function() {
-    navigateTo('page-theater');
     loadTheaterConfig();
-    loadTheaterState(); // 加载预设
-    loadTheaterLogs();  // ✨ 新增：加载历史聊天
+    loadAllScripts(); // 加载列表数据
+    renderScriptList(); // 渲染列表UI
+    navigateTo('page-theater-list'); // 跳转到列表页
+}
+
+// 加载所有剧本
+function loadAllScripts() {
+    const s = localStorage.getItem('theater_all_scripts');
+    if(s) {
+        allScripts = JSON.parse(s);
+    } else {
+        // 兼容旧数据：如果用户之前有单剧本数据，把它迁移过来
+        const oldLogs = localStorage.getItem('theater_chat_logs');
+        if(oldLogs) {
+            const logs = JSON.parse(oldLogs);
+            if(logs.length > 0) {
+                // 创建一个“旧存档”
+                const defaultCharId = contacts.length > 0 ? contacts[0].id : null;
+                const migrationScript = {
+                    id: 'script_' + Date.now(),
+                    title: "旧的存档",
+                    charId: defaultCharId,
+                    logs: logs,
+                    lastModified: Date.now()
+                };
+                allScripts.push(migrationScript);
+                saveAllScripts();
+                localStorage.removeItem('theater_chat_logs'); // 清理旧数据
+            }
+        }
+    }
+}
+
+function saveAllScripts() {
+    localStorage.setItem('theater_all_scripts', JSON.stringify(allScripts));
+}
+
+// 渲染列表 (仿截图)
+function renderScriptList() {
+    const container = document.getElementById('theater-list-container');
+    container.innerHTML = '';
+
+    if(allScripts.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:50px; color:#999;">暂无剧本<br>点击右上角 + 开始</div>`;
+        return;
+    }
+
+    // 按时间倒序
+    const sorted = [...allScripts].sort((a,b) => b.lastModified - a.lastModified);
+
+    sorted.forEach(script => {
+        // 获取主角头像和名字
+        const char = contacts.find(c => c.id === script.charId);
+        const avatarUrl = char ? char.avatar : 'https://api.dicebear.com/7.x/shapes/svg?seed=Unknown';
+        const charName = char ? char.name : '未知角色';
+        
+        // 获取预览文字 (最后一条内容)
+        const lastLog = script.logs.length > 0 ? script.logs[script.logs.length-1].content : "无内容";
+        // 清洗一下预览文字 (去掉换行符)
+        const previewText = lastLog.replace(/<[^>]+>/g, '').substring(0, 50); // 简单去标签
+
+        // 格式化时间
+        const date = new Date(script.lastModified);
+        const timeStr = `${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2,'0')}`;
+
+        const div = document.createElement('div');
+        div.className = 'script-item';
+        div.onclick = (e) => {
+            // 如果点的是删除按钮，不进剧本
+            if(e.target.classList.contains('btn-del-script')) return;
+            openScript(script.id);
+        };
+
+        div.innerHTML = `
+            <div class="script-avatar-box">
+                <img src="${avatarUrl}" class="script-avatar">
+            </div>
+            <div class="script-info">
+                <div class="script-header">
+                    <span class="script-title">${charName} - ${script.title}</span>
+                    <span class="script-time">${timeStr}</span>
+                </div>
+                <div class="script-preview">${previewText}</div>
+            </div>
+            <button class="btn-del-script" onclick="deleteScript('${script.id}')">×</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// ========================================================
+// 3. 交互逻辑：新建与打开
+// ========================================================
+
+// 新建剧本 (先选人，再起名)
+function createNewScript() {
+    if(contacts.length === 0) return alert("请先在信息列表创建角色！");
+    
+    // 弹窗让用户输入标题
+    const title = prompt("给新剧本起个名字：", "未命名剧本");
+    if(!title) return;
+
+    // 选择角色 (默认用当前活跃角色或第一个)
+    let charId = activeContactId;
+    if(!charId) {
+        charId = contacts[0].id;
+        alert(`未选择当前角色，默认使用：${contacts[0].name}`);
+    }
+
+    const newScript = {
+        id: 'script_' + Date.now(),
+        title: title,
+        charId: charId,
+        logs: [], // 空记录
+        lastModified: Date.now()
+    };
+
+    allScripts.unshift(newScript);
+    saveAllScripts();
+    openScript(newScript.id); // 直接进入
+}
+
+// 打开具体剧本 (进入舞台)
+function openScript(scriptId) {
+    const script = allScripts.find(s => s.id === scriptId);
+    if(!script) return;
+
+    // 1. 更新全局状态
+    theaterState.currentScriptId = scriptId;
+    theaterState.logs = script.logs; // 加载这个剧本的日志
+    
+    // 2. 加载预设
+    loadTheaterState(); 
+
+    // 3. 设置 UI
+    const char = contacts.find(c => c.id === script.charId);
+    document.getElementById('theater-title').innerText = script.title;
+    
+    // 如果角色不存在了，用默认名
+    const charName = char ? char.name : "未知";
+    
+    // 渲染舞台内容
+    const stage = document.getElementById('theater-stage');
+    stage.innerHTML = ''; // 清空上一场戏
+    
+    theaterState.logs.forEach(log => {
+        const displayName = log.role === 'user' ? "我" : charName;
+        appendTheaterLog(log.role, log.content, displayName);
+    });
+
+    // 4. 跳转
+    navigateTo('page-theater');
+    
+    // 滚动到底部
+    setTimeout(() => {
+        stage.scrollTop = stage.scrollHeight;
+    }, 100);
+}
+
+// 删除剧本
+function deleteScript(id) {
+    if(confirm("确定要删除这个剧本存档吗？无法恢复。")) {
+        allScripts = allScripts.filter(s => s.id !== id);
+        saveAllScripts();
+        renderScriptList();
+    }
 }
 
 function loadTheaterConfig() {
@@ -10011,10 +10290,15 @@ async function sendTheaterMsg() {
 }
         // === 【修复补丁】补充缺失的保存函数 ===
 function saveTheaterLogs() {
-    // 确保 theaterState.logs 存在
-    if (!theaterState.logs) theaterState.logs = [];
-    // 保存到本地存储
-    localStorage.setItem('theater_chat_logs', JSON.stringify(theaterState.logs));
+    if (!theaterState.currentScriptId) return;
+
+    // 找到当前剧本
+    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+    if (script) {
+        script.logs = theaterState.logs; // 更新日志
+        script.lastModified = Date.now(); // 更新时间
+        saveAllScripts(); // 存入 localStorage
+    }
 }
 
 
@@ -11088,6 +11372,7 @@ async function testTheaterConnection() {
     </script>
 </body>
 </html>
+
 
 
 
