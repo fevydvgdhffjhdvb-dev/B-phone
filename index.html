@@ -1827,6 +1827,10 @@ select.x-input option {
     <span class="ios-label">粮仓图标</span>
     <input type="text" id="iconInput-forum" class="ios-input" placeholder="http://..." onchange="saveTheme()">
 </div>
+                    <div class="ios-item">
+    <span class="ios-label">剧场图标</span>
+    <input type="text" id="iconInput-theater" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+</div>
                 </div>
 
                 <div class="ios-group-title">全局 CSS 代码 (高级美化)</div>
@@ -4037,6 +4041,9 @@ if(iconBook) iconBook.value = themeConfig.icons.book || "";
             const iconLudo = document.getElementById('iconInput-ludo');
 if(iconLudo) iconLudo.value = themeConfig.icons.ludo || "";
 
+            const iconTheater = document.getElementById('iconInput-theater');
+if(iconTheater) iconTheater.value = themeConfig.icons.theater || "";
+
             // 2. 恢复CSS和字体
             const cssInput = document.getElementById('customCssInput');
             if(cssInput) cssInput.value = themeConfig.customCss || "";
@@ -4072,6 +4079,7 @@ if(iconLudo) iconLudo.value = themeConfig.icons.ludo || "";
         themeConfig.icons.wallet = document.getElementById('iconInput-wallet')?.value || "";
         themeConfig.icons.forum = document.getElementById('iconInput-forum')?.value || "";
         themeConfig.icons.ludo = document.getElementById('iconInput-ludo')?.value || "";
+        themeConfig.icons.theater = document.getElementById('iconInput-theater')?.value || "";
         
         themeConfig.customCss = document.getElementById('customCssInput')?.value || "";
         themeConfig.bubbleCss = document.getElementById('bubbleCssInput')?.value || ""; // 气泡美化
@@ -4100,6 +4108,7 @@ if(iconLudo) iconLudo.value = themeConfig.icons.ludo || "";
         updateAppIcon('app-icon-wallet', themeConfig.icons.wallet);
         updateAppIcon('app-icon-forum', themeConfig.icons.forum);
         updateAppIcon('app-icon-ludo', themeConfig.icons.ludo);
+        updateAppIcon('app-icon-theater', themeConfig.icons.theater);
 
         // B. 应用壁纸
         const homePage = document.getElementById('page-home');
@@ -11079,6 +11088,7 @@ async function testTheaterConnection() {
     </script>
 </body>
 </html>
+
 
 
 
