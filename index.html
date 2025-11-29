@@ -10782,41 +10782,53 @@ function toggleWorldInfoEnable(index) {
     saveTheaterState();
     renderConsoleUI();
 }
-        // === 🧩 正则处理引擎 (最终修复版) ===
+        // === 最终修正版：带“防误删报警”的正则引擎 ===
 function runRegex(text, placementType) {
-    // 补丁1：防止 theaterState.preset 还没加载好就运行导致报错
+    // 1. 安全检查
     if (!theaterState.preset || !theaterState.preset.regexScripts) return text;
-    // 补丁2：防止传入的 text 不是字符串 (比如是 null) 导致 replace 报错
     if (typeof text !== 'string') return text;
-
+    
     const scripts = theaterState.preset.regexScripts;
     if (scripts.length === 0) return text;
 
     let processedText = text;
 
     scripts.forEach(script => {
+        // 跳过禁用的脚本
         if (script.disabled) return;
         
         const targetEnum = placementType === 'input' ? 1 : 2;
-        // 兼容 placement 可能为空的情况
         const pl = script.placement || [1, 2];
         
         if (pl.includes(targetEnum)) {
             try {
-                // 🔥 核心修复：必须检查 regex 是否存在！
-                // 只有当 script.regex 有内容时，才去创建正则对象
                 if (script.regex) {
+                    // 备份处理前的文本
+                    const before = processedText;
+                    
                     const re = new RegExp(script.regex, 'gim');
                     const replaceStr = script.replacement === undefined ? "" : script.replacement;
-                    processedText = processedText.replace(re, replaceStr);
+                    
+                    // 执行替换
+                    let after = processedText.replace(re, replaceStr);
+
+                    // 🔥 核心保护机制 🔥
+                    // 如果处理前有字 (大于5个)，处理后变成了空字符串或纯空白
+                    // 说明这个脚本正在“杀人灭口”
+                    if (before.trim().length > 5 && after.trim().length === 0) {
+                        console.warn(`⚠️ 拦截到危险正则 [${script.scriptName}]，它试图清空所有回复！已强制忽略。`);
+                        // 保持原样，不应用这次替换
+                        after = before; 
+                    }
+
+                    processedText = after;
                 }
             } catch (e) {
-                // 即使出错了，也只打印日志，绝对不中断程序运行
-                console.warn(`正则脚本 [${script.scriptName}] 运行跳过:`, e);
+                console.warn(`正则脚本 [${script.scriptName}] 运行出错:`, e);
             }
         }
     });
-
+    
     return processedText;
 }
         // === 📡 功能 1：只拉取模型列表 ===
@@ -10928,6 +10940,7 @@ async function testTheaterConnection() {
     </script>
 </body>
 </html>
+
 
 
 
