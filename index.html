@@ -10506,7 +10506,7 @@ function loadTheaterState() {
         });
     }
 }
-        // === 最终修复：开启流式传输 (解决 Load Failed) ===
+        // === 最终增强版：带缓冲区的流式解析 (解决空回/截断问题) ===
 async function triggerTheaterAI(char) {
     // 1. 获取配置
     let apiUrl = theaterState.config.apiUrl || globalConfig.apiUrl;
@@ -10524,21 +10524,20 @@ async function triggerTheaterAI(char) {
     btn.innerText = "⏳"; 
     btn.disabled = true;
 
-    // 3. 创建 UI 占位符
+    // 3. UI 占位符
     const aiUiBox = appendTheaterLog('ai', '...', char.name);
     let fullText = "";
 
     try {
         const systemPrompt = assembleSystemPrompt(char);
         
-        // 处理输入正则
         let userLastMsg = "";
         if (theaterState.logs.length > 0) {
             userLastMsg = theaterState.logs[theaterState.logs.length - 1].content;
         }
         let finalUserContent = runRegex(userLastMsg, 'input');
 
-        // 准备历史记录
+        // 准备上下文
         const contextMessages = theaterState.logs.slice(0, -1).slice(-10).map(l => ({
             role: l.role,
             content: l.content
@@ -10550,87 +10549,93 @@ async function triggerTheaterAI(char) {
             { role: "user", content: finalUserContent }
         ];
 
-        // ----------------------------------------------------
-        // 🔥 核心修改：强制开启 Stream (流式)，解决超时/Load Failed
-        // ----------------------------------------------------
-        const requestBody = {
-            model: model,
-            messages: messagesToSend,
-            temperature: 1.0, 
-            stream: true // <--- 必须开启！很多反代不支持 false
-        };
-
-        // 发送请求 (使用 fetch，手动处理流)
-        // 这里不使用 fetchWithRetry 简化逻辑，直接针对反代优化
+        // 4. 发起请求
         const res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json", 
                 "Authorization": "Bearer " + apiKey 
             },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify({
+                model: model,
+                messages: messagesToSend,
+                temperature: 1.0, 
+                stream: true // 保持开启流式
+            })
         });
 
         if (!res.ok) {
-            // 尝试读取错误信息
             const errText = await res.text();
-            throw new Error(`请求失败 (${res.status}): ${errText.substring(0, 100)}...`);
+            throw new Error(`API请求失败 ${res.status}: ${errText.substring(0, 100)}`);
         }
 
-        // === 处理流式响应 (就像主聊天框一样) ===
+        // === 🔥 核心修复：缓冲区解析逻辑 🔥 ===
         const reader = res.body.getReader();
-        const decoder = new TextDecoder();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = ""; // 缓冲区，专门用来存“半截”的数据
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
             
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
+            // 解码当前块并拼接到缓冲区
+            buffer += decoder.decode(value, { stream: true });
             
-            for (const line of lines) {
-                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-                    try {
-                        const jsonStr = line.replace('data: ', '');
-                        const json = JSON.parse(jsonStr);
-                        const delta = json.choices[0].delta.content || "";
-                        
-                        // 拼接文本
-                        fullText += delta;
-                        
-                        // 实时更新 UI (稍微清洗一下换行)
-                        aiUiBox.innerHTML = fullText.replace(/\n/g, '<br>');
-                        
-                        // 自动滚动到底部
-                        const stage = document.getElementById('theater-stage');
-                        if(stage) stage.scrollTop = stage.scrollHeight;
+            // 按换行符切割
+            const lines = buffer.split('\n');
+            
+            // ⚠️ 关键：最后一行可能是不完整的，必须留到下一次循环处理
+            // 所以我们只处理到倒数第二行，最后一行重新塞回 buffer
+            buffer = lines.pop(); 
 
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed) continue; // 跳过空行
+                if (trimmed === 'data: [DONE]') continue; // 结束标志
+
+                // 处理 'data: ' 前缀
+                if (trimmed.startsWith('data: ')) {
+                    try {
+                        const jsonStr = trimmed.replace('data: ', '');
+                        const json = JSON.parse(jsonStr);
+                        
+                        // 兼容不同的字段结构 (delta.content 或 message.content)
+                        const delta = json.choices[0].delta?.content || json.choices[0].message?.content || "";
+                        
+                        if (delta) {
+                            fullText += delta;
+                            // 实时更新 UI
+                            aiUiBox.innerHTML = fullText.replace(/\n/g, '<br>');
+                            
+                            // 自动滚动
+                            const stage = document.getElementById('theater-stage');
+                            if(stage) stage.scrollTop = stage.scrollHeight;
+                        }
                     } catch (e) {
-                        // 忽略解析错误，继续读下一块
+                        // 如果解析失败，说明这一行数据有问题，在控制台打印出来看看
+                        console.warn("解析跳过:", trimmed, e);
                     }
                 }
             }
         }
 
-        // === 流传输结束后的处理 ===
+        // 循环结束后，处理正则和保存
+        // (如果有残留 buffer 也可以在这里尝试处理，一般流式结束时 buffer 应该是空的或无用数据)
         
-        // 1. 处理输出正则 (Output Regex)
-        // 注意：流式传输时正则是最后一次性处理的，无法实时变身
+        // 如果完全没收到内容（比如反代虽然连接成功但没发有效数据）
+        if (!fullText) {
+            throw new Error("收到空回复 (可能反代不支持流式或模型未输出)");
+        }
+
         fullText = runRegex(fullText, 'output');
         aiUiBox.innerHTML = fullText.replace(/\n/g, '<br>');
 
-        // 2. 保存历史
         theaterState.logs.push({ role: 'assistant', content: fullText });
         saveTheaterLogs();
 
     } catch (e) {
-        // 错误提示
         console.error("Theater Error:", e);
-        aiUiBox.innerHTML = `<span style="color:#ff3b30">❌ 连接中断: ${e.message}</span>`;
-        // 如果是 Load Failed，通常 message 是 "Failed to fetch"
-        if(e.message.includes("Failed to fetch")) {
-            alert("无法连接到 API。\n1. 请检查你的反代地址是否跨域(CORS)。\n2. 尝试换一个网络环境。");
-        }
+        aiUiBox.innerHTML = `<span style="color:#ff3b30">❌ 错误: ${e.message}</span>`;
     } finally {
         btn.innerText = oldBtnText;
         btn.disabled = false;
@@ -10925,6 +10930,7 @@ async function testTheaterConnection() {
     </script>
 </body>
 </html>
+
 
 
 
