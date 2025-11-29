@@ -9761,10 +9761,11 @@ async function sendLudoMsg() {
     triggerLudoAI(txt, "chat");
 }
 
-// --- 升级版 AI 互动函数 (带主聊天记忆) ---
+// --- 升级版 AI 互动函数 (已修复 Google Key 掉线问题) ---
 async function triggerLudoAI(userContent, contextType) {
     const char = getLudoChar();
-    if(!globalConfig.apiKey) return;
+    // 这里的校验改宽一点，只要是 Google 模式或者有 Key 就可以
+    if(globalConfig.provider !== 'google' && !globalConfig.apiKey) return; 
 
     // 1. 获取主聊天记录 (最近10条即可，太多容易干扰)
     const mainHistory = char.messages.slice(-10).map(m => ({
@@ -9782,7 +9783,7 @@ async function triggerLudoAI(userContent, contextType) {
 
     // 3. 获取游戏内的即时记录
     const gameLogs = ludoState.logs.slice(-6).map(l => `[刚刚发生了]: ${l.content}`).join('\n');
-    
+
     // 4. 核心系统指令 (强逻辑版)
     let systemInstruction = `
     你正在和用户玩“飞行棋”游戏。你的角色：${char.name}。人设：${char.systemPrompt}
@@ -9796,14 +9797,10 @@ async function triggerLudoAI(userContent, contextType) {
     - "chat": 正常闲聊。
     `;
 
-    // 5. ✨ 组装最终消息列表 (关键修改：加入明确的时间分割线)
+    // 5. 组装最终消息列表
     const apiMessages = [
         { role: "system", content: systemInstruction },
-        
-        // 插入历史聊天作为背景
         ...mainHistory, 
-        
-        // 🔥🔥🔥 强力分割线：告诉 AI 上面是过去，下面是现在 🔥🔥🔥
         { role: "system", content: `
         -------------------------------------------------------------
         【系统提示】：
@@ -9814,21 +9811,20 @@ async function triggerLudoAI(userContent, contextType) {
         【游戏内最新动态】：
         ${gameLogs}
         `},
-        
-        // 用户的最新发言
         { role: "user", content: userContent }
     ];
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: apiMessages,
-                temperature: 0.8
-            })
+        // 🔥🔥🔥 核心修复点：改用 fetchWithRetry 🔥🔥🔥
+        // 这样它就会自动去你的 Google Key 列表里找能用的 Key，而不是傻傻地用空 Key
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: apiMessages,
+            temperature: 0.8
         });
+
+        if (!res.ok) throw new Error("连接断开");
+
         const data = await res.json();
         let reply = data.choices[0].message.content;
         
@@ -9839,14 +9835,14 @@ async function triggerLudoAI(userContent, contextType) {
         }
 
         addLudoLog('ai', reply);
-        
         if (contextType === "do_task" || isTaskDone) {
-             setTimeout(nextTurn, 2000); 
+             setTimeout(nextTurn, 2000);
         }
 
     } catch(e) {
         console.error(e);
-        addLudoLog('system', 'AI 掉线了...');
+        addLudoLog('system', 'AI 掉线了... (请检查 Key 或网络)');
+        // 如果是做任务途中掉线，强制跳过回合，防止卡死
         if (contextType === "do_task") nextTurn(); 
     }
 }
@@ -11833,6 +11829,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
