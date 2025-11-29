@@ -10506,13 +10506,14 @@ function loadTheaterState() {
         });
     }
 }
-        // === 【修复补丁 3】强制关闭流式输出，解决连接中断问题 ===
+        // === 修复版：强制统一请求逻辑，解决反代空回问题 ===
 async function triggerTheaterAI(char) {
+    // 1. 获取配置
     let apiUrl = theaterState.config.apiUrl || globalConfig.apiUrl;
     let apiKey = theaterState.config.apiKey || globalConfig.apiKey;
     let model = theaterState.config.model || globalConfig.model;
 
-    // 1. 再次检查模型名字是否填了
+    // 2. 基础检查
     if (!model) {
         alert("错误：未填写模型 ID (Model ID)，请在导演控制台填写！");
         return;
@@ -10520,22 +10521,22 @@ async function triggerTheaterAI(char) {
 
     const btn = document.querySelector('.theater-send-btn');
     const oldBtnText = btn.innerText;
-    btn.innerText = "⏳";
-    
-    // 创建一个空的回复框
+    btn.innerText = "⏳"; 
+
+    // 3. 这是一个 UI 占位符，用来显示 AI 的回复
     const aiUiBox = appendTheaterLog('ai', '正在思考...', char.name);
 
     try {
         const systemPrompt = assembleSystemPrompt(char);
         
-        // 获取用户最后一条消息并处理正则
+        // 处理用户输入正则
         let userLastMsg = "";
         if (theaterState.logs.length > 0) {
             userLastMsg = theaterState.logs[theaterState.logs.length - 1].content;
         }
         let finalUserContent = runRegex(userLastMsg, 'input');
-        
-        // 准备历史记录
+
+        // 准备历史上下文
         const contextMessages = theaterState.logs.slice(0, -1).slice(-10).map(l => ({
             role: l.role,
             content: l.content
@@ -10547,46 +10548,76 @@ async function triggerTheaterAI(char) {
             { role: "user", content: finalUserContent }
         ];
 
-        // 🔥 【重点修改】stream 改为 false (关闭流式)
-        const res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json", 
-                "Authorization": "Bearer " + apiKey 
-            },
-            body: JSON.stringify({
-                model: model,
-                messages: messagesToSend,
-                temperature: 1.0, 
-                stream: false // 👈 强制关闭流式，防止断连
-            })
-        });
+        // ----------------------------------------------------
+        // 🔥 核心修改：使用 fetchWithRetry (复用主聊天的请求器)
+        // ----------------------------------------------------
+        // 即使是反代，fetchWithRetry 也能更好地处理 Headers 和 URL 格式
+        
+        // 注意：为了兼容正则处理，剧场模式依然建议 stream: false。
+        // 但如果你的反代在 stream: false 下必挂，你可以尝试把下面的 false 改成 true。
+        // 不过改为 true 后，下方的正则处理 (runRegex output) 可能无法对全部文本生效，但在“能用”和“不能用”之间，显然能用更重要。
+        
+        const requestBody = {
+            model: model,
+            messages: messagesToSend,
+            temperature: 1.0, 
+            stream: false // <--- 如果还是空回，尝试把这里改成 true
+        };
 
-        if (!res.ok) {
-            // 尝试读取错误信息
-            const errJson = await res.json().catch(() => ({}));
-            throw new Error(`API报错: ${res.status} - ${errJson.error?.message || res.statusText}`);
+        // 如果剧场有独立配置，用剧场的；否则用全局的 fetchWithRetry
+        let res;
+        if (theaterState.config.apiKey) {
+            // 剧场独立连接
+            res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json", 
+                    "Authorization": "Bearer " + apiKey 
+                },
+                body: JSON.stringify(requestBody)
+            });
+        } else {
+            // 使用全局连接 (复用主聊天逻辑)
+            res = await fetchWithRetry(normalizeUrl(apiUrl) + '/chat/completions', requestBody);
         }
 
-        // 解析非流式响应
+        // --- 增强错误捕获 ---
+        if (!res.ok) {
+            // 尝试读取反代返回的错误详情
+            const errText = await res.text();
+            let errMsg = `HTTP Error ${res.status}`;
+            try {
+                const errJson = JSON.parse(errText);
+                if (errJson.error && errJson.error.message) errMsg = errJson.error.message;
+            } catch(e) {}
+            
+            throw new Error(`请求失败: ${errMsg}`);
+        }
+
         const data = await res.json();
+
+        // --- 防止空内容崩溃 ---
+        if (!data.choices || data.choices.length === 0 || !data.choices[0].message) {
+            console.warn("API 返回数据异常:", data);
+            throw new Error("反代返回了空数据 (格式不兼容)");
+        }
+
         let fullText = data.choices[0].message.content;
 
-        // 正则处理输出
+        // 正则后处理
         fullText = runRegex(fullText, 'output');
-        
+
         // 更新 UI
         aiUiBox.innerHTML = fullText.replace(/\n/g, '<br>');
-
-        // 保存
+        
+        // 保存历史
         theaterState.logs.push({ role: 'assistant', content: fullText });
         saveTheaterLogs();
 
     } catch (e) {
-        aiUiBox.innerText = "❌ 生成失败: " + e.message;
-        console.error(e);
-        // 如果失败，把刚才那条“正在思考”删掉，免得看着难受
-        // aiUiBox.parentElement.remove(); 
+        // 把错误显示出来，不再默默失败
+        aiUiBox.innerHTML = `<span style="color:red">❌ 出错了: ${e.message}</span>`;
+        console.error("Theater Error:", e);
     } finally {
         btn.innerText = oldBtnText;
     }
@@ -10880,6 +10911,7 @@ async function testTheaterConnection() {
     </script>
 </body>
 </html>
+
 
 
 
