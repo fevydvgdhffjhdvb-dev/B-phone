@@ -2704,31 +2704,31 @@ select.x-input option {
             <!-- Tab 1: 独立连接 -->
             <div id="tab-connect" class="t-tab-content" style="display:block;">
                 <div class="t-group-title">独立 API 设置 (仅剧场生效)</div>
+                
                 <input type="text" id="t-api-url" class="t-input" placeholder="API URL (例如: https://api.openai.com/v1)">
-                <input type="password" id="t-api-key" class="t-input" placeholder="sk-...">
-                <input type="text" id="t-model" class="t-input" placeholder="Model ID (推荐 Claude 3.5 / GPT-4)">
-                <div class="t-tip">* 如果留空，将默认使用手机全局设置。</div>
-            </div>
-            <div id="tab-connect" class="t-tab-content" style="display:block;">
-                <div class="t-group-title">独立 API 设置 (仅剧场生效)</div>
-                <input type="text" id="t-api-url" class="t-input" placeholder="API URL (例如: https://api.openai.com/v1)">
+                
                 <input type="password" id="t-api-key" class="t-input" placeholder="sk-...">
                 
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <button onclick="fetchTheaterModels()" style="flex:1; padding:10px; background:#333; color:#fff; border:1px solid #555; border-radius:6px; cursor:pointer;">
+                    <button onclick="fetchTheaterModels()" style="flex:1; padding:12px; background:#333; color:#fff; border:1px solid #444; border-radius:8px; cursor:pointer; font-size:14px; transition:0.2s;">
                         ⬇️ 拉取模型
                     </button>
-                    <button onclick="testTheaterConnection()" style="flex:1; padding:10px; background:#007AFF; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">
+                    <button onclick="testTheaterConnection()" style="flex:1; padding:12px; background:#007AFF; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; transition:0.2s;">
                         ✅ 测试连接
                     </button>
                 </div>
 
                 <div id="t-model-select-box" style="display:none; margin-bottom:10px;">
-                    <select id="t-model-select" class="t-input" onchange="document.getElementById('t-model').value = this.value">
+                    <select id="t-model-select" class="t-input" onchange="document.getElementById('t-model').value = this.value" style="background:#222; border-color:#007AFF;">
                         </select>
                 </div>
+
                 <input type="text" id="t-model" class="t-input" placeholder="Model ID (推荐 Claude 3.5 / GPT-4)">
-                <div class="t-tip">* 如果留空，将默认使用手机全局设置。</div>
+                
+                <div class="t-tip" style="margin-top:10px; opacity:0.6;">
+                    * 如果留空，将默认使用手机全局设置。<br>
+                    * 先填 Key，点“拉取模型”，选好后点“测试连接”。
+                </div>
             </div>
 
             <!-- Tab 2: 预设导入 (核心) -->
@@ -10869,6 +10869,7 @@ async function testTheaterConnection() {
     </script>
 </body>
 </html>
+
 
 
 
