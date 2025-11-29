@@ -10506,49 +10506,48 @@ function loadTheaterState() {
         });
     }
 }
-        async function triggerTheaterAI(char) {
-    // A. 准备 API 配置
-    // 优先使用剧场独立配置，如果没有，则“借用”全局配置
+        // === 【修复补丁 3】强制关闭流式输出，解决连接中断问题 ===
+async function triggerTheaterAI(char) {
     let apiUrl = theaterState.config.apiUrl || globalConfig.apiUrl;
     let apiKey = theaterState.config.apiKey || globalConfig.apiKey;
     let model = theaterState.config.model || globalConfig.model;
 
-    if (!apiKey) return alert("请先配置 API Key");
+    // 1. 再次检查模型名字是否填了
+    if (!model) {
+        alert("错误：未填写模型 ID (Model ID)，请在导演控制台填写！");
+        return;
+    }
 
-    // UI 变为思考状态
     const btn = document.querySelector('.theater-send-btn');
+    const oldBtnText = btn.innerText;
     btn.innerText = "⏳";
     
-    // 预先创建一个空的 AI 消息框用于流式输出
-    const aiUiBox = appendTheaterLog('ai', '...', char.name);
+    // 创建一个空的回复框
+    const aiUiBox = appendTheaterLog('ai', '正在思考...', char.name);
 
     try {
-        // B. 拼装 System Prompt (这是最关键的一步!)
         const systemPrompt = assembleSystemPrompt(char);
-        // === ✨ 正则处理：用户输入 (Input) ===
-    // 获取用户刚刚发的最后一条消息
-    let userLastMsg = theaterState.logs[theaterState.logs.length - 1].content;
-    // 经过正则清洗，变成发给 AI 的实际内容
-    // (注意：界面上显示的还是原话，但发给 AI 的是被正则改过的)
-    let finalUserContent = runRegex(userLastMsg, 'input');
         
-        // C. 准备历史记录
-            // ⚠️ 关键修改：我们要先用 slice(0, -1) 排除掉刚才发的那条最新消息(原话)
-            // 因为我们要手动把正则处理过的版本(finalUserContent)加在最后
-            const contextMessages = theaterState.logs.slice(0, -1).slice(-20).map(l => ({
-                role: l.role,
-                content: l.content
-            }));
+        // 获取用户最后一条消息并处理正则
+        let userLastMsg = "";
+        if (theaterState.logs.length > 0) {
+            userLastMsg = theaterState.logs[theaterState.logs.length - 1].content;
+        }
+        let finalUserContent = runRegex(userLastMsg, 'input');
+        
+        // 准备历史记录
+        const contextMessages = theaterState.logs.slice(0, -1).slice(-10).map(l => ({
+            role: l.role,
+            content: l.content
+        }));
 
-            // D. 组合最终请求体
-            const messagesToSend = [
-                { role: "system", content: systemPrompt },
-                ...contextMessages,
-                // 🔥 这里！必须显式地把正则处理过的“最终内容”发给 AI
-                { role: "user", content: finalUserContent }
-            ];
+        const messagesToSend = [
+            { role: "system", content: systemPrompt },
+            ...contextMessages,
+            { role: "user", content: finalUserContent }
+        ];
 
-        // E. 发送请求 (支持流式)
+        // 🔥 【重点修改】stream 改为 false (关闭流式)
         const res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { 
@@ -10558,60 +10557,38 @@ function loadTheaterState() {
             body: JSON.stringify({
                 model: model,
                 messages: messagesToSend,
-                temperature: 1.1, // 剧场模式稍微高一点，更有创造力
-                stream: true
+                temperature: 1.0, 
+                stream: false // 👈 强制关闭流式，防止断连
             })
         });
 
-        if (!res.ok) throw new Error("API Error: " + res.status);
-
-        // F. 处理流式响应
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let fullText = "";
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
-            
-            for (const line of lines) {
-                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-                    try {
-                        const json = JSON.parse(line.replace('data: ', ''));
-                        const delta = json.choices[0].delta.content || "";
-                        if (delta) {
-                            fullText += delta;
-                            // 实时更新 UI (替换掉 ...)
-                            aiUiBox.innerText = fullText; 
-                            // 保持滚动到底部
-                            const stage = document.getElementById('theater-stage');
-                            stage.scrollTop = stage.scrollHeight;
-                        }
-                    } catch (e) { }
-                }
-            }
+        if (!res.ok) {
+            // 尝试读取错误信息
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(`API报错: ${res.status} - ${errJson.error?.message || res.statusText}`);
         }
-        // ... (流式接收循环结束) ...
 
-        // === ✨ 正则处理：AI 回复 (Output) ===
+        // 解析非流式响应
+        const data = await res.json();
+        let fullText = data.choices[0].message.content;
+
+        // 正则处理输出
         fullText = runRegex(fullText, 'output');
         
-        // 再次更新 UI，确保用户看到的是清洗后的干净文本
+        // 更新 UI
         aiUiBox.innerHTML = fullText.replace(/\n/g, '<br>');
 
-        // ... (然后才是保存到 logs) ...
-
-        // G. 完成后保存
+        // 保存
         theaterState.logs.push({ role: 'assistant', content: fullText });
         saveTheaterLogs();
 
     } catch (e) {
-        aiUiBox.innerText = "生成失败: " + e.message;
+        aiUiBox.innerText = "❌ 生成失败: " + e.message;
         console.error(e);
+        // 如果失败，把刚才那条“正在思考”删掉，免得看着难受
+        // aiUiBox.parentElement.remove(); 
     } finally {
-        btn.innerText = "✒️";
+        btn.innerText = oldBtnText;
     }
 }
 
@@ -10903,6 +10880,7 @@ async function testTheaterConnection() {
     </script>
 </body>
 </html>
+
 
 
 
