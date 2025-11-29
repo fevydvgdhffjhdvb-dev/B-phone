@@ -10086,7 +10086,7 @@ async function handleWorldImport(e) {
     }
 }
 
-// 2. 独立导入正则脚本 (防报错 + 全格式兼容版)
+// 2. 独立导入正则脚本 (终极修正版：支持空替换 + 自动去斜杠)
 async function handleRegexImport(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -10097,7 +10097,16 @@ async function handleRegexImport(e) {
         let count = 0;
         let scripts = [];
         
-        // 1. 格式识别
+        // --- 内部工具：清洗酒馆格式的正则 (去掉两头的 / 和尾部的 g/m/i) ---
+        // 比如把 "/abc/g" 变成 "abc"，否则 JS 引擎无法识别
+        const cleanPattern = (str) => {
+            if (!str) return "";
+            // 匹配以 / 开头，以 / 加可选标志结尾的字符串
+            const match = str.match(/^\/(.*?)\/([a-z]*)$/);
+            return match ? match[1] : str;
+        };
+
+        // --- 1. 格式识别 ---
         if (Array.isArray(json)) {
             scripts = json;
         } else if (json.regex_scripts && Array.isArray(json.regex_scripts)) {
@@ -10105,28 +10114,35 @@ async function handleRegexImport(e) {
         } else if (json.scripts && Array.isArray(json.scripts)) {
             scripts = json.scripts;
         } else {
-            if ((json.regex && json.replacement) || (json.findRegex && json.replaceString)) {
+            // 单个对象检查
+            // 🔥 核心修复：使用 !== undefined 来允许空字符串 ""
+            const hasLegacy = (json.regex && json.replacement !== undefined);
+            const hasNew = (json.findRegex && json.replaceString !== undefined);
+            
+            if (hasLegacy || hasNew) {
                 scripts = [json];
             } else {
                 throw new Error("无法识别的正则文件格式");
             }
         }
 
-        // 🔥🔥🔥 核心修复在这里 🔥🔥🔥
-        // 如果系统发现 regexScripts 不存在（被旧缓存覆盖了），立刻原地新建一个空数组
+        // --- 2. 补丁：防止 regexScripts 容器缺失 ---
         if (!theaterState.preset.regexScripts) {
             theaterState.preset.regexScripts = [];
         }
-        // 🔥🔥🔥 修复结束 🔥🔥🔥
 
-        // 2. 数据清洗与存入
+        // --- 3. 数据清洗与存入 ---
         scripts.forEach(r => {
+            // 获取原始正则字符串
+            let rawRegex = r.regex || r.findRegex;
+            // 🔥 自动脱壳：去掉酒馆格式两头的斜杠
+            let finalRegex = cleanPattern(rawRegex);
+
             theaterState.preset.regexScripts.push({
                 id: r.id || 'reg_' + Math.random(),
                 scriptName: r.scriptName || '导入脚本',
-                // 兼容不同字段名
-                regex: r.regex || r.findRegex, 
-                replacement: r.replacement || r.replaceString,
+                regex: finalRegex, 
+                replacement: r.replacement || r.replaceString || "", // 确保即使是null也是空字符串
                 placement: r.placement || [1, 2],
                 disabled: r.disabled || false
             });
@@ -10726,6 +10742,7 @@ function runRegex(text, placementType) {
     </script>
 </body>
 </html>
+
 
 
 
