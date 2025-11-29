@@ -10506,7 +10506,7 @@ function loadTheaterState() {
         });
     }
 }
-        // === 最终增强版：带缓冲区的流式解析 (解决空回/截断问题) ===
+        // === 最终完全体：流式 + 缓冲区 + 正则回滚保护 ===
 async function triggerTheaterAI(char) {
     // 1. 获取配置
     let apiUrl = theaterState.config.apiUrl || globalConfig.apiUrl;
@@ -10526,7 +10526,7 @@ async function triggerTheaterAI(char) {
 
     // 3. UI 占位符
     const aiUiBox = appendTheaterLog('ai', '...', char.name);
-    let fullText = "";
+    let fullText = ""; 
 
     try {
         const systemPrompt = assembleSystemPrompt(char);
@@ -10537,7 +10537,6 @@ async function triggerTheaterAI(char) {
         }
         let finalUserContent = runRegex(userLastMsg, 'input');
 
-        // 准备上下文
         const contextMessages = theaterState.logs.slice(0, -1).slice(-10).map(l => ({
             role: l.role,
             content: l.content
@@ -10549,7 +10548,7 @@ async function triggerTheaterAI(char) {
             { role: "user", content: finalUserContent }
         ];
 
-        // 4. 发起请求
+        // 4. 发起请求 (强制开启流式)
         const res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { 
@@ -10560,7 +10559,7 @@ async function triggerTheaterAI(char) {
                 model: model,
                 messages: messagesToSend,
                 temperature: 1.0, 
-                stream: true // 保持开启流式
+                stream: true 
             })
         });
 
@@ -10569,67 +10568,66 @@ async function triggerTheaterAI(char) {
             throw new Error(`API请求失败 ${res.status}: ${errText.substring(0, 100)}`);
         }
 
-        // === 🔥 核心修复：缓冲区解析逻辑 🔥 ===
+        // === 🔥 核心 1: 缓冲区机制 (都在这儿) ===
         const reader = res.body.getReader();
         const decoder = new TextDecoder("utf-8");
-        let buffer = ""; // 缓冲区，专门用来存“半截”的数据
+        let buffer = "";
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
             
-            // 解码当前块并拼接到缓冲区
+            // 拼接数据
             buffer += decoder.decode(value, { stream: true });
-            
-            // 按换行符切割
             const lines = buffer.split('\n');
-            
-            // ⚠️ 关键：最后一行可能是不完整的，必须留到下一次循环处理
-            // 所以我们只处理到倒数第二行，最后一行重新塞回 buffer
-            buffer = lines.pop(); 
+            buffer = lines.pop(); // 保留未完成的半截数据
 
             for (const line of lines) {
                 const trimmed = line.trim();
-                if (!trimmed) continue; // 跳过空行
-                if (trimmed === 'data: [DONE]') continue; // 结束标志
+                if (!trimmed || trimmed === 'data: [DONE]') continue;
 
-                // 处理 'data: ' 前缀
                 if (trimmed.startsWith('data: ')) {
                     try {
                         const jsonStr = trimmed.replace('data: ', '');
                         const json = JSON.parse(jsonStr);
                         
-                        // 兼容不同的字段结构 (delta.content 或 message.content)
+                        // === 🔥 核心 2: 宽容读取 (都在这儿) ===
                         const delta = json.choices[0].delta?.content || json.choices[0].message?.content || "";
                         
                         if (delta) {
                             fullText += delta;
-                            // 实时更新 UI
+                            // 实时显示，让字蹦出来
                             aiUiBox.innerHTML = fullText.replace(/\n/g, '<br>');
                             
-                            // 自动滚动
                             const stage = document.getElementById('theater-stage');
                             if(stage) stage.scrollTop = stage.scrollHeight;
                         }
-                    } catch (e) {
-                        // 如果解析失败，说明这一行数据有问题，在控制台打印出来看看
-                        console.warn("解析跳过:", trimmed, e);
+                    } catch (e) { 
+                        // 忽略单行解析错误
                     }
                 }
             }
         }
 
-        // 循环结束后，处理正则和保存
-        // (如果有残留 buffer 也可以在这里尝试处理，一般流式结束时 buffer 应该是空的或无用数据)
+        if (!fullText) throw new Error("收到空回复");
+
+        // === 🔥 核心 3: 正则回滚保护 (防止瞬间消失) ===
+        // 先备份原始文本
+        const originalText = fullText;
         
-        // 如果完全没收到内容（比如反代虽然连接成功但没发有效数据）
-        if (!fullText) {
-            throw new Error("收到空回复 (可能反代不支持流式或模型未输出)");
+        // 尝试应用正则
+        let processedText = runRegex(fullText, 'output');
+        
+        // 判断：如果原本有字，处理后却没了，说明正则有问题！
+        if (!processedText && originalText.length > 5) {
+            console.warn("⚠️ 触发保护机制：正则处理导致内容丢失，已回滚到原文。");
+            processedText = originalText; // 强制回滚
         }
+        
+        fullText = processedText;
 
-        fullText = runRegex(fullText, 'output');
+        // 最终更新
         aiUiBox.innerHTML = fullText.replace(/\n/g, '<br>');
-
         theaterState.logs.push({ role: 'assistant', content: fullText });
         saveTheaterLogs();
 
@@ -10930,6 +10928,7 @@ async function testTheaterConnection() {
     </script>
 </body>
 </html>
+
 
 
 
