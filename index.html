@@ -10307,137 +10307,228 @@ function parseSillyTavernJSON(json, fileName) {
     }
 }
 
-// 3. UI 渲染器：把数据画到控制台里
+// ========================================================
+// 🛠️ 升级版：渲染控制台 (支持世界书编辑 + 新增按钮)
+// ========================================================
 function renderConsoleUI() {
     const p = theaterState.preset;
     document.getElementById('t-current-preset-name').innerText = p.name;
 
-    // --- A. 渲染核心列表 (只读展示) ---
+    // --- A. 核心列表 (Core) ---
     const coreList = document.getElementById('t-core-list');
-    coreList.innerHTML = '';
-    p.core.forEach(item => {
-        coreList.innerHTML += `
+    if (coreList) {
+        coreList.innerHTML = '';
+        p.core.forEach(item => {
+            coreList.innerHTML += `
             <div class="t-item-row" style="opacity:0.7;">
                 <span class="t-item-name" style="font-size:12px;">🔒 ${item.name}</span>
                 <span style="font-size:10px; color:#34c759;">已装载</span>
             </div>`;
-    });
+        });
+    }
 
-    // --- B. 渲染文风列表 (单选 Radio) ---
+    // --- B. 文风列表 (Style) ---
     const styleList = document.getElementById('t-style-list');
-    styleList.innerHTML = '';
-    if(p.styles.length === 0) styleList.innerHTML = '<div class="t-tip">无文风选项</div>';
-    
-    p.styles.forEach(item => {
-        const isActive = (item.id === p.activeStyleId);
-        const div = document.createElement('div');
-        div.className = `t-item-row ${isActive ? 'active' : ''}`;
-        div.onclick = () => selectTheaterStyle(item.id);
-        div.innerHTML = `
-            <span class="t-item-name">${item.name}</span>
-            <div class="t-radio-check"></div>
-        `;
-        styleList.appendChild(div);
-    });
+    if (styleList) {
+        styleList.innerHTML = '';
+        if (p.styles.length === 0) styleList.innerHTML = '<div class="t-tip">无文风选项</div>';
+        p.styles.forEach(item => {
+            const isActive = (item.id === p.activeStyleId);
+            const div = document.createElement('div');
+            div.className = `t-item-row ${isActive ? 'active' : ''}`;
+            div.onclick = () => selectTheaterStyle(item.id);
+            div.innerHTML = `<span class="t-item-name">${item.name}</span><div class="t-radio-check"></div>`;
+            styleList.appendChild(div);
+        });
+    }
 
-    // --- C. 渲染小剧场列表 (开关 Toggle) ---
+    // --- C. 小剧场列表 (Modules) ---
     const moduleList = document.getElementById('t-module-list');
-    moduleList.innerHTML = '';
-    if(p.modules.length === 0) moduleList.innerHTML = '<div class="t-tip">无小剧场模块</div>';
-
-    p.modules.forEach(item => {
-        // 检查这个 ID 是否在激活列表里
-        const isActive = p.activeModules.includes(item.id);
-        const div = document.createElement('div');
-        div.className = 't-item-row';
-        div.onclick = () => toggleTheaterModule(item.id);
-        
-        // 简单的开关样式
-        const toggleColor = isActive ? '#34c759' : '#444';
-        const togglePos = isActive ? '22px' : '2px';
-        
-        div.innerHTML = `
+    if (moduleList) {
+        moduleList.innerHTML = '';
+        if (p.modules.length === 0) moduleList.innerHTML = '<div class="t-tip">无小剧场模块</div>';
+        p.modules.forEach(item => {
+            const isActive = p.activeModules.includes(item.id);
+            const div = document.createElement('div');
+            div.className = 't-item-row';
+            div.onclick = () => toggleTheaterModule(item.id);
+            const toggleColor = isActive ? '#34c759' : '#444';
+            const togglePos = isActive ? '22px' : '2px';
+            div.innerHTML = `
             <span class="t-item-name" style="${isActive ? 'color:#fff' : ''}">${item.name}</span>
             <div style="width:40px; height:22px; background:${toggleColor}; border-radius:11px; position:relative; transition:0.2s;">
                 <div style="width:18px; height:18px; background:#fff; border-radius:50%; position:absolute; top:2px; left:${togglePos}; transition:0.2s;"></div>
-            </div>
-        `;
-        moduleList.appendChild(div);
-    });
-    // --- D. 渲染世界书列表 ---
-const worldList = document.getElementById('t-world-list');
-worldList.innerHTML = '';
-if (!p.worldInfo || p.worldInfo.length === 0) {
-    worldList.innerHTML = '<div class="t-tip">未导入包含 World Info 的预设</div>';
-} else {
-    p.worldInfo.forEach((item, index) => {
-        // 样式逻辑：
-        // 灰色 = 未启用 (enabled=false)
-        // 白色 = 启用但未触发
-        // 绿色 = 当前已触发 (isActive=true)
-        // 黄色 = 强制激活 (forceActive=true)
+            </div>`;
+            moduleList.appendChild(div);
+        });
+    }
+
+    // --- D. 世界书列表 (World Info) - 升级版 ---
+    const worldList = document.getElementById('t-world-list');
+    if (worldList) {
+        worldList.innerHTML = '';
         
-        let color = '#888';
-        if (item.enabled) color = '#fff';
-        if (item.isActive) color = '#34c759'; // 绿
-        if (item.forceActive) color = '#ffcc00'; // 黄
+        // 1. 在列表顶部加一个“+ 新增”按钮
+        const addBtn = document.createElement('div');
+        addBtn.className = 't-upload-box';
+        addBtn.style.padding = "8px"; 
+        addBtn.style.marginBottom = "10px";
+        addBtn.style.borderStyle = "dashed";
+        addBtn.style.borderColor = "#007AFF";
+        addBtn.style.color = "#007AFF";
+        addBtn.innerText = "➕ 新建世界书条目";
+        addBtn.onclick = () => openWorldEditor(-1); // -1 代表新建
+        // 把它插入到 worldList 的前面？不，worldList 是容器，直接 append 进去作为第一个元素
+        worldList.appendChild(addBtn);
 
-        const div = document.createElement('div');
-        div.className = 't-item-row';
-        div.style.cursor = 'pointer';
-        // 点击切换“强制激活”状态
-        div.onclick = () => toggleWorldInfoForce(index);
-
-        div.innerHTML = `
-            <div style="flex:1; overflow:hidden;">
-                <div class="t-item-name" style="color:${color}; font-weight:${item.isActive||item.forceActive?'bold':'normal'}">
-                    ${item.comment}
-                </div>
-                <div style="font-size:10px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                    Keys: ${item.keys.join(', ')}
-                </div>
-            </div>
-            <div onclick="event.stopPropagation(); toggleWorldInfoEnable(${index})" 
-                 style="width:10px; height:10px; border-radius:50%; background:${item.enabled ? '#34c759':'#333'}; border:1px solid #555;">
-            </div>
-        `;
-        worldList.appendChild(div);
-    });
-}
-    // --- E. 渲染正则列表 ---
-    const regList = document.getElementById('t-regex-list');
-    if (regList) { // 确保元素存在防报错
-        regList.innerHTML = '';
-        if (!p.regexScripts || p.regexScripts.length === 0) {
-            regList.innerHTML = '<div class="t-tip">当前预设未包含正则脚本</div>';
+        if (!p.worldInfo || p.worldInfo.length === 0) {
+            const tip = document.createElement('div');
+            tip.className = 't-tip';
+            tip.innerText = '暂无条目，请导入或新建';
+            worldList.appendChild(tip);
         } else {
-            p.regexScripts.forEach((item, index) => {
-                // 判断作用域标签
-                let tags = [];
-                // 兼容 placement 为空的情况
-                let pl = item.placement || [1, 2];
-                if(pl.includes(1)) tags.push("输入"); // Input
-                if(pl.includes(2)) tags.push("输出"); // Output
+            p.worldInfo.forEach((item, index) => {
+                let color = '#888';
+                let statusText = "";
                 
+                if (item.enabled) {
+                    color = '#fff';
+                    if (item.forceActive) {
+                        color = '#ffcc00'; // 黄色 (常驻)
+                        statusText = "⚡";
+                    } else if (item.isActive) {
+                        color = '#34c759'; // 绿色 (触发)
+                        statusText = "🟢";
+                    }
+                }
+
                 const div = document.createElement('div');
                 div.className = 't-item-row';
-                // 点击开关
-                div.onclick = () => toggleRegexScript(index);
+                div.style.cursor = 'pointer';
+                
+                // 点击整行 -> 打开编辑
+                div.onclick = () => openWorldEditor(index);
 
                 div.innerHTML = `
-                    <div style="flex:1; overflow:hidden;">
-                        <div class="t-item-name" style="color:${item.disabled ? '#888' : '#fff'};">
-                            ${item.scriptName}
+                    <div style="flex:1; overflow:hidden; padding-right:10px;">
+                        <div class="t-item-name" style="color:${color}; font-weight:${item.isActive||item.forceActive?'bold':'normal'}; display:flex; align-items:center; gap:5px;">
+                            ${statusText} ${item.comment || '未命名'}
                         </div>
-                        <div style="font-size:10px; color:#666;">
-                            [${tags.join('/')}] <code>${item.regex.substring(0, 15)}...</code>
+                        <div style="font-size:10px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            ${item.keys.join(', ')}
                         </div>
                     </div>
-                    <div style="width:10px; height:10px; border-radius:50%; background:${item.disabled ? '#333' : '#34c759'}; border:1px solid #555;"></div>
+                    
+                    <div onclick="event.stopPropagation(); toggleWorldInfoEnable(${index})" 
+                         style="width:30px; height:18px; border-radius:9px; background:${item.enabled ? '#34c759':'#333'}; position:relative;">
+                         <div style="width:14px; height:14px; background:#fff; border-radius:50%; position:absolute; top:2px; left:${item.enabled?'14px':'2px'}; transition:0.2s;"></div>
+                    </div>
                 `;
-                regList.appendChild(div);
+                worldList.appendChild(div);
             });
         }
+    }
+
+    // --- E. 正则列表 ---
+    // (这部分保持原样，如果有的话)
+    const regList = document.getElementById('t-regex-list');
+    if (regList && p.regexScripts) {
+        regList.innerHTML = '';
+        p.regexScripts.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 't-item-row';
+            div.onclick = () => toggleRegexScript(index);
+            div.innerHTML = `
+                <div style="flex:1; overflow:hidden;">
+                    <div class="t-item-name" style="color:${item.disabled ? '#888' : '#fff'};">${item.scriptName}</div>
+                </div>
+                <div style="width:10px; height:10px; border-radius:50%; background:${item.disabled ? '#333' : '#34c759'}; border:1px solid #555;"></div>
+            `;
+            regList.appendChild(div);
+        });
+    }
+}
+
+// ========================================================
+// ✨ 新增逻辑：世界书编辑功能
+// ========================================================
+
+// 1. 打开编辑器 (index=-1 为新建)
+function openWorldEditor(index) {
+    const p = theaterState.preset;
+    const modal = document.getElementById('modal-world-edit');
+    
+    // 存索引
+    document.getElementById('we-index').value = index;
+
+    if (index === -1) {
+        // 新建模式：清空
+        document.getElementById('we-comment').value = "";
+        document.getElementById('we-keys').value = "";
+        document.getElementById('we-content').value = "";
+        document.getElementById('we-force').checked = false;
+    } else {
+        // 编辑模式：回显
+        const item = p.worldInfo[index];
+        document.getElementById('we-comment').value = item.comment || "";
+        document.getElementById('we-keys').value = item.keys.join(", ");
+        document.getElementById('we-content').value = item.content || "";
+        document.getElementById('we-force').checked = item.forceActive || false;
+    }
+
+    // 显示弹窗
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+// 2. 保存条目
+function saveWorldEntry() {
+    const index = parseInt(document.getElementById('we-index').value);
+    const comment = document.getElementById('we-comment').value.trim() || "未命名条目";
+    const keysStr = document.getElementById('we-keys').value.trim();
+    const content = document.getElementById('we-content').value;
+    const forceActive = document.getElementById('we-force').checked;
+
+    // 分割关键词 (支持中文逗号)
+    let keys = keysStr.split(/[,，]/).map(k => k.trim()).filter(k => k !== "");
+
+    const entry = {
+        id: (index === -1) ? ('wi_' + Date.now()) : theaterState.preset.worldInfo[index].id,
+        comment: comment,
+        keys: keys,
+        content: content,
+        enabled: true, // 保存即默认启用
+        forceActive: forceActive,
+        isActive: false
+    };
+
+    if (index === -1) {
+        // 新增
+        if (!theaterState.preset.worldInfo) theaterState.preset.worldInfo = [];
+        theaterState.preset.worldInfo.push(entry);
+    } else {
+        // 修改
+        theaterState.preset.worldInfo[index] = entry;
+    }
+
+    saveTheaterState(); // 保存到本地
+    renderConsoleUI();  // 刷新列表
+    closeModal('modal-world-edit');
+}
+
+// 3. 删除条目
+function deleteWorldEntry() {
+    const index = parseInt(document.getElementById('we-index').value);
+    if (index === -1) {
+        closeModal('modal-world-edit');
+        return;
+    }
+
+    if (confirm("确定要删除这个词条吗？")) {
+        theaterState.preset.worldInfo.splice(index, 1);
+        saveTheaterState();
+        renderConsoleUI();
+        closeModal('modal-world-edit');
     }
 }
         function toggleRegexScript(index) {
@@ -10937,9 +11028,58 @@ async function testTheaterConnection() {
         btn.disabled = false;
     }
 }
+        // ========================================================
+// 🛠️ 补丁：自动注入“世界书编辑弹窗” HTML
+// ========================================================
+(function injectWorldEditorModal() {
+    if (document.getElementById('modal-world-edit')) return; // 防止重复注入
+
+    const html = `
+    <div class="modal-overlay" id="modal-world-edit" style="z-index: 600;">
+        <div class="modal-box" style="height: 70%; background: #222; color: #eee; border: 1px solid #444;">
+            <div class="modal-header" style="background: #1a1a1a; border-bottom: 1px solid #333;">
+                <button onclick="closeModal('modal-world-edit')" style="color:#999;">取消</button>
+                <span style="color:#fff; font-weight:bold;">编辑词条</span>
+                <button onclick="saveWorldEntry()" style="color:#007AFF; font-weight:bold;">保存</button>
+            </div>
+            <div class="modal-body" style="padding: 15px; background: #222;">
+                <input type="hidden" id="we-index">
+                
+                <div style="margin-bottom:15px;">
+                    <div style="font-size:12px; color:#888; margin-bottom:5px;">词条名称 (注释)</div>
+                    <input type="text" id="we-comment" class="t-input" placeholder="例如: 此时的地点 / 也就是个备注">
+                </div>
+
+                <div style="margin-bottom:15px;">
+                    <div style="font-size:12px; color:#888; margin-bottom:5px;">触发关键词 (逗号分隔)</div>
+                    <input type="text" id="we-keys" class="t-input" placeholder="例如: 厨房, 做饭, 冰箱">
+                </div>
+
+                <div style="margin-bottom:15px; flex:1; display:flex; flex-direction:column;">
+                    <div style="font-size:12px; color:#888; margin-bottom:5px;">内容 (Prompt)</div>
+                    <textarea id="we-content" class="t-input" style="flex:1; min-height:150px; line-height:1.5;" placeholder="当检测到关键词时，这段话会被注入给 AI..."></textarea>
+                </div>
+
+                <div style="display:flex; gap:15px; border-top:1px solid #333; padding-top:15px;">
+                    <label style="display:flex; align-items:center; gap:5px; color:#ccc; font-size:14px;">
+                        <input type="checkbox" id="we-force" style="width:16px; height:16px;"> 强制一直生效 (常驻)
+                    </label>
+                </div>
+
+                <button onclick="deleteWorldEntry()" style="width:100%; margin-top:20px; padding:12px; background:#3a1111; color:#ff3b30; border:1px solid #521818; border-radius:8px;">
+                    删除此条目
+                </button>
+            </div>
+        </div>
+    </div>`;
+
+    // 插入到 body 末尾
+    document.body.insertAdjacentHTML('beforeend', html);
+})();
     </script>
 </body>
 </html>
+
 
 
 
