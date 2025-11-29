@@ -10686,34 +10686,37 @@ function toggleWorldInfoEnable(index) {
     saveTheaterState();
     renderConsoleUI();
 }
-        // === 🧩 正则处理引擎 ===
+        // === 🧩 正则处理引擎 (最终修复版) ===
 function runRegex(text, placementType) {
+    // 补丁1：防止 theaterState.preset 还没加载好就运行导致报错
+    if (!theaterState.preset || !theaterState.preset.regexScripts) return text;
+    // 补丁2：防止传入的 text 不是字符串 (比如是 null) 导致 replace 报错
+    if (typeof text !== 'string') return text;
+
     const scripts = theaterState.preset.regexScripts;
-    if (!scripts || scripts.length === 0) return text;
+    if (scripts.length === 0) return text;
 
     let processedText = text;
 
     scripts.forEach(script => {
-        // 1. 检查开关
         if (script.disabled) return;
         
-        // 2. 检查作用域 (输入还是输出?)
-        // 这里我们定义: 'input'=1, 'output'=2
         const targetEnum = placementType === 'input' ? 1 : 2;
+        // 兼容 placement 可能为空的情况
+        const pl = script.placement || [1, 2];
         
-        // 如果脚本的作用域包含当前环节，就执行
-        if (script.placement && script.placement.includes(targetEnum)) {
+        if (pl.includes(targetEnum)) {
             try {
-                // 3. 执行替换
-                // g=全局替换, i=忽略大小写, m=多行模式
-                const re = new RegExp(script.regex, 'gim');
-                // 如果 replacement 是 null/undefined，就替换为空字符串
-                const replaceStr = script.replacement === undefined ? "" : script.replacement;
-                
-                processedText = processedText.replace(re, replaceStr);
-                
+                // 🔥 核心修复：必须检查 regex 是否存在！
+                // 只有当 script.regex 有内容时，才去创建正则对象
+                if (script.regex) {
+                    const re = new RegExp(script.regex, 'gim');
+                    const replaceStr = script.replacement === undefined ? "" : script.replacement;
+                    processedText = processedText.replace(re, replaceStr);
+                }
             } catch (e) {
-                console.warn(`正则脚本 [${script.scriptName}] 执行出错:`, e);
+                // 即使出错了，也只打印日志，绝对不中断程序运行
+                console.warn(`正则脚本 [${script.scriptName}] 运行跳过:`, e);
             }
         }
     });
@@ -10723,6 +10726,7 @@ function runRegex(text, placementType) {
     </script>
 </body>
 </html>
+
 
 
 
