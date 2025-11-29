@@ -2709,6 +2709,27 @@ select.x-input option {
                 <input type="text" id="t-model" class="t-input" placeholder="Model ID (推荐 Claude 3.5 / GPT-4)">
                 <div class="t-tip">* 如果留空，将默认使用手机全局设置。</div>
             </div>
+            <div id="tab-connect" class="t-tab-content" style="display:block;">
+                <div class="t-group-title">独立 API 设置 (仅剧场生效)</div>
+                <input type="text" id="t-api-url" class="t-input" placeholder="API URL (例如: https://api.openai.com/v1)">
+                <input type="password" id="t-api-key" class="t-input" placeholder="sk-...">
+                
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <button onclick="fetchTheaterModels()" style="flex:1; padding:10px; background:#333; color:#fff; border:1px solid #555; border-radius:6px; cursor:pointer;">
+                        ⬇️ 拉取模型
+                    </button>
+                    <button onclick="testTheaterConnection()" style="flex:1; padding:10px; background:#007AFF; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">
+                        ✅ 测试连接
+                    </button>
+                </div>
+
+                <div id="t-model-select-box" style="display:none; margin-bottom:10px;">
+                    <select id="t-model-select" class="t-input" onchange="document.getElementById('t-model').value = this.value">
+                        </select>
+                </div>
+                <input type="text" id="t-model" class="t-input" placeholder="Model ID (推荐 Claude 3.5 / GPT-4)">
+                <div class="t-tip">* 如果留空，将默认使用手机全局设置。</div>
+            </div>
 
             <!-- Tab 2: 预设导入 (核心) -->
             <div id="tab-presets" class="t-tab-content">
@@ -10739,9 +10760,116 @@ function runRegex(text, placementType) {
 
     return processedText;
 }
+        // === 📡 功能 1：只拉取模型列表 ===
+async function fetchTheaterModels() {
+    const urlInput = document.getElementById('t-api-url');
+    const keyInput = document.getElementById('t-api-key');
+    const btn = event.target; 
+
+    let apiUrl = urlInput.value.trim();
+    let apiKey = keyInput.value.trim();
+
+    if (!apiUrl || !apiKey) return alert("请先填入 API URL 和 Key！");
+
+    const oldText = btn.innerText;
+    btn.innerText = "⏳...";
+    btn.disabled = true;
+
+    try {
+        const cleanUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+        const res = await fetch(cleanUrl + '/models', {
+            method: 'GET',
+            headers: { "Authorization": "Bearer " + apiKey }
+        });
+
+        if (!res.ok) throw new Error("拉取失败 (Code: " + res.status + ")");
+
+        const data = await res.json();
+        let list = data.data || data.models || []; // 兼容 OpenAI/Google
+
+        if (!Array.isArray(list)) throw new Error("格式错误，未找到列表");
+
+        const select = document.getElementById('t-model-select');
+        select.innerHTML = '<option value="" disabled selected>👇 请选择模型...</option>';
+
+        list.sort((a, b) => a.id.localeCompare(b.id));
+        list.forEach(m => {
+            const id = m.id.replace('models/', '');
+            if (id.includes('embedding')) return;
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.innerText = id;
+            select.appendChild(opt);
+        });
+
+        document.getElementById('t-model-select-box').style.display = 'block';
+        // 成功提示
+        if(navigator.vibrate) navigator.vibrate(50);
+
+    } catch (e) {
+        alert("❌ " + e.message);
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
+
+// === 📡 功能 2：真实对话测试 (验证模型可用性) ===
+async function testTheaterConnection() {
+    const urlInput = document.getElementById('t-api-url');
+    const keyInput = document.getElementById('t-api-key');
+    const modelInput = document.getElementById('t-model');
+    const btn = event.target;
+
+    let apiUrl = urlInput.value.trim();
+    let apiKey = keyInput.value.trim();
+    let model = modelInput.value.trim();
+
+    if (!apiUrl || !apiKey) return alert("缺 URL 或 Key！");
+    if (!model) return alert("请先【拉取模型】并选择一个 Model ID！");
+
+    const oldText = btn.innerText;
+    btn.innerText = "测试中...";
+    btn.disabled = true;
+
+    try {
+        const cleanUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+        
+        // 发送一个极简的请求
+        const res = await fetch(cleanUrl + '/chat/completions', {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authorization": "Bearer " + apiKey 
+            },
+            body: JSON.stringify({
+                model: model,
+                messages: [{ role: "user", content: "Hi" }],
+                max_tokens: 5 // 省钱，只测通不通
+            })
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(`错误 ${res.status}: ${errData.error?.message || res.statusText}`);
+        }
+
+        // 成功！
+        const data = await res.json();
+        const reply = data.choices?.[0]?.message?.content || "OK";
+        alert(`🎉 测试通过！\n模型 [${model}] 响应正常。\n回复: ${reply}`);
+
+    } catch (e) {
+        alert("❌ 连接失败:\n" + e.message);
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
     </script>
 </body>
 </html>
+
 
 
 
