@@ -4155,8 +4155,8 @@ function removeGoogleKey(index) {
         renderGoogleKeyList();
     }
 }
-        // --- ✨ 新增：切换 API 供应商逻辑 ✨ ---
-        function toggleApiProvider() {
+        // --- ✨ 新增：切换 API 供应商逻辑 (完整版) ✨ ---
+function toggleApiProvider() {
     const provider = document.getElementById('apiProvider').value;
     const urlInput = document.getElementById('apiUrl');
     
@@ -4166,12 +4166,11 @@ function removeGoogleKey(index) {
 
     if (provider === 'google') {
         // --- Google 模式 ---
-        // 1. 强制覆盖为 Google 地址
         urlInput.value = "https://generativelanguage.googleapis.com/v1beta/openai";
         urlInput.disabled = true;
         urlInput.style.color = "#999"; 
         
-        // 2. 显示多Key管理器，隐藏单Key
+        // 显示多Key，隐藏单Key
         googleMgr.style.display = 'block';
         singleKeyContainer.style.display = 'none';
         
@@ -4181,18 +4180,19 @@ function removeGoogleKey(index) {
         urlInput.disabled = false;
         urlInput.style.color = "#007AFF";
         
-        // 🔥🔥🔥 核心修改：切回来时，优先恢复“备份”的地址 🔥🔥🔥
-        // 如果有 savedCustomUrl 就用它，没有就用默认的 OpenAI
+        // 恢复备份的 URL
         urlInput.value = globalConfig.savedCustomUrl || "https://api.openai.com/v1";
         
-        // 3. 隐藏多Key管理器，显示单Key
+        // 隐藏多Key，显示单Key
         googleMgr.style.display = 'none';
         singleKeyContainer.style.display = 'flex';
         document.getElementById('apiKey').placeholder = "sk-...";
     }
     
-    // 保存当前状态（防止刷新后重置）
+    // 保存当前状态
     saveGlobalConfig();
+} 
+// ⬆️ 看到这个花括号了吗？你之前就是少了它！现在补上了。
 
         // --- 美化/主题系统 (终极版: 图标+字体+壁纸) ---
     let themeConfig = {
@@ -11819,6 +11819,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
