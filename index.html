@@ -3825,19 +3825,18 @@ let globalAudioPass = new Audio();
                 聊天记录：
                 ${textBlock}`;
 
-                const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-                    method: "POST",
-                    headers: { "Authorization": "Bearer " + globalConfig.apiKey, "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        model: globalConfig.model,
-                        messages: [
-                            { role: "system", content: "你是一个擅长模仿人类情感和内心戏的小说家。" },
-                            { role: "user", content: prompt }
-                        ]
-                    })
-                });
-                const data = await res.json();
-                const diaryEntry = data.choices[0].message.content;
+                // ✅ 正确写法：fetchWithRetry 不需要 method 和 headers，直接传数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [
+        { role: "system", content: "你是一个擅长模仿人类情感和内心戏的小说家。" },
+        { role: "user", content: prompt }
+    ]
+});
+
+// fetchWithRetry 返回的就是 fetch 的结果，所以后面这些都不用动
+const data = await res.json();
+const diaryEntry = data.choices[0].message.content;
                 
                 // 存入日记数组
                 char.diaries.push(diaryEntry);
@@ -4798,18 +4797,15 @@ async function generateDiaryReply(char, userDiaryContent) {
     `;
 
     try {
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [
-                    { role: "system", content: "你是一个正在写日记的角色。" },
-                    { role: "user", content: prompt }
-                ],
-                temperature: 0.8
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [
+        { role: "system", content: "你是一个正在写日记的角色。" },
+        { role: "user", content: prompt }
+    ],
+    temperature: 0.8
+});
 
         const data = await res.json();
         const reply = data.choices[0].message.content;
@@ -5169,18 +5165,15 @@ async function triggerPomoAI(reason) {
     if(reason === "finish") userTrigger = "计时结束了！夸奖我！";
 
     try {
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [
-                    { role: "system", content: systemInstruction },
-                    { role: "user", content: userTrigger }
-                ],
-                temperature: 0.7
-            })
-        });
+       // ✅ 正确写法：去掉 method, headers 和 stringify，只留纯数据
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [
+        { role: "system", content: systemInstruction },
+        { role: "user", content: userTrigger }
+    ],
+    temperature: 0.7
+});
         
         const data = await res.json();
         const reply = data.choices[0].message.content;
@@ -5307,20 +5300,16 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
             content: m.content 
         }));
 
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [
-                    { role: "system", content: char.systemPrompt },
-                    ...history,
-                    // 【核心修改】将 role 改为 user，强制模型必须回应，防止空回
-                    { role: "user", content: backfillPrompt }
-                ],
-                temperature: 0.85 
-            })
-        });
+        // ✅ 正确写法：去掉 method, headers 和 stringify，只留纯数据
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [
+        { role: "system", content: char.systemPrompt },
+        ...history,
+        { role: "user", content: backfillPrompt }
+    ],
+    temperature: 0.85
+});
         
         if (!res.ok) {
             throw new Error(`API error: ${res.status}`);
@@ -5656,15 +5645,12 @@ async function checkAndSendHolidayGreeting(char) {
             { role: "user", content: greetingPrompt }
         ];
 
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: msgs,
-                temperature: 0.85
-            })
-        });
+       // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: msgs,
+    temperature: 0.85
+});
 
         if (!res.ok) {
             throw new Error(`网络错误: ${res.status}`);
@@ -6361,15 +6347,12 @@ async function generateXTweetAI(charId) {
     }`;
 
     try {
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [{ role: "user", content: prompt }],
-                temperature: 0.9
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.9
+});
         const data = await res.json();
         const result = JSON.parse(data.choices[0].message.content.replace(/```json|```/g, '').trim());
         
@@ -6423,18 +6406,15 @@ async function generateFanOrNPCTweetAI(type) {
     }
 
     try {
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [
-                    { role: "system", content: "你是一个推特模拟生成器。请只返回纯 JSON 格式: {name, handle, content}。" },
-                    { role: "user", content: systemInstruction }
-                ],
-                temperature: 0.95
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [
+        { role: "system", content: "你是一个推特模拟生成器。请只返回纯 JSON 格式: {name, handle, content}。" },
+        { role: "user", content: systemInstruction }
+    ],
+    temperature: 0.95
+});
 
         const data = await res.json();
         let aiText = data.choices[0].message.content;
@@ -6485,15 +6465,12 @@ async function generateFanOrNPCCommentForUser(tweetId) {
     必须返回纯JSON数组：[{"name": "网名", "content": "内容"}, ...]`;
 
     try {
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [{ role: "user", content: prompt }],
-                temperature: 0.9
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.9
+});
         const data = await res.json();
         const comments = JSON.parse(data.choices[0].message.content.replace(/```json|```/g, '').trim());
         
@@ -6711,14 +6688,11 @@ async function triggerDetailAiReply(tweet, userComment) {
     if(!systemPrompt) { btn.innerText="回复"; return; }
 
     try {
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [{ role: "user", content: systemPrompt }]
-            })
-        });
+        // ✅ 正确写法：
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [{ role: "user", content: systemPrompt }]
+});
         const data = await res.json();
         const replyText = data.choices[0].message.content;
 
@@ -6904,14 +6878,11 @@ async function generateCharacterCommentForUser(tweetId) {
     `;
 
     try {
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [{ role: "user", content: prompt }]
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [{ role: "user", content: prompt }]
+});
         const data = await res.json();
         const replyText = data.choices[0].message.content;
 
@@ -7363,14 +7334,11 @@ async function generateChapterSummary() {
 
         // 注意：这里 model 用的是你设置里的全局 model。
         // 建议在设置里填支持长文本的模型，如 gpt-3.5-turbo-16k 或 gpt-4o
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model, // 确保这个模型能吃得下几千字
-                messages: [{ role: "user", content: prompt }]
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model, // 确保这个模型能吃得下几千字
+    messages: [{ role: "user", content: prompt }]
+});
         
         if (!res.ok) {
             const errData = await res.json();
@@ -7477,14 +7445,11 @@ async function manualShareReport() {
         3. 字数控制在 100 字以内。
         `;
 
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [{ role: "user", content: prompt }]
-            })
-        });
+        // ✅ 修复版：移除 method/headers/body，只传纯数据
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [{ role: "user", content: prompt }]
+});
 
         const data = await res.json();
         const aiSummary = data.choices[0].message.content;
@@ -7626,14 +7591,11 @@ async function sendReaderMsg() {
     btn.innerText = "⏳";
 
     try {
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: apiMessages // 使用包含历史的数组
-            })
-        });
+       // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: apiMessages // 使用包含历史的数组
+});
         const data = await res.json();
         const reply = data.choices[0].message.content;
 
@@ -8888,15 +8850,12 @@ async function triggerCallAI(userText) {
     ];
 
     try {
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: apiMessages, // 发送完整的上下文
-                temperature: 0.8
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: apiMessages, // 发送完整的上下文
+    temperature: 0.8
+});
         const data = await res.json();
         const reply = data.choices[0].message.content;
 
@@ -9203,14 +9162,11 @@ async function submitFicRequest() {
     `;
 
     try {
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [{ role: "user", content: prompt }]
-            })
-        });
+        // ✅ 粘贴这段新的 (注意没有 headers, 没有 stringify)
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [{ role: "user", content: prompt }]
+});
         
         const data = await res.json();
         let jsonStr = data.choices[0].message.content;
@@ -11842,6 +11798,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
