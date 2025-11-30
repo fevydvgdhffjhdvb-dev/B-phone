@@ -11751,7 +11751,7 @@ function deleteArchive(index) {
     }
 }
         // ==========================================
-// --- 🎭 剧场模式：重刷功能 (Reroll) ---
+// --- 🎭 剧场模式：重刷功能 (智能容错版) ---
 // ==========================================
 
 async function rerollTheaterMsg() {
@@ -11761,32 +11761,39 @@ async function rerollTheaterMsg() {
     
     if (!logs || logs.length === 0) return;
 
-    // 2. 检查最后一条消息是谁发的
+    // 2. 获取最后一条消息
     const lastMsg = logs[logs.length - 1];
     
-    // 如果最后一条是用户发的，或者已经有了系统存档，就不让重刷了，防止逻辑错乱
-    if (lastMsg.role !== 'assistant') {
-        return alert("只能重刷 AI 的最后一条回复哦。");
+    // === 核心修改逻辑 ===
+    
+    // 情况 A: 最后一条是 AI 发的 (或者系统报错信息)
+    // -> 也就是你要“推倒重来”，需要先删掉这一条
+    if (lastMsg.role === 'assistant') {
+        // 删除数据
+        logs.pop(); 
+        saveTheaterLogs();
+
+        // 删除界面上的气泡
+        const stage = document.getElementById('theater-stage');
+        const blocks = stage.querySelectorAll('.t-msg-block');
+        if (blocks.length > 0) {
+            blocks[blocks.length - 1].remove();
+        }
+    }
+    
+    // 情况 B: 最后一条是 User 发的 (说明上次请求彻底失败了，连记录都没留下)
+    // -> 不需要删任何东西，直接让 AI 再试一次就行
+
+    // 情况 C: 如果删完 AI 消息后，发现上一条不是 User (比如是系统提示)，那也没法接话
+    // 稍微检查一下现在的“最后一条”
+    const newLast = logs[logs.length - 1];
+    if (!newLast || newLast.role === 'system') {
+        // 虽然通常不会发生，但也防一手
+        // 如果你想让它强行续写系统提示，也可以去掉这个 return
+        return alert("找不到上一条用户发言，无法重刷。");
     }
 
-    // 3. 确认操作 (为了流畅体验，这里我不加 confirm 弹窗了，直接刷)
-    // 如果你想要防误触，可以把下面这行注释解开：
-    // if (!confirm("确定要让它重新演这一段吗？")) return;
-
-    // 4. 执行删除 (数据层)
-    logs.pop(); // 删掉最后一条
-    saveTheaterLogs(); // 保存更改
-
-    // 5. 执行删除 (UI层)
-    const stage = document.getElementById('theater-stage');
-    // 移除最后一个 .t-msg-block
-    const blocks = stage.querySelectorAll('.t-msg-block');
-    if (blocks.length > 0) {
-        blocks[blocks.length - 1].remove();
-    }
-
-    // 6. 重新生成
-    // 获取当前剧本对应的角色
+    // 3. 重新召唤 AI
     const script = allScripts.find(s => s.id === theaterState.currentScriptId);
     if (script) {
         const char = contacts.find(c => c.id === script.charId);
@@ -11798,6 +11805,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
