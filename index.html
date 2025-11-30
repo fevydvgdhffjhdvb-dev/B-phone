@@ -3825,7 +3825,7 @@ let globalAudioPass = new Audio();
                 聊天记录：
                 ${textBlock}`;
 
-                const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+                const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
                     method: "POST",
                     headers: { "Authorization": "Bearer " + globalConfig.apiKey, "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -4798,7 +4798,7 @@ async function generateDiaryReply(char, userDiaryContent) {
     `;
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -5169,7 +5169,7 @@ async function triggerPomoAI(reason) {
     if(reason === "finish") userTrigger = "计时结束了！夸奖我！";
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -5307,7 +5307,7 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
             content: m.content 
         }));
 
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -5656,7 +5656,7 @@ async function checkAndSendHolidayGreeting(char) {
             { role: "user", content: greetingPrompt }
         ];
 
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -6361,7 +6361,7 @@ async function generateXTweetAI(charId) {
     }`;
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -6423,7 +6423,7 @@ async function generateFanOrNPCTweetAI(type) {
     }
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -6485,7 +6485,7 @@ async function generateFanOrNPCCommentForUser(tweetId) {
     必须返回纯JSON数组：[{"name": "网名", "content": "内容"}, ...]`;
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -6711,7 +6711,7 @@ async function triggerDetailAiReply(tweet, userComment) {
     if(!systemPrompt) { btn.innerText="回复"; return; }
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -6904,7 +6904,7 @@ async function generateCharacterCommentForUser(tweetId) {
     `;
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -7363,7 +7363,7 @@ async function generateChapterSummary() {
 
         // 注意：这里 model 用的是你设置里的全局 model。
         // 建议在设置里填支持长文本的模型，如 gpt-3.5-turbo-16k 或 gpt-4o
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -7477,7 +7477,7 @@ async function manualShareReport() {
         3. 字数控制在 100 字以内。
         `;
 
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -7626,7 +7626,7 @@ async function sendReaderMsg() {
     btn.innerText = "⏳";
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -8888,7 +8888,7 @@ async function triggerCallAI(userText) {
     ];
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -9203,7 +9203,7 @@ async function submitFicRequest() {
     `;
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
             body: JSON.stringify({
@@ -11015,21 +11015,34 @@ async function triggerTheaterAI(char) {
             { role: "user", content: finalUserContent }
         ];
 
-        // 4. 发起请求 (强制开启流式)
-        const res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json", 
-                "Authorization": "Bearer " + apiKey 
-            },
-            body: JSON.stringify({
-                model: model,
-                messages: messagesToSend,
-                temperature: 1.0, 
-                stream: true 
-            })
-        });
+        // 1. 先定义好请求内容 (Payload)，避免重复写
+        const requestPayload = {
+            model: model,
+            messages: messagesToSend,
+            temperature: 1.0, 
+            stream: true 
+        };
 
+        let res; // 声明响应变量
+
+        // 2. 智能判断逻辑 🔥
+        // 情况 A: 剧场有独立 Key -> 使用原生 fetch (直连，保持独立性)
+        if (theaterState.config.apiKey) {
+            res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json", 
+                    "Authorization": "Bearer " + apiKey 
+                },
+                body: JSON.stringify(requestPayload)
+            });
+        } 
+        // 情况 B: 剧场没填 Key (想用全局) -> 使用 fetchWithRetry (自动去 Google 钥匙包里找)
+        else {
+            res = await fetchWithRetry(normalizeUrl(apiUrl) + '/chat/completions', requestPayload);
+        }
+
+        // 3. 错误处理 (保持原样)
         if (!res.ok) {
             const errText = await res.text();
             throw new Error(`API请求失败 ${res.status}: ${errText.substring(0, 100)}`);
@@ -11829,6 +11842,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
