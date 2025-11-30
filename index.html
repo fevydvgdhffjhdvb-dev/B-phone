@@ -4018,17 +4018,27 @@ const diaryEntry = data.choices[0].message.content;
 }
         
         function saveGlobalConfig() {
-            globalConfig.provider = document.getElementById('apiProvider').value;
-            globalConfig.apiUrl = document.getElementById('apiUrl').value;
-            globalConfig.apiKey = document.getElementById('apiKey').value;
-            globalConfig.model = document.getElementById('modelId').value;
-            globalConfig.temp = document.getElementById('tempVal').value;
-            globalConfig.historyLimit = parseInt(document.getElementById('historyLimit').value) || 20;
-            globalConfig.xiApiKey = document.getElementById('xiApiKey').value;
+    const provider = document.getElementById('apiProvider').value;
+    const urlVal = document.getElementById('apiUrl').value; // 获取当前填写的 URL
+
+    globalConfig.provider = provider;
+    globalConfig.apiUrl = urlVal;
+    
+    // 🔥🔥🔥 核心修改：如果是自定义模式，把 URL 单独存一份“备份” 🔥🔥🔥
+    if (provider === 'custom') {
+        globalConfig.savedCustomUrl = urlVal;
+    }
+
+    globalConfig.apiKey = document.getElementById('apiKey').value;
+    globalConfig.model = document.getElementById('modelId').value;
+    globalConfig.temp = document.getElementById('tempVal').value;
+    globalConfig.historyLimit = parseInt(document.getElementById('historyLimit').value) || 20;
+    globalConfig.xiApiKey = document.getElementById('xiApiKey').value;
     globalConfig.xiVoiceId = document.getElementById('xiVoiceId').value;
-            globalConfig.xiModelId = document.getElementById('xiModelId').value;
-            saveData();
-        }
+    globalConfig.xiModelId = document.getElementById('xiModelId').value;
+    
+    saveData();
+}
         // --- Google Key 管理系统 ---
 
 // 1. 渲染列表
@@ -4145,39 +4155,42 @@ function removeGoogleKey(index) {
         renderGoogleKeyList();
     }
 }
-        // --- ✨ 新增：切换 API 供应商逻辑 ✨ ---
-function toggleApiProvider() {
+        // --- ✨ 新增：切换 API 供应商逻辑 ✨ ---function toggleApiProvider() {
     const provider = document.getElementById('apiProvider').value;
     const urlInput = document.getElementById('apiUrl');
-    // 获取原来的单 Key 输入框，Google 模式下我们要隐藏它
+    
+    // 获取原来的单 Key 输入框 和 Google 管理器
     const singleKeyContainer = document.getElementById('apiKey').closest('.ios-item');
     const googleMgr = document.getElementById('googleKeyManager');
 
     if (provider === 'google') {
-        // Google 模式
+        // --- Google 模式 ---
+        // 1. 强制覆盖为 Google 地址
         urlInput.value = "https://generativelanguage.googleapis.com/v1beta/openai";
         urlInput.disabled = true;
         urlInput.style.color = "#999"; 
         
-        // 显示多Key管理器，隐藏单Key输入框
+        // 2. 显示多Key管理器，隐藏单Key
         googleMgr.style.display = 'block';
         singleKeyContainer.style.display = 'none';
         
-        // 渲染列表
         renderGoogleKeyList();
     } else {
-        // 自定义模式
+        // --- 自定义模式 ---
         urlInput.disabled = false;
         urlInput.style.color = "#007AFF";
-        if (urlInput.value.includes("googleapis.com")) {
-            urlInput.value = "https://api.openai.com/v1";
-        }
         
-        // 隐藏多Key管理器，显示单Key输入框
+        // 🔥🔥🔥 核心修改：切回来时，优先恢复“备份”的地址 🔥🔥🔥
+        // 如果有 savedCustomUrl 就用它，没有就用默认的 OpenAI
+        urlInput.value = globalConfig.savedCustomUrl || "https://api.openai.com/v1";
+        
+        // 3. 隐藏多Key管理器，显示单Key
         googleMgr.style.display = 'none';
         singleKeyContainer.style.display = 'flex';
         document.getElementById('apiKey').placeholder = "sk-...";
     }
+    
+    // 保存当前状态（防止刷新后重置）
     saveGlobalConfig();
 }
         // --- 美化/主题系统 (终极版: 图标+字体+壁纸) ---
@@ -11805,6 +11818,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
