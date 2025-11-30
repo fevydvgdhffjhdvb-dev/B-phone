@@ -4017,14 +4017,14 @@ const diaryEntry = data.choices[0].message.content;
     document.getElementById('xiModelId').value = globalConfig.xiModelId || "eleven_multilingual_v2";
 }
         
-        function saveGlobalConfig() {
+       function saveGlobalConfig() {
     const provider = document.getElementById('apiProvider').value;
     const urlVal = document.getElementById('apiUrl').value; // 获取当前填写的 URL
 
     globalConfig.provider = provider;
     globalConfig.apiUrl = urlVal;
     
-    // 🔥🔥🔥 核心修改：如果是自定义模式，把 URL 单独存一份“备份” 🔥🔥🔥
+    // 🔥 如果是自定义模式，把 URL 单独存一份“备份”
     if (provider === 'custom') {
         globalConfig.savedCustomUrl = urlVal;
     }
@@ -4039,7 +4039,8 @@ const diaryEntry = data.choices[0].message.content;
     
     saveData();
 }
-        // --- Google Key 管理系统 ---
+
+// --- Google Key 管理系统 ---
 
 // 1. 渲染列表
 function renderGoogleKeyList() {
@@ -4074,7 +4075,7 @@ function renderGoogleKeyList() {
     });
 }
 
-// 2. 添加 Key (修复验证版)
+// 2. 添加 Key (修复验证版 - 保持原生 fetch)
 async function addGoogleKey() {
     const input = document.getElementById('newGoogleKeyInput');
     const key = input.value.trim();
@@ -4105,7 +4106,6 @@ async function addGoogleKey() {
             newObj.status = 'valid';
             console.log("Key 验证成功");
         } else {
-            // 即便验证失败，也打印一下原因
             console.warn("Key 验证失败 status:", res.status);
             newObj.status = 'invalid';
         }
@@ -4113,23 +4113,22 @@ async function addGoogleKey() {
         console.error("验证出错:", e);
         newObj.status = 'invalid';
     }
-    // ----------------------
 
     saveGlobalConfig(); 
     renderGoogleKeyList(); 
 }
-        // --- ✨ 新增：一键重新检测所有 Key ✨ ---
+
+// --- ✨ 新增：一键重新检测所有 Key ✨ ---
 async function revalidateAllKeys() {
     if (!globalConfig.googleKeys || globalConfig.googleKeys.length === 0) return;
 
-    const btn = event.target; // 获取点击的按钮
+    const btn = event.target;
     const oldText = btn.innerText;
     btn.innerText = "检测中...";
 
-    // 遍历所有 Key 并重新验证
     for (let kObj of globalConfig.googleKeys) {
-        kObj.status = 'checking'; // 先变成检测中状态
-        renderGoogleKeyList();    // 刷新UI让用户看到变化
+        kObj.status = 'checking';
+        renderGoogleKeyList();
         
         try {
             const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/models", {
@@ -4155,12 +4154,12 @@ function removeGoogleKey(index) {
         renderGoogleKeyList();
     }
 }
-        // --- ✨ 新增：切换 API 供应商逻辑 (完整版) ✨ ---
+
+// --- ✨ 新增：切换 API 供应商逻辑 (修复版) ✨ ---
 function toggleApiProvider() {
     const provider = document.getElementById('apiProvider').value;
     const urlInput = document.getElementById('apiUrl');
     
-    // 获取原来的单 Key 输入框 和 Google 管理器
     const singleKeyContainer = document.getElementById('apiKey').closest('.ios-item');
     const googleMgr = document.getElementById('googleKeyManager');
 
@@ -4170,7 +4169,6 @@ function toggleApiProvider() {
         urlInput.disabled = true;
         urlInput.style.color = "#999"; 
         
-        // 显示多Key，隐藏单Key
         googleMgr.style.display = 'block';
         singleKeyContainer.style.display = 'none';
         
@@ -4183,17 +4181,13 @@ function toggleApiProvider() {
         // 恢复备份的 URL
         urlInput.value = globalConfig.savedCustomUrl || "https://api.openai.com/v1";
         
-        // 隐藏多Key，显示单Key
         googleMgr.style.display = 'none';
         singleKeyContainer.style.display = 'flex';
         document.getElementById('apiKey').placeholder = "sk-...";
     }
     
-    // 保存当前状态
     saveGlobalConfig();
-} 
-// ⬆️ 看到这个花括号了吗？你之前就是少了它！现在补上了。
-
+}
         // --- 美化/主题系统 (终极版: 图标+字体+壁纸) ---
     let themeConfig = {
             icons: { msg: "", mem: "", set: "", theme: "", diary: "", pomo: "", cal: "", sched: "", book: "" },
@@ -11819,6 +11813,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
