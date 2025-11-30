@@ -1851,9 +1851,7 @@ select.x-input option {
     </div>
 </div>
 
-<!-- 下面接原来的 API URL 输入框 -->
-<div class="ios-item" id="apiUrlContainer"> ... </div>
-                     <!-- 原有的 API URL (加了 id="apiUrlContainer" 方便控制样式) -->
+
     <div class="ios-item" id="apiUrlContainer">
         <span class="ios-label">API URL</span>
         <input type="text" id="apiUrl" class="ios-input" placeholder="https://api.openai.com/v1" onchange="saveGlobalConfig()">
@@ -3359,13 +3357,27 @@ let globalAudioPass = new Audio();
             localStorage.setItem('ai_phone_contacts', JSON.stringify(contacts));
         }
 
-        function loadData() {
-            const c = localStorage.getItem('ai_phone_config');
-            if(c) globalConfig = JSON.parse(c);
-            
-            const ct = localStorage.getItem('ai_phone_contacts');
-            if(ct) contacts = JSON.parse(ct);
+        // ✅ 替换后的安全加载函数
+function loadData() {
+    try {
+        const c = localStorage.getItem('ai_phone_config');
+        if(c) globalConfig = JSON.parse(c);
+    } catch(e) {
+        console.error("读取设置失败，但这不影响聊天记录:", e);
+    }
+    
+    try {
+        const ct = localStorage.getItem('ai_phone_contacts');
+        if(ct) {
+            contacts = JSON.parse(ct);
+            console.log("成功读取到", contacts.length, "个角色");
         }
+    } catch(e) {
+        console.error("❌ 严重警告：聊天记录读取失败！", e);
+        alert("⚠️ 警告：读取聊天记录出错，可能是数据格式问题。\n为了防止覆盖旧数据，请不要进行任何操作，建议立即备份现有数据（Export）并检查文件！");
+        // 这里我们可以故意让 contacts 保持 undefined 或者抛出错误，防止后续的自动保存覆盖数据
+    }
+}
 
         function createCharacter(name, prompt, avatar) {
             const id = Date.now().toString();
@@ -11813,6 +11825,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
