@@ -3321,63 +3321,88 @@ select.x-input option {
             model: "gpt-3.5-turbo",
             temp: 0.7,
             historyLimit: 20,
-    // ✨ 新增这两个：
-    xiApiKey: "",
-    xiVoiceId: "",
+            xiApiKey: "",
+            xiVoiceId: "",
             xiModelId: "eleven_multilingual_v2"
         };
 
-        // 角色列表。每个对象包含完整独立的数据
+        // 角色列表
         let contacts = []; 
         // 当前活跃的聊天ID
         let activeContactId = null;
 
-        // 临时图片
+        // 临时变量
         let currentImg = null;
-        let currentCallContext = []; // 用来存通话时的临时记忆
-        // --- 定义一个全局音频对象，作为“通行证” ---
-let globalAudioPass = new Audio();
+        let currentCallContext = []; 
+        let globalAudioPass = new Audio();
+
+        // 🛡️ 全局安全锁：默认为关闭状态
+        // 只有当 loadData 成功读取数据后，这个锁才会打开
+        // 否则 saveData 将被禁止运行，防止空数据覆盖旧存档
+        window.isDataSafeToSave = false;
 
         // --- 初始化与生命周期 ---
         window.onload = function() {
             startClock();
-            loadData();
-            if (contacts.length === 0) {
-                // 默认创建一个角色
+            loadData(); // 尝试读取数据
+
+            // 如果联系人为空，且安全锁打开了（说明是真没数据，而不是读错了），才创建默认角色
+            if (contacts.length === 0 && window.isDataSafeToSave) {
                 createCharacter("AI Assistant", "你是一个有用的助手。", "https://api.dicebear.com/7.x/bottts/svg?seed=Default");
             }
+            
             updateContactList();
             updateGlobalSettingsUI();
             loadTheme();
         };
 
-        // --- 数据持久化 ---
+        // --- 数据持久化 (带保险丝版) ---
         function saveData() {
-            localStorage.setItem('ai_phone_config', JSON.stringify(globalConfig));
-            localStorage.setItem('ai_phone_contacts', JSON.stringify(contacts));
+            // 🛑 核心防御：检查安全锁
+            if (!window.isDataSafeToSave) {
+                console.warn("🚫 拦截：由于数据读取异常或尚未完成，已阻止覆盖保存，以保护原数据。");
+                return; // 直接退出，什么都不做，保护你的数据！
+            }
+
+            try {
+                localStorage.setItem('ai_phone_config', JSON.stringify(globalConfig));
+                localStorage.setItem('ai_phone_contacts', JSON.stringify(contacts));
+            } catch (e) {
+                console.error("保存失败 (可能是存储空间满了): " + e.message);
+            }
         }
 
-        // ✅ 替换后的安全加载函数
-function loadData() {
-    try {
-        const c = localStorage.getItem('ai_phone_config');
-        if(c) globalConfig = JSON.parse(c);
-    } catch(e) {
-        console.error("读取设置失败，但这不影响聊天记录:", e);
-    }
-    
-    try {
-        const ct = localStorage.getItem('ai_phone_contacts');
-        if(ct) {
-            contacts = JSON.parse(ct);
-            console.log("成功读取到", contacts.length, "个角色");
+        // --- 读取数据 (带报警版) ---
+        function loadData() {
+            try {
+                // 1. 读取配置
+                const c = localStorage.getItem('ai_phone_config');
+                if (c) globalConfig = JSON.parse(c);
+
+                // 2. 读取联系人 (最重要的数据)
+                const ct = localStorage.getItem('ai_phone_contacts');
+                if (ct) {
+                    contacts = JSON.parse(ct);
+                    console.log("✅ 数据读取成功，共", contacts.length, "个角色");
+                } else {
+                    console.log("⚠️ 未找到联系人数据，可能是第一次使用，或者是新设备");
+                }
+
+                // 🎉 3. 关键一步：读取成功，打开安全锁！
+                // 只有运行到这一行，才允许后续的保存操作
+                window.isDataSafeToSave = true;
+
+            } catch (e) {
+                // 🚨 发生严重错误 (比如 JSON 格式错了)
+                console.error("❌ 致命错误：数据读取失败！", e);
+                
+                // 锁死保存功能
+                window.isDataSafeToSave = false; 
+                
+                // 弹出红色警报
+                alert("⚠️【严重警告】数据读取失败！\n\n可能是代码修改导致格式错误，或者是数据损坏。\n为了保护你的存档，系统已【禁止自动保存】。\n\n请不要进行任何操作，先检查代码或导出备份！");
+            }
         }
-    } catch(e) {
-        console.error("❌ 严重警告：聊天记录读取失败！", e);
-        alert("⚠️ 警告：读取聊天记录出错，可能是数据格式问题。\n为了防止覆盖旧数据，请不要进行任何操作，建议立即备份现有数据（Export）并检查文件！");
-        // 这里我们可以故意让 contacts 保持 undefined 或者抛出错误，防止后续的自动保存覆盖数据
-    }
-}
 
         function createCharacter(name, prompt, avatar) {
             const id = Date.now().toString();
@@ -11825,6 +11850,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
