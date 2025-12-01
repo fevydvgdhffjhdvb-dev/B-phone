@@ -12127,7 +12127,7 @@ function compressPhoto(file) {
     });
 }
 
-// 3. 处理上传 & AI 分析 (Gemini 3.0 / 2.5 兼容修复版)
+// 3. 处理上传 & AI 分析 (终极调试版：检测安全拦截 + 宽松模式)
 async function handleAlbumUpload(e) {
     const file = e.target.files[0];
     if(!file) return;
@@ -12155,15 +12155,18 @@ async function handleAlbumUpload(e) {
             const char = contacts.find(c => c.id === activeContactId) || contacts[0];
             if(!char) throw new Error("请先创建一个角色");
 
-            // 提示词：针对 Gemini 3.0 优化，强调纯 JSON
+            // 🔥 修改提示词：不再强求 JSON，改用自然语言，降低被拦截概率
             const visionPrompt = `
-            [图片分析]
-            请以"${char.name}"的身份（人设：${char.systemPrompt}）看这张图。
-            1. 写一段简短评价（30字左右）。
-            2. 提取3个标签。
+            [Image Analysis]
+            Roleplay as "${char.name}". Persona: ${char.systemPrompt}
             
-            【格式要求】：请务必返回纯 JSON 格式。
-            格式示例：{"comment": "你的评价内容", "tags": ["标签1", "标签2"]}
+            Look at this image and tell me what you see.
+            1. Write a short comment (about 30 words) based on your persona.
+            2. List 3 keywords (tags).
+            
+            Format:
+            Comment: [Your comment here]
+            Tags: [Tag1, Tag2, Tag3]
             `;
 
             try {
@@ -12179,7 +12182,7 @@ async function handleAlbumUpload(e) {
                             ]
                         }
                     ],
-                    max_tokens: 500
+                    max_tokens: 300
                 });
 
                 if (!res.ok) {
@@ -12188,49 +12191,47 @@ async function handleAlbumUpload(e) {
                 }
 
                 const data = await res.json();
-                
+                console.log("🔍 API完整返回:", data); // 打开 F12 看控制台
+
+                // 🛡️ 核心诊断逻辑：检查为什么是空的
                 if (!data.choices || data.choices.length === 0) {
-                    throw new Error("API 返回了空数据");
+                    throw new Error("API 返回了空数组 (No choices)");
                 }
 
-                const rawContent = data.choices[0].message.content || "";
-                console.log("🔍 AI 原始返回:", rawContent); 
+                const choice = data.choices[0];
+                const rawContent = choice.message.content || "";
+                
+                // 1. 检查是否被安全拦截 (Google 特产)
+                if (choice.finish_reason === 'safety' || choice.finish_reason === 'content_filter') {
+                    alert("⚠️ 图片被 Google 安全系统拦截 (Safety Filter)！\n可能是图片包含人像、敏感内容，或模型认为不合规。");
+                    throw new Error("Safety Filter Triggered");
+                }
 
-                // === 🔥 核心修复：强力清洗 Markdown 标记 🔥 ===
-                let finalComment = "";
+                // 2. 检查内容是否真为空
+                if (!rawContent.trim()) {
+                    alert(`⚠️ API 返回内容为空。\n停止原因(finish_reason): ${choice.finish_reason}\n请尝试更换 Model ID (推荐 gemini-1.5-pro)。`);
+                    throw new Error("Empty Content");
+                }
+
+                // === 解析逻辑 (适配新提示词) ===
+                let finalComment = rawContent;
                 let finalTags = ["照片"];
 
-                try {
-                    // 1. 暴力去除 ```json 和 ``` 标记
-                    let cleanJson = rawContent
-                        .replace(/```json/gi, '') 
-                        .replace(/```/g, '')      
-                        .trim();
+                // 尝试提取 Comment
+                const commentMatch = rawContent.match(/Comment:\s*(.+)/i);
+                if (commentMatch) finalComment = commentMatch[1].trim();
 
-                    // 2. 尝试寻找 JSON 的大括号范围（防止开头有废话）
-                    const firstBrace = cleanJson.indexOf('{');
-                    const lastBrace = cleanJson.lastIndexOf('}');
-                    
-                    if (firstBrace !== -1 && lastBrace !== -1) {
-                        cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
-                        
-                        // 3. 解析
-                        const parsed = JSON.parse(cleanJson);
-                        finalComment = parsed.comment || parsed.description || parsed.text;
-                        finalTags = parsed.tags || ["未分类"];
-                    } else {
-                        // 没找到 JSON，直接用原文
-                        finalComment = rawContent;
-                    }
-                } catch(e) {
-                    console.warn("JSON解析失败，降级为显示原文:", e);
-                    // 4. 兜底：解析失败时，直接显示 AI 的原始回复，不再显示空白！
-                    finalComment = rawContent; 
-                }
-
-                // 如果依然是空的
-                if (!finalComment || finalComment.trim() === "") {
-                    finalComment = "❌ AI 看到了图片，但没说话。";
+                // 尝试提取 Tags
+                const tagsMatch = rawContent.match(/Tags:\s*(.+)/i);
+                if (tagsMatch) {
+                    // 去掉方括号，按逗号分割
+                    finalTags = tagsMatch[1].replace(/[\[\]]/g, '').split(/[,，]/).map(t => t.trim());
+                } else {
+                    // 如果没匹配到，尝试用正则找任何看起来像 JSON 的数组
+                    try {
+                        const jsonTags = rawContent.match(/\[(.*?)\]/);
+                        if(jsonTags) finalTags = jsonTags[1].split(',').map(t=>t.trim());
+                    } catch(e){}
                 }
 
                 // D. 存入数据库
@@ -12249,17 +12250,20 @@ async function handleAlbumUpload(e) {
                 
                 // F. 刷新
                 renderAlbumGrid();
-                alert(`评价已生成：${finalComment.substring(0, 10)}...`);
+                alert(`评价已生成：${finalComment.substring(0, 15)}...`);
 
             } catch (apiErr) {
-                alert("API 请求出错: " + apiErr.message);
                 console.error(apiErr);
+                // 只有非安全拦截的错误才弹窗，避免重复
+                if (apiErr.message !== "Safety Filter Triggered" && apiErr.message !== "Empty Content") {
+                    alert("API 错误: " + apiErr.message);
+                }
             }
         };
 
     } catch(err) {
         console.error(err);
-        alert("处理失败: " + err.message);
+        alert("图片处理失败: " + err.message);
     } finally {
         btn.innerText = oldBtnText;
         e.target.value = '';
@@ -12420,6 +12424,7 @@ function getPhotoAlbumContext(userMessage = "") {
     </script>
 </body>
 </html>
+
 
 
 
