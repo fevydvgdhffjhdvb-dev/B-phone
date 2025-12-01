@@ -10961,11 +10961,9 @@ function parseSillyTavernJSON(json, fileName) {
             theaterState.preset.modules.push(item);
             
         } else {
-            // C. 归类为【核心规则】 (常驻)
-            // 只有原文件里 enabled=true 的才放进来
-            if (p.enabled) {
-                theaterState.preset.core.push(item);
-            }
+            // C. 归类为【核心规则】
+            // 修改：不再过滤 enabled，全部放入，状态由 item.enabled 决定
+            theaterState.preset.core.push(item);
         }
     });
     // === ✨ 新增：解析世界书 (World Info) ===
@@ -11022,12 +11020,25 @@ function renderConsoleUI() {
     const coreList = document.getElementById('t-core-list');
     if (coreList) {
         coreList.innerHTML = '';
-        p.core.forEach(item => {
-            coreList.innerHTML += `
-            <div class="t-item-row" style="opacity:0.7;">
-                <span class="t-item-name" style="font-size:12px;">🔒 ${item.name}</span>
-                <span style="font-size:10px; color:#34c759;">已装载</span>
+        if (p.core.length === 0) coreList.innerHTML = '<div class="t-tip">无核心规则</div>';
+        
+        p.core.forEach((item, index) => {
+            const isActive = item.enabled; // 读取条目自身状态
+            const div = document.createElement('div');
+            div.className = 't-item-row';
+            // 绑定点击事件，切换 Core 状态
+            div.onclick = () => toggleCoreRule(index);
+            
+            const toggleColor = isActive ? '#34c759' : '#444';
+            const togglePos = isActive ? '22px' : '2px';
+            const nameColor = isActive ? '#fff' : '#aaa'; // 未启用变灰
+
+            div.innerHTML = `
+            <span class="t-item-name" style="color:${nameColor}; flex:1;">${item.name}</span>
+            <div style="width:40px; height:22px; background:${toggleColor}; border-radius:11px; position:relative; transition:0.2s; flex-shrink:0;">
+                <div style="width:18px; height:18px; background:#fff; border-radius:50%; position:absolute; top:2px; left:${togglePos}; transition:0.2s;"></div>
             </div>`;
+            coreList.appendChild(div);
         });
     }
 
@@ -11247,6 +11258,15 @@ function selectTheaterStyle(id) {
     theaterState.preset.activeStyleId = id;
     saveTheaterState();
     renderConsoleUI();
+}
+        // 切换核心规则的开关状态
+function toggleCoreRule(index) {
+    const item = theaterState.preset.core[index];
+    if (item) {
+        item.enabled = !item.enabled;
+        saveTheaterState(); // 保存状态
+        renderConsoleUI();  // 刷新界面
+    }
 }
 
 function toggleTheaterModule(id) {
@@ -11491,7 +11511,10 @@ ${allSummaries}
 
     // 3. 核心规则 (Core)
     p.core.forEach(item => {
-        parts.push(process(item.content));
+        // 修改：只拼接启用的条目
+        if (item.enabled) {
+            parts.push(process(item.content));
+        }
     });
 
     // 4. 文风 (Style)
@@ -12654,6 +12677,7 @@ function deleteCustomPreset() {
     </script>
 </body>
 </html>
+
 
 
 
