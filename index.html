@@ -2122,6 +2122,11 @@ select.x-input option {
     <span class="ios-label">剧场图标</span>
     <input type="text" id="iconInput-theater" class="ios-input" placeholder="http://..." onchange="saveTheme()">
 </div>
+                    <!-- 新增：相册图标设置 -->
+<div class="ios-item">
+    <span class="ios-label">相册图标</span>
+    <input type="text" id="iconInput-album" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+</div>
                 </div>
 
                 <div class="ios-group-title">全局 CSS 代码 (高级美化)</div>
@@ -3952,12 +3957,17 @@ select.x-input option {
             apiMsgs.push({ role: m.role, content: contentToSend });
         }
     });
+            apiMsgs.push({
+        role: "system",
+        content: `[System Note]: Don't forget to append {{STATUS: state}} at the very end! Keep the status within 10 chars. 不要忘记在回复末尾加上 {{STATUS: 你的状态}} 标签！`
+    });
 
     // --- 5. UI 占位与 API 调用 ---
     const aiMsgIndex = char.messages.length + 1;
     const aiUiSpan = appendMsgUI('assistant', '...', null, aiMsgIndex, true);
     let fullText = "";
-            let capturedStatus = "";
+    let capturedStatus = "";
+    const statusRegex = /\{\{\s*STATUS\s*[：:]\s*(.*?)\s*\}\}/gi;
 
     try {
         const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
@@ -3983,7 +3993,7 @@ select.x-input option {
                         const json = JSON.parse(line.replace('data: ', ''));
                         const delta = json.choices[0].delta.content || "";
                         fullText += delta;
-                        let displayText = fullText.replace(/{{STATUS:.*?}}/g, "");
+                        let displayText = fullText.replace(statusRegex, "");
                         aiUiSpan.innerHTML = formatText(displayText);
                         scrollToBottom();
                     } catch (e) { }
@@ -3991,14 +4001,17 @@ select.x-input option {
             }
         }
         // --- ✨ 4. 提取状态并更新顶部 UI ---
-        const match = fullText.match(/{{STATUS:(.*?)}}/);
+        const match = statusRegex.exec(fullText);
         if (match && match[1]) {
             capturedStatus = match[1].trim();
-            updateChatStatus(capturedStatus); // 调用更新函数
+            updateChatStatus(capturedStatus); 
+        } else {
+            // 🛠️ 修正 3：增加 else 分支，没抓到就恢复默认，防止卡死
+            updateChatStatus("在线"); // ✅ 加这行
         }
 
         // 保存时，把标签去掉，只留纯净文本 (或者你想保留标签也可以，这里选择去掉)
-        const cleanContent = fullText.replace(/{{STATUS:.*?}}/g, "").trim();
+        const cleanContent = fullText.replace(statusRegex, "").trim();
 
         // 保存 AI 回复 (加上时间戳)
         char.messages.push({ role: 'assistant', content: cleanContent, timestamp: Date.now() });
@@ -4497,6 +4510,9 @@ if(iconLudo) iconLudo.value = themeConfig.icons.ludo || "";
             const iconTheater = document.getElementById('iconInput-theater');
 if(iconTheater) iconTheater.value = themeConfig.icons.theater || "";
 
+            const iconAlbum = document.getElementById('iconInput-album');
+if(iconAlbum) iconAlbum.value = themeConfig.icons.album || "";
+
             // 2. 恢复CSS和字体
             const cssInput = document.getElementById('customCssInput');
             if(cssInput) cssInput.value = themeConfig.customCss || "";
@@ -4533,6 +4549,7 @@ if(iconTheater) iconTheater.value = themeConfig.icons.theater || "";
         themeConfig.icons.forum = document.getElementById('iconInput-forum')?.value || "";
         themeConfig.icons.ludo = document.getElementById('iconInput-ludo')?.value || "";
         themeConfig.icons.theater = document.getElementById('iconInput-theater')?.value || "";
+        themeConfig.icons.album = document.getElementById('iconInput-album')?.value || "";
         
         themeConfig.customCss = document.getElementById('customCssInput')?.value || "";
         themeConfig.bubbleCss = document.getElementById('bubbleCssInput')?.value || ""; // 气泡美化
@@ -4562,6 +4579,7 @@ if(iconTheater) iconTheater.value = themeConfig.icons.theater || "";
         updateAppIcon('app-icon-forum', themeConfig.icons.forum);
         updateAppIcon('app-icon-ludo', themeConfig.icons.ludo);
         updateAppIcon('app-icon-theater', themeConfig.icons.theater);
+        updateAppIcon('app-icon-album', themeConfig.icons.album);
 
         // B. 应用壁纸
         const homePage = document.getElementById('page-home');
@@ -12432,6 +12450,7 @@ function getPhotoAlbumContext(userMessage = "") {
     </script>
 </body>
 </html>
+
 
 
 
