@@ -12127,7 +12127,7 @@ function compressPhoto(file) {
     });
 }
 
-// 3. 处理上传 & AI 分析 (终极调试版：检测安全拦截 + 宽松模式)
+// 3. 处理上传 & AI 分析 (Token 扩容修复版)
 async function handleAlbumUpload(e) {
     const file = e.target.files[0];
     if(!file) return;
@@ -12151,21 +12151,20 @@ async function handleAlbumUpload(e) {
         reader.onloadend = async () => {
             const base64Data = reader.result;
             
-            // C. 触发 AI 视觉分析
             const char = contacts.find(c => c.id === activeContactId) || contacts[0];
             if(!char) throw new Error("请先创建一个角色");
 
-            // 🔥 修改提示词：不再强求 JSON，改用自然语言，降低被拦截概率
+            // 提示词：自然语言模式，防止 JSON 格式占用太多 Token
             const visionPrompt = `
-            [Image Analysis]
+            [Image Analysis Task]
             Roleplay as "${char.name}". Persona: ${char.systemPrompt}
             
-            Look at this image and tell me what you see.
-            1. Write a short comment (about 30 words) based on your persona.
-            2. List 3 keywords (tags).
+            Look at this image.
+            1. Write a comment (about 50 words) based on your persona.
+            2. List 3 tags.
             
-            Format:
-            Comment: [Your comment here]
+            Format your response exactly like this:
+            Comment: [Your text here]
             Tags: [Tag1, Tag2, Tag3]
             `;
 
@@ -12182,7 +12181,9 @@ async function handleAlbumUpload(e) {
                             ]
                         }
                     ],
-                    max_tokens: 300
+                    // 🔥🔥🔥 核心修改：把 Token 上限拉满，防止话没说完被掐断
+                    max_tokens: 4096, 
+                    temperature: 0.7
                 });
 
                 if (!res.ok) {
@@ -12191,9 +12192,8 @@ async function handleAlbumUpload(e) {
                 }
 
                 const data = await res.json();
-                console.log("🔍 API完整返回:", data); // 打开 F12 看控制台
+                console.log("🔍 API完整返回:", data);
 
-                // 🛡️ 核心诊断逻辑：检查为什么是空的
                 if (!data.choices || data.choices.length === 0) {
                     throw new Error("API 返回了空数组 (No choices)");
                 }
@@ -12201,37 +12201,42 @@ async function handleAlbumUpload(e) {
                 const choice = data.choices[0];
                 const rawContent = choice.message.content || "";
                 
-                // 1. 检查是否被安全拦截 (Google 特产)
-                if (choice.finish_reason === 'safety' || choice.finish_reason === 'content_filter') {
-                    alert("⚠️ 图片被 Google 安全系统拦截 (Safety Filter)！\n可能是图片包含人像、敏感内容，或模型认为不合规。");
+                // 1. 检查截断 (Length)
+                if (choice.finish_reason === 'length') {
+                    console.warn("⚠️ 警告：回复因达到 Token 上限被截断，尝试使用已生成的部分。");
+                }
+                
+                // 2. 检查安全拦截
+                if (choice.finish_reason === 'safety') {
+                    alert("⚠️ 图片被 Google 安全系统拦截，无法生成评价。");
                     throw new Error("Safety Filter Triggered");
                 }
 
-                // 2. 检查内容是否真为空
-                if (!rawContent.trim()) {
-                    alert(`⚠️ API 返回内容为空。\n停止原因(finish_reason): ${choice.finish_reason}\n请尝试更换 Model ID (推荐 gemini-1.5-pro)。`);
-                    throw new Error("Empty Content");
-                }
-
-                // === 解析逻辑 (适配新提示词) ===
+                // === 解析逻辑 (兼容截断情况) ===
                 let finalComment = rawContent;
                 let finalTags = ["照片"];
 
-                // 尝试提取 Comment
-                const commentMatch = rawContent.match(/Comment:\s*(.+)/i);
-                if (commentMatch) finalComment = commentMatch[1].trim();
+                // 如果内容为空，但 finish_reason 是 length，说明连第一个字都没憋出来就被掐了（极少见）
+                if (!rawContent.trim() && choice.finish_reason === 'length') {
+                    finalComment = "❌ AI 想说的话太长被系统拦截了，请重试。";
+                } 
+                else if (rawContent.trim()) {
+                    // 尝试提取 Comment
+                    const commentMatch = rawContent.match(/Comment:\s*([\s\S]+?)(?=Tags:|$)/i);
+                    if (commentMatch) {
+                        finalComment = commentMatch[1].trim();
+                    } else {
+                        // 没按格式来，直接用全文
+                        finalComment = rawContent;
+                    }
 
-                // 尝试提取 Tags
-                const tagsMatch = rawContent.match(/Tags:\s*(.+)/i);
-                if (tagsMatch) {
-                    // 去掉方括号，按逗号分割
-                    finalTags = tagsMatch[1].replace(/[\[\]]/g, '').split(/[,，]/).map(t => t.trim());
+                    // 尝试提取 Tags
+                    const tagsMatch = rawContent.match(/Tags:\s*(.+)/i);
+                    if (tagsMatch) {
+                        finalTags = tagsMatch[1].replace(/[\[\]]/g, '').split(/[,，]/).map(t => t.trim());
+                    }
                 } else {
-                    // 如果没匹配到，尝试用正则找任何看起来像 JSON 的数组
-                    try {
-                        const jsonTags = rawContent.match(/\[(.*?)\]/);
-                        if(jsonTags) finalTags = jsonTags[1].split(',').map(t=>t.trim());
-                    } catch(e){}
+                    finalComment = "❌ AI 看到了图片，但保持了沉默。";
                 }
 
                 // D. 存入数据库
@@ -12254,8 +12259,7 @@ async function handleAlbumUpload(e) {
 
             } catch (apiErr) {
                 console.error(apiErr);
-                // 只有非安全拦截的错误才弹窗，避免重复
-                if (apiErr.message !== "Safety Filter Triggered" && apiErr.message !== "Empty Content") {
+                if (apiErr.message !== "Safety Filter Triggered") {
                     alert("API 错误: " + apiErr.message);
                 }
             }
@@ -12424,6 +12428,7 @@ function getPhotoAlbumContext(userMessage = "") {
     </script>
 </body>
 </html>
+
 
 
 
