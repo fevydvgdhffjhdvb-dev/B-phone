@@ -1970,6 +1970,29 @@ select.x-input option {
         <!-- 动态生成 -->
     </div>
 </div>
+                    <!-- === ✨ 新增：自定义反代预设管理器 (默认隐藏) ✨ === -->
+<div id="customPresetManager" style="display:none; background:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:15px; border:1px solid #e5e5ea;">
+    <div style="font-size:12px; color:#666; margin-bottom:5px;">常用反代预设</div>
+    
+    <!-- 预设选择下拉框 -->
+    <div class="ios-item" style="border:1px solid #ddd; border-radius:8px; margin-bottom:10px; background:#fff;">
+        <span class="ios-label">选择预设</span>
+        <select id="presetSelect" class="ios-input" style="direction: rtl;" onchange="applyCustomPreset()">
+            <option value="">-- 请选择 --</option>
+        </select>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div style="display:flex; gap:10px;">
+        <button onclick="saveNewCustomPreset()" style="flex:1; border:none; background:#007AFF; color:white; border-radius:8px; padding:8px; font-weight:bold; font-size:13px;">
+            另存为新预设
+        </button>
+        <button onclick="deleteCustomPreset()" style="flex:0.4; border:none; background:#fff; color:#ff3b30; border:1px solid #ff3b30; border-radius:8px; padding:8px; font-weight:bold; font-size:13px;">
+            删除
+        </button>
+    </div>
+</div>
+<!-- === 新增结束 === -->
 
 
     <div class="ios-item" id="apiUrlContainer">
@@ -4279,6 +4302,7 @@ const diaryEntry = data.choices[0].message.content;
     const googleMgr = document.getElementById('googleKeyManager');
     // 获取单 Key 输入框的外层容器 (整行)，以便隐藏
     const singleKeyContainer = document.getElementById('apiKey').closest('.ios-item');
+    const presetMgr = document.getElementById('customPresetManager');
 
     // 3. 根据供应商切换界面状态
     if (provider === 'google') {
@@ -4291,6 +4315,7 @@ const diaryEntry = data.choices[0].message.content;
         // ✨✨✨ 关键修改：显示钥匙包，隐藏单 Key ✨✨✨
         googleMgr.style.display = 'block';
         singleKeyContainer.style.display = 'none';
+        if(presetMgr) presetMgr.style.display = 'none';
         
         // ✨✨✨ 关键修改：必须调用渲染函数，否则列表是空的 ✨✨✨
         renderGoogleKeyList(); 
@@ -4304,6 +4329,10 @@ const diaryEntry = data.choices[0].message.content;
         // 隐藏钥匙包，显示单 Key
         googleMgr.style.display = 'none';
         singleKeyContainer.style.display = 'flex';
+         if(presetMgr) {
+            presetMgr.style.display = 'block';
+            renderCustomPresetMenu();
+        }
     }
 
     // 4. 还原其他通用设置 (保持不变)
@@ -4454,13 +4483,16 @@ function removeGoogleKey(index) {
     }
 }
 
-// --- ✨ 新增：切换 API 供应商逻辑 (修复版) ✨ ---
+// --- ✨ 修改后的 toggleApiProvider ---
 function toggleApiProvider() {
     const provider = document.getElementById('apiProvider').value;
     const urlInput = document.getElementById('apiUrl');
     
     const singleKeyContainer = document.getElementById('apiKey').closest('.ios-item');
     const googleMgr = document.getElementById('googleKeyManager');
+    
+    // 获取新加的预设管理器元素
+    const presetMgr = document.getElementById('customPresetManager'); 
 
     if (provider === 'google') {
         // --- Google 模式 ---
@@ -4468,8 +4500,9 @@ function toggleApiProvider() {
         urlInput.disabled = true;
         urlInput.style.color = "#999"; 
         
-        googleMgr.style.display = 'block';
-        singleKeyContainer.style.display = 'none';
+        googleMgr.style.display = 'block';       // 显示 Google 钥匙包
+        singleKeyContainer.style.display = 'none'; // 隐藏单 Key
+        if(presetMgr) presetMgr.style.display = 'none'; // 隐藏反代预设
         
         renderGoogleKeyList();
     } else {
@@ -4480,8 +4513,13 @@ function toggleApiProvider() {
         // 恢复备份的 URL
         urlInput.value = globalConfig.savedCustomUrl || "https://api.openai.com/v1";
         
-        googleMgr.style.display = 'none';
-        singleKeyContainer.style.display = 'flex';
+        googleMgr.style.display = 'none';        // 隐藏 Google 钥匙包
+        singleKeyContainer.style.display = 'flex'; // 显示单 Key
+        if(presetMgr) {
+            presetMgr.style.display = 'block';   // ✨ 显示反代预设
+            renderCustomPresetMenu();            // ✨ 渲染列表
+        }
+        
         document.getElementById('apiKey').placeholder = "sk-...";
     }
     
@@ -12523,9 +12561,93 @@ function getPhotoAlbumContext(userMessage = "") {
     
     return context;
 }
+        // ==========================================
+// --- 🛠️ 自定义反代预设管理逻辑 (新增) ---
+// ==========================================
+
+// 1. 渲染预设菜单
+function renderCustomPresetMenu() {
+    const select = document.getElementById('presetSelect');
+    select.innerHTML = '<option value="">-- 请选择预设 --</option>';
+
+    // 确保数据结构存在
+    if (!globalConfig.customPresets) globalConfig.customPresets = [];
+
+    globalConfig.customPresets.forEach((preset, index) => {
+        const opt = document.createElement('option');
+        opt.value = index;
+        opt.innerText = preset.name;
+        select.appendChild(opt);
+    });
+}
+
+// 2. 另存为新预设
+function saveNewCustomPreset() {
+    const currentUrl = document.getElementById('apiUrl').value.trim();
+    const currentKey = document.getElementById('apiKey').value.trim();
+    const currentModel = document.getElementById('modelId').value.trim();
+
+    if (!currentUrl) return alert("API URL 不能为空！");
+    if (!currentKey) return alert("API Key 不能为空！");
+
+    const name = prompt("给这个配置起个名字吧 (例如: DeepSeek反代):");
+    if (!name) return;
+
+    if (!globalConfig.customPresets) globalConfig.customPresets = [];
+
+    // 保存 URL, Key 和 Model ID
+    globalConfig.customPresets.push({
+        name: name,
+        url: currentUrl,
+        key: currentKey,
+        model: currentModel // 顺便把模型ID也存了，方便切换
+    });
+
+    saveData(); // 保存到本地存储
+    renderCustomPresetMenu(); // 刷新菜单
+    
+    // 自动选中刚才新建的
+    document.getElementById('presetSelect').value = globalConfig.customPresets.length - 1;
+    alert(`预设 "${name}" 保存成功！`);
+}
+
+// 3. 应用预设 (点击菜单时触发)
+function applyCustomPreset() {
+    const index = document.getElementById('presetSelect').value;
+    if (index === "") return;
+
+    const preset = globalConfig.customPresets[index];
+    if (preset) {
+        document.getElementById('apiUrl').value = preset.url;
+        document.getElementById('apiKey').value = preset.key;
+        if (preset.model) {
+            document.getElementById('modelId').value = preset.model;
+        }
+        
+        // 触发一下保存，让它立即生效
+        saveGlobalConfig();
+        
+        // 视觉反馈
+        if(navigator.vibrate) navigator.vibrate(50);
+    }
+}
+
+// 4. 删除预设
+function deleteCustomPreset() {
+    const index = document.getElementById('presetSelect').value;
+    if (index === "") return alert("请先在下拉框中选择要删除的预设");
+
+    const preset = globalConfig.customPresets[index];
+    if (confirm(`确定要删除预设 "${preset.name}" 吗？`)) {
+        globalConfig.customPresets.splice(index, 1);
+        saveData();
+        renderCustomPresetMenu();
+    }
+}
     </script>
 </body>
 </html>
+
 
 
 
