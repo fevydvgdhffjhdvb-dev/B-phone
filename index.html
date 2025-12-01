@@ -12156,16 +12156,20 @@ async function handleAlbumUpload(e) {
 
             // 提示词：自然语言模式，防止 JSON 格式占用太多 Token
             const visionPrompt = `
-            [Image Analysis Task]
-            Roleplay as "${char.name}". Persona: ${char.systemPrompt}
+            [图片分析任务]
+            这是一张用户上传到手机相册的照片。
+            请你以 "${char.name}" 的身份（人设：${char.systemPrompt}）来看这张照片。
             
-            Look at this image.
-            1. Write a comment (about 50 words) based on your persona.
-            2. List 3 tags.
+            1. 写一段 50 字以内的“照片批注/评价”。语气要符合你的人设。
+            2. 提取 5-8 个关键视觉元素标签（Tags）。
+            ⚠️ 标签要求：
+            - 必须全部使用中文。
+            - 包含物体名 (如: 猫, 汽车)、场景 (如: 海边, 卧室)、氛围 (如: 温馨, 搞笑)、颜色等。
+            - 这将用于未来的记忆检索，所以请尽可能丰富。
             
-            Format your response exactly like this:
-            Comment: [Your text here]
-            Tags: [Tag1, Tag2, Tag3]
+            请严格按照以下格式返回：
+            Comment: [在这里写你的评价]
+            Tags: [标签1, 标签2, 标签3]
             `;
 
             try {
@@ -12428,6 +12432,7 @@ function getPhotoAlbumContext(userMessage = "") {
     </script>
 </body>
 </html>
+
 
 
 
