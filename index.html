@@ -12334,7 +12334,7 @@ async function renderAlbumGrid() {
     });
 }
 
-// 5. 查看详情
+// 5. 查看详情 (升级版：显示隐藏标签)
 async function openPhotoDetail(id) {
     const meta = albumMeta.find(m => m.id === id);
     if(!meta) return;
@@ -12344,11 +12344,26 @@ async function openPhotoDetail(id) {
     // 恢复卡片翻转状态 (默认看图)
     document.getElementById('photo-card-inner').classList.remove('flipped');
     
-    // 设置文字
+    // 1. 设置评价内容 (保持原样)
     document.getElementById('viewer-comment').innerText = meta.comment;
-    document.getElementById('viewer-date').innerText = new Date(meta.timestamp).toLocaleString();
     
-    // 从 DB 取大图
+    // 2. ✨✨✨ 核心修改：把标签显示出来！✨✨✨
+    // 将标签数组转换成漂亮的小气泡 HTML
+    const tags = meta.tags || ["无标签"];
+    const tagsHtml = tags.map(t => 
+        `<span style="background:#f2f2f7; color:#8e8e93; padding:4px 8px; border-radius:6px; font-size:12px; margin:2px;">#${t}</span>`
+    ).join('');
+
+    // 将标签插入到日期上方
+    const dateStr = new Date(meta.timestamp).toLocaleString();
+    document.getElementById('viewer-date').innerHTML = `
+        <div style="margin-bottom:15px; display:flex; flex-wrap:wrap; justify-content:center; gap:5px;">
+            ${tagsHtml}
+        </div>
+        <div style="font-size:10px; opacity:0.6;">${dateStr}</div>
+    `;
+    
+    // 从 DB 取大图 (保持原样)
     const db = await openDB();
     const blob = await new Promise((resolve) => {
         const tx = db.transaction(albumStoreName, "readonly");
@@ -12363,7 +12378,6 @@ async function openPhotoDetail(id) {
     
     openModal('modal-photo-viewer');
 }
-
 function flipPhotoCard() {
     document.getElementById('photo-card-inner').classList.toggle('flipped');
 }
@@ -12450,6 +12464,7 @@ function getPhotoAlbumContext(userMessage = "") {
     </script>
 </body>
 </html>
+
 
 
 
