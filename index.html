@@ -12127,13 +12127,13 @@ function compressPhoto(file) {
     });
 }
 
-// 3. 处理上传 & AI 分析 (重点！)
+// 3. 处理上传 & AI 分析 (增强防爆版)
 async function handleAlbumUpload(e) {
     const file = e.target.files[0];
     if(!file) return;
     
     // 检查 Key
-    if(!globalConfig.apiKey) return alert("请先在设置中配置 API Key，否则 AI 无法生成批注。");
+    if(!globalConfig.apiKey && globalConfig.provider !== 'google') return alert("请先在设置中配置 API Key，否则 AI 无法生成批注。");
 
     const btn = document.querySelector('#page-album .btn-icon-only');
     const oldBtnText = btn.innerText;
@@ -12144,7 +12144,7 @@ async function handleAlbumUpload(e) {
         const compressedBlob = await compressPhoto(file);
         const photoId = Date.now().toString();
         
-        // B. 转换 Base64 用于显示和发送给 AI
+        // B. 转换 Base64
         const reader = new FileReader();
         reader.readAsDataURL(compressedBlob);
         
@@ -12152,11 +12152,10 @@ async function handleAlbumUpload(e) {
             const base64Data = reader.result;
             
             // C. 触发 AI 视觉分析
-            // 获取当前活跃角色
             const char = contacts.find(c => c.id === activeContactId) || contacts[0];
             if(!char) throw new Error("请先创建一个角色");
 
-            // 构造 Vision Prompt (优化版)
+            // 构造 Vision Prompt
             const visionPrompt = `
             [图片分析任务]
             这是一张用户上传到手机相册的照片。
@@ -12176,57 +12175,85 @@ async function handleAlbumUpload(e) {
             }
             `;
 
-            // 发送请求
-            const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-                model: globalConfig.model, // 确保模型支持视觉 (如 gpt-4o, gemini-flash)
-                messages: [
-                    {
-                        role: "user",
-                        content: [
-                            { type: "text", text: visionPrompt },
-                            { type: "image_url", image_url: { url: base64Data } }
-                        ]
-                    }
-                ],
-                max_tokens: 300
-            });
-
-            const data = await res.json();
-            let aiResult = { comment: "哇！看起来不错！", tags: ["照片"] };
-            
             try {
-                let cleanJson = data.choices[0].message.content.replace(/```json|```/g, '').trim();
-                aiResult = JSON.parse(cleanJson);
-            } catch(jsonErr) {
-                // 如果 JSON 解析失败，直接用原文
-                aiResult.comment = data.choices[0].message.content;
-            }
+                // 发送请求
+                const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+                    model: globalConfig.model, 
+                    messages: [
+                        {
+                            role: "user",
+                            content: [
+                                { type: "text", text: visionPrompt },
+                                { type: "image_url", image_url: { url: base64Data } }
+                            ]
+                        }
+                    ],
+                    max_tokens: 300
+                });
 
-            // D. 存入 IndexedDB (图片本体)
-            const db = await openDB();
-            const tx = db.transaction(albumStoreName, "readwrite");
-            tx.objectStore(albumStoreName).put({ id: photoId, blob: compressedBlob });
-            
-            // E. 存入 Metadata (Local Storage)
-            albumMeta.unshift({
-                id: photoId,
-                timestamp: Date.now(),
-                comment: aiResult.comment,
-                tags: aiResult.tags
-            });
-            saveAlbumMeta();
-            
-            // F. 刷新界面
-            renderAlbumGrid();
-            btn.innerText = oldBtnText;
-            alert(`上传成功！${char.name} 已经写好了批注，快点开看看吧！`);
+                if (!res.ok) {
+                    const errData = await res.json().catch(()=>({}));
+                    // 如果报错包含 model 字样，提示用户换模型
+                    if(JSON.stringify(errData).includes("model")) {
+                        throw new Error("当前模型不支持识图！请在设置里切换为 gpt-4o 或 gemini-1.5-flash");
+                    }
+                    throw new Error(`API 错误 ${res.status}`);
+                }
+
+                const data = await res.json();
+                
+                // === 🔥 核心修复：更强壮的数据解析 🔥 ===
+                // 默认兜底值
+                let finalComment = "（AI 似乎看呆了，没有留下评价...）";
+                let finalTags = ["照片"];
+
+                try {
+                    const rawContent = data.choices[0].message.content;
+                    // 尝试清洗 JSON
+                    let cleanJson = rawContent.replace(/```json|```/g, '').trim();
+                    const parsed = JSON.parse(cleanJson);
+                    
+                    // 容错取值：不管 AI 用什么 Key，都试着拿一下
+                    finalComment = parsed.comment || parsed.description || parsed.message || parsed.text || rawContent;
+                    finalTags = parsed.tags || parsed.keywords || ["照片"];
+                    
+                } catch(jsonErr) {
+                    // 如果 JSON 解析挂了，直接用纯文本作为评论
+                    console.warn("JSON解析失败，降级为纯文本");
+                    finalComment = data.choices[0].message.content;
+                }
+
+                // 防止 undefined
+                if (!finalComment || finalComment === "undefined") finalComment = "哇！看起来不错！";
+
+                // D. 存入 IndexedDB (图片本体)
+                const db = await openDB();
+                const tx = db.transaction(albumStoreName, "readwrite");
+                tx.objectStore(albumStoreName).put({ id: photoId, blob: compressedBlob });
+                
+                // E. 存入 Metadata (Local Storage)
+                albumMeta.unshift({
+                    id: photoId,
+                    timestamp: Date.now(),
+                    comment: finalComment, // 修复后的评论
+                    tags: finalTags
+                });
+                saveAlbumMeta();
+                
+                // F. 刷新界面
+                renderAlbumGrid();
+                alert(`上传成功！${char.name} 已评价。`);
+
+            } catch (apiErr) {
+                throw apiErr; // 抛出给外层处理
+            }
         };
 
     } catch(err) {
         console.error(err);
         alert("上传失败: " + err.message);
-        btn.innerText = oldBtnText;
     } finally {
+        btn.innerText = oldBtnText;
         e.target.value = '';
     }
 }
@@ -12385,6 +12412,7 @@ function getPhotoAlbumContext(userMessage = "") {
     </script>
 </body>
 </html>
+
 
 
 
