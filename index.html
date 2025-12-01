@@ -3523,21 +3523,52 @@ select.x-input option {
             loadTheme();
         };
 
-        // --- 数据持久化 (带保险丝版) ---
-        function saveData() {
-            // 🛑 核心防御：检查安全锁
-            if (!window.isDataSafeToSave) {
-                console.warn("🚫 拦截：由于数据读取异常或尚未完成，已阻止覆盖保存，以保护原数据。");
-                return; // 直接退出，什么都不做，保护你的数据！
-            }
+        // --- 数据持久化 (带智能回滚机制) ---
+function saveData() {
+    // 🛑 核心防御：检查安全锁
+    if (!window.isDataSafeToSave) return;
 
-            try {
-                localStorage.setItem('ai_phone_config', JSON.stringify(globalConfig));
-                localStorage.setItem('ai_phone_contacts', JSON.stringify(contacts));
-            } catch (e) {
-                console.error("保存失败 (可能是存储空间满了): " + e.message);
+    try {
+        localStorage.setItem('ai_phone_config', JSON.stringify(globalConfig));
+        localStorage.setItem('ai_phone_contacts', JSON.stringify(contacts));
+    } catch (e) {
+        // 🔥 捕获存储空间已满错误
+        if (e.name === 'QuotaExceededError' || e.code === 22) {
+            console.warn("存储空间已满，尝试执行【弃车保帅】策略...");
+
+            // 1. 找到当前正在聊天的角色
+            const char = contacts.find(c => c.id === activeContactId);
+            
+            // 2. 检查最后一条消息是否有图片
+            if (char && char.messages.length > 0) {
+                const lastMsg = char.messages[char.messages.length - 1];
+                
+                if (lastMsg.image) {
+                    // ✂️ 动作：删除图片数据，保留文字
+                    lastMsg.image = null; 
+                    // 给文字加个备注，让你知道发生过惨案
+                    lastMsg.content += "\n(⚠️系统: 图片因空间不足已丢弃)";
+
+                    // 3. 二次尝试保存
+                    try {
+                        localStorage.setItem('ai_phone_contacts', JSON.stringify(contacts));
+                        // 成功挽救！弹窗告知
+                        alert("💾【空间告急】\n刚才发的图片太大存不下，系统自动丢弃了图片，但【保留了文字记录】。\n\n请尽快清理旧数据释放空间！");
+                        return; // 挽救成功，退出
+                    } catch (retryE) {
+                        // 依然失败，说明连文字都存不下了
+                        alert("❌【保存失败】即使删除了图片，空间依然不足！\n刚才的对话已丢失，请立即去设置里备份并清理数据！");
+                    }
+                } else {
+                    // 最后一条没图，说明是纯文字都存不下了
+                    alert("❌【保存失败】存储空间已满！\n无法保存新消息，请立即清理数据。");
+                }
             }
+        } else {
+            console.error("保存出错:", e);
         }
+    }
+}
 
         // --- 读取数据 (带报警版) ---
         function loadData() {
@@ -4740,22 +4771,32 @@ const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/models', {
             });
         }
         function clearUpload() { currentImg=null; document.getElementById('uploadPreview').style.display='none'; document.getElementById('fileInput').value=''; }
-        function fileToBase64(file) {
-            return new Promise(resolve => {
-                const reader = new FileReader(); reader.readAsDataURL(file);
-                reader.onload = e => {
-                    // 简单压缩
-                    const img = new Image(); img.src = e.target.result;
-                    img.onload = () => {
-                        const cvs = document.createElement('canvas');
-                        const scale = Math.min(1, 800/img.width); // 限制最大宽度800
-                        cvs.width = img.width * scale; cvs.height = img.height * scale;
-                        cvs.getContext('2d').drawImage(img,0,0,cvs.width,cvs.height);
-                        resolve(cvs.toDataURL('image/jpeg', 0.7));
-                    }
-                }
-            });
+       // --- 图片压缩工具 (强力压缩版) ---
+function fileToBase64(file) {
+    return new Promise(resolve => {
+        const reader = new FileReader(); 
+        reader.readAsDataURL(file);
+        reader.onload = e => {
+            const img = new Image(); 
+            img.src = e.target.result;
+            img.onload = () => {
+                const cvs = document.createElement('canvas');
+                // 🔥 修改1：限制最大宽度从 800 降到 480 (够聊天看了)
+                const maxSide = 480; 
+                const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+                
+                cvs.width = img.width * scale; 
+                cvs.height = img.height * scale;
+                
+                const ctx = cvs.getContext('2d');
+                ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
+                
+                // 🔥 修改2：质量从 0.7 降到 0.5 (大幅减小体积)
+                resolve(cvs.toDataURL('image/jpeg', 0.5));
+            }
         }
+    });
+}
         
         // 导出/导入
         // --- 数据备份与恢复 (全量版) ---
@@ -12485,6 +12526,7 @@ function getPhotoAlbumContext(userMessage = "") {
     </script>
 </body>
 </html>
+
 
 
 
