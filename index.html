@@ -1632,6 +1632,60 @@ select.x-input option {
     transform: rotate(-180deg) scale(0.9); /* 点击时旋转一下 */
     background: #444;
 }
+        /* --- ✨ 新增：Ins 风状态栏样式 --- */
+.chat-header-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* 防止文字太长溢出 */
+}
+
+/* 名字样式微调 */
+.chat-contact-name {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 0; /* 去掉边距，紧凑一点 */
+}
+
+/* 状态栏容器 */
+.chat-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 5px; /* 点和字的间距 */
+    opacity: 0; /* 默认隐藏，有字才显示 */
+    transform: translateY(5px);
+    transition: all 0.3s ease-out; /* 丝滑动画 */
+}
+
+/* 状态显示时的动画类 */
+.chat-status-bar.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 那个 Ins 风的小绿点 */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #34c759; /* 苹果绿 */
+    border-radius: 50%;
+    border: 1px solid #fff; /* 加个白边更精致 */
+    box-shadow: 0 0 4px rgba(52, 199, 89, 0.4);
+}
+
+/* 状态文字 */
+.status-text {
+    font-size: 11px;
+    color: #8e8e93; /* 灰色 */
+    font-weight: 400;
+    white-space: nowrap;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
     </style>
 </head>
 <body>
@@ -1757,7 +1811,15 @@ select.x-input option {
                 <button class="chat-back-btn" onclick="navigateTo('page-msg-list')">
                     <span style="font-size:24px; margin-right:5px;">‹</span> 信息
                 </button>
-                <span class="chat-contact-name" id="chat-title-name">AI</span>
+                <!-- 新的中间部分：名字 + 状态 -->
+<div class="chat-header-center">
+    <div class="chat-contact-name" id="chat-title-name">AI</div>
+    <!-- 状态栏 -->
+    <div class="chat-status-bar" id="chat-status-container">
+        <div class="status-dot"></div>
+        <div class="status-text" id="chat-status-text">在线</div>
+    </div>
+</div>
                 <div class="chat-header-actions">
                 <button class="btn-icon-only" onclick="openChatSettings()" title="角色设置" style="font-size: 20px;">⚙️</button>
             </div>
@@ -3521,6 +3583,13 @@ select.x-input option {
         function renderChat(id) {
             const char = contacts.find(c => c.id === id);
             if(!char) return;
+            const statusContainer = document.getElementById('chat-status-container');
+    if(statusContainer) {
+        statusContainer.classList.remove('show');
+        // 可选：也可以默认显示“在线”
+        // document.getElementById('chat-status-text').innerText = "在线";
+        // statusContainer.classList.add('show');
+    }
 
             document.getElementById('chat-title-name').innerText = char.name;
             
@@ -3662,9 +3731,25 @@ select.x-input option {
     const originalBtnContent = btn.innerHTML;
     btn.innerHTML = '<span class="typing-indicator"></span><span class="typing-indicator"></span>';
     btn.disabled = true;
+             // --- ✨ 2. 构建 System Prompt (加入状态指令) ---
+    // 这里的指令非常重要，决定了 AI 的状态好不好玩
+    let systemPromptFull = char.systemPrompt + `\n[当前时间: ${new Date().toLocaleString()}]\n[用户名称: ${char.userName}]`;
+    
+    // 👇👇👇 核心新增指令 👇👇👇
+    systemPromptFull += `
+    \n[🔴 强制指令 - 实时状态反馈]:
+    在你的回复内容的【最后面】，必须附带你当下的心理状态或动作。
+    格式必须严格为：{{STATUS: 状态内容}}
+    要求：
+    1. 状态内容不要超过10个字。
+    2. 风格要生动、幽默、毒舌或带比喻。
+    3. 例如：{{STATUS: 正在翻白眼}} 或 {{STATUS: 被你气成河豚}} 或 {{STATUS: 正在研究怎么把你煮了}}。
+    4. 这个标签不要出现在正文中，只放在最后。
+    `;
+    // 👆👆👆 新增结束 👆👆👆
 
     // --- 1. 构建 System Prompt (基础设定) ---
-    let systemPromptFull = char.systemPrompt + `\n[当前时间: ${new Date().toLocaleString()}]\n[用户名称: ${char.userName}]`;
+    
     if (char.userPersona) systemPromptFull += `\n[用户设定: ${char.userPersona}]`;
             if (char.languageMode === 'en') {
         systemPromptFull += `
@@ -3765,6 +3850,7 @@ select.x-input option {
     const aiMsgIndex = char.messages.length + 1;
     const aiUiSpan = appendMsgUI('assistant', '...', null, aiMsgIndex, true);
     let fullText = "";
+            let capturedStatus = "";
 
     try {
         const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
@@ -3790,15 +3876,25 @@ select.x-input option {
                         const json = JSON.parse(line.replace('data: ', ''));
                         const delta = json.choices[0].delta.content || "";
                         fullText += delta;
-                        aiUiSpan.innerHTML = formatText(fullText);
+                        let displayText = fullText.replace(/{{STATUS:.*?}}/g, "");
+                        aiUiSpan.innerHTML = formatText(displayText);
                         scrollToBottom();
                     } catch (e) { }
                 }
             }
         }
+        // --- ✨ 4. 提取状态并更新顶部 UI ---
+        const match = fullText.match(/{{STATUS:(.*?)}}/);
+        if (match && match[1]) {
+            capturedStatus = match[1].trim();
+            updateChatStatus(capturedStatus); // 调用更新函数
+        }
+
+        // 保存时，把标签去掉，只留纯净文本 (或者你想保留标签也可以，这里选择去掉)
+        const cleanContent = fullText.replace(/{{STATUS:.*?}}/g, "").trim();
 
         // 保存 AI 回复 (加上时间戳)
-        char.messages.push({ role: 'assistant', content: fullText, timestamp: Date.now() });
+        char.messages.push({ role: 'assistant', content: cleanContent, timestamp: Date.now() });
         saveData();
 
         // 再次刷新以确保格式正确 (特别是时间戳显示)
@@ -3812,6 +3908,21 @@ select.x-input option {
 
     btn.innerHTML = originalBtnContent;
     btn.disabled = false;
+}
+        function updateChatStatus(text) {
+    const container = document.getElementById('chat-status-container');
+    const textEl = document.getElementById('chat-status-text');
+    
+    if (!container || !textEl) return;
+
+    // 先淡出
+    container.classList.remove('show');
+    
+    setTimeout(() => {
+        textEl.innerText = text; // 更新文字
+        // 再淡入
+        container.classList.add('show');
+    }, 300); // 配合 CSS 的 transition 时间
 }
 
         // --- 3. 智能总结功能 ---
@@ -11850,6 +11961,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
