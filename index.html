@@ -12401,69 +12401,99 @@ async function deleteCurrentPhoto() {
 }
 
 // ==========================================
-// --- 🧠 核心：智能相册检索 (RAG 机制) ---
+// --- 🧠 核心：智能相册检索 (加强版) ---
 // ==========================================
 
-// 替换掉原来的 getPhotoAlbumContext
 function getPhotoAlbumContext(userMessage = "") {
+    // 0. 如果相册是空的，直接跳过
     if (albumMeta.length === 0) return "";
+
+    // 调试日志：看看用户说了啥
+    console.log(`[相册检索] 用户正在说: "${userMessage}"`);
 
     // 1. 定义结果集
     let selectedPhotos = [];
     
-    // 2. 策略A：必须包含最近的 2 张 (保持短期连贯性)
-    // 无论聊什么，刚发的照片得记得
+    // 2. 策略A：【短期记忆】必须包含最近的 2 张 (保持刚传完照片的连贯性)
     const recentPhotos = albumMeta.slice(0, 2);
     selectedPhotos.push(...recentPhotos);
 
-    // 3. 策略B：关键词检索 (如果用户说话了)
+    // 3. 策略B：【关键词检索】 (如果用户说话了)
     if (userMessage && userMessage.trim().length > 0) {
-        // 简单的关键词匹配算法
         const searchResults = albumMeta.filter(photo => {
             // 排除掉已经在最近列表里的，防止重复
             if (recentPhotos.find(r => r.id === photo.id)) return false;
 
-            // 检查 Tags 是否出现在用户的话里
-            // 例如：用户说"我想去海边"，照片Tag有"海边" -> 命中
-            const tagHit = photo.tags && photo.tags.some(tag => userMessage.includes(tag));
+            // --- 核心修改：双向模糊匹配 ---
+            const tagHit = photo.tags && photo.tags.some(tag => {
+                // 情况A: 用户说 "我想看海" -> 标签 "海" (用户话包含标签)
+                const hitA = userMessage.includes(tag);
+                // 情况B: 用户说 "猫" -> 标签 "可爱猫咪" (标签包含用户话)
+                const hitB = tag.includes(userMessage);
+                
+                if(hitA || hitB) {
+                    console.log(`🎯 [命中标签] "${tag}" 匹配成功! -> 照片ID: ${photo.id}`);
+                    return true;
+                }
+                return false;
+            });
             
-            // 检查 AI 批注是否包含用户关键词 (简单分词或直接包含)
-            // 这里做简化处理：检查用户说的话是否包含照片批注里的某些字稍微有点难，
-            // 反过来：检查"批注"是否包含了用户这句话里的关键词？
-            // 由于前端没法做复杂分词，我们主要依赖 Tags 的匹配，以及简单的字符串包含
-            const commentHit = photo.comment.includes(userMessage); // 弱匹配
+            // 评价内容的弱匹配
+            const commentHit = photo.comment.includes(userMessage); 
+            if(commentHit && !tagHit) console.log(`🎯 [命中评价] 内容匹配成功 -> 照片ID: ${photo.id}`);
             
             return tagHit || commentHit;
         });
 
-        // 取相关度最高的 3 张 (按时间倒序)
-        selectedPhotos.push(...searchResults.slice(0, 3));
+        // 取相关度最高的 3 张
+        if (searchResults.length > 0) {
+            console.log(`✅ 共检索到 ${searchResults.length} 张旧照片`);
+            selectedPhotos.push(...searchResults.slice(0, 3));
+        } else {
+            console.log("💨 没检索到旧照片 (关键词没对上)");
+        }
     }
 
-    // 4. 组装最终文本
+    // 4. 如果没选中任何照片（相册空），返回空字符串
     if (selectedPhotos.length === 0) return "";
 
-    // 去重 (以防万一)
+    // 去重
     selectedPhotos = [...new Set(selectedPhotos)];
 
-    let context = "\n[视觉记忆检索 (Visual Memory Retrieval)]:\n(系统根据用户当前话题，联想到了相册里的以下照片):\n";
+    // --- 构造给 AI 看的提示词 ---
+    let context = "\n========== 📸 [视觉记忆检索 Visual Memory] ==========\n";
+    context += "系统检测到用户的话题可能与以下照片有关，请在回复中表现出你“突然想起来了”：\n";
     
     selectedPhotos.forEach((p) => {
         const dateStr = new Date(p.timestamp).toLocaleDateString();
-        context += `---
-📸 照片ID: ${p.id} (拍摄于 ${dateStr})
-🏷️ 视觉标签: ${p.tags ? p.tags.join(', ') : '无'}
-📝 当时你的评价: "${p.comment}"
+        context += `
+[照片档案]
+- 时间: ${dateStr}
+- 你的视觉标签: ${p.tags ? p.tags.join(', ') : '无'}
+- 你当时的评价: "${p.comment}"
 `;
     });
     
-    context += "------------------\n(指令：如果用户的话题与上述照片相关，请结合当年的评价进行回复，表现出怀念或惊喜。)\n";
+    // 🔥 核心修改：语气加重，强制 AI 反应
+    context += `
+---------------------------------------------------
+【回复指令】：
+请结合上述照片信息进行回复。
+1. 不要生硬地复述评价。
+2. 要像真人回忆往事一样：“说起这个，我还记得那天...” 或者 “对呀，就像那张照片里...”
+3. 如果是最近的照片，直接继续聊评价内容。
+===================================================
+\n`;
+    
+    // 调试：打印最终发给 AI 的内容
+    // console.log("📦 注入的 Prompt:", context);
     
     return context;
 }
     </script>
 </body>
 </html>
+
 
 
 
