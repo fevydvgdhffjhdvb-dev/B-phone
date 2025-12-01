@@ -12127,17 +12127,17 @@ function compressPhoto(file) {
     });
 }
 
-// 3. 处理上传 & AI 分析 (增强防爆版)
+// 3. 处理上传 & AI 分析 (调试去兜底版)
 async function handleAlbumUpload(e) {
     const file = e.target.files[0];
     if(!file) return;
     
-    // 检查 Key
-    if(!globalConfig.apiKey && globalConfig.provider !== 'google') return alert("请先在设置中配置 API Key，否则 AI 无法生成批注。");
+    // 检查配置
+    if(!globalConfig.apiKey && globalConfig.provider !== 'google') return alert("请先在设置中配置 API Key。");
 
     const btn = document.querySelector('#page-album .btn-icon-only');
     const oldBtnText = btn.innerText;
-    btn.innerText = "⏳"; // loading
+    btn.innerText = "⏳"; 
 
     try {
         // A. 压缩图片
@@ -12155,24 +12155,13 @@ async function handleAlbumUpload(e) {
             const char = contacts.find(c => c.id === activeContactId) || contacts[0];
             if(!char) throw new Error("请先创建一个角色");
 
-            // 构造 Vision Prompt
             const visionPrompt = `
-            [图片分析任务]
-            这是一张用户上传到手机相册的照片。
-            请你以 "${char.name}" 的身份（人设：${char.systemPrompt}）来看这张照片。
-            
-            1. 写一段 50 字以内的“照片批注/评价”。语气要符合你的人设。
-            2. 提取 5-8 个关键视觉元素标签（Tags）。
-            ⚠️ 标签要求：
-            - 必须全部使用中文。
-            - 包含物体名 (如: 猫, 汽车)、场景 (如: 海边, 卧室)、氛围 (如: 温馨, 搞笑)、颜色等。
-            - 这将用于未来的记忆检索，所以请尽可能丰富。
-            
-            返回纯 JSON 格式：
-            {
-                "comment": "你的评价内容...",
-                "tags": ["标签1", "标签2", "标签3", ...]
-            }
+            [图片分析]
+            请以"${char.name}"的身份（人设：${char.systemPrompt}）看这张图。
+            1. 写一段简短评价。
+            2. 提取3个标签。
+            返回JSON格式：{"comment": "内容", "tags": ["标签"]}
+            如果无法识别，请直接告诉我你看到了什么。
             `;
 
             try {
@@ -12192,66 +12181,66 @@ async function handleAlbumUpload(e) {
                 });
 
                 if (!res.ok) {
-                    const errData = await res.json().catch(()=>({}));
-                    // 如果报错包含 model 字样，提示用户换模型
-                    if(JSON.stringify(errData).includes("model")) {
-                        throw new Error("当前模型不支持识图！请在设置里切换为 gpt-4o 或 gemini-1.5-flash");
-                    }
-                    throw new Error(`API 错误 ${res.status}`);
+                    const errText = await res.text();
+                    throw new Error(`API报错: ${res.status} - ${errText}`);
                 }
 
                 const data = await res.json();
+                const rawContent = data.choices[0].message.content;
                 
-                // === 🔥 核心修复：更强壮的数据解析 🔥 ===
-                // 默认兜底值
-                let finalComment = "（AI 似乎看呆了，没有留下评价...）";
+                console.log("🔍 AI 原始返回内容:", rawContent); // F12 控制台可以看到
+
+                // === 🔥 核心修改：不再使用默认兜底，而是显示真实情况 🔥 ===
+                let finalComment = "";
                 let finalTags = ["照片"];
 
                 try {
-                    const rawContent = data.choices[0].message.content;
-                    // 尝试清洗 JSON
-                    let cleanJson = rawContent.replace(/```json|```/g, '').trim();
-                    const parsed = JSON.parse(cleanJson);
+                    // 尝试提取 JSON
+                    const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+                    const jsonStr = jsonMatch ? jsonMatch[0] : rawContent;
+                    const parsed = JSON.parse(jsonStr);
                     
-                    // 容错取值：不管 AI 用什么 Key，都试着拿一下
-                    finalComment = parsed.comment || parsed.description || parsed.message || parsed.text || rawContent;
-                    finalTags = parsed.tags || parsed.keywords || ["照片"];
-                    
-                } catch(jsonErr) {
-                    // 如果 JSON 解析挂了，直接用纯文本作为评论
-                    console.warn("JSON解析失败，降级为纯文本");
-                    finalComment = data.choices[0].message.content;
+                    finalComment = parsed.comment || parsed.description || parsed.text || rawContent;
+                    finalTags = parsed.tags || ["未分类"];
+                } catch(e) {
+                    // 如果不是 JSON，直接显示 AI 的原始回复
+                    // 这样如果 AI 说 "I can't see images"，你就能直接看到了！
+                    finalComment = rawContent;
                 }
 
-                // 防止 undefined
-                if (!finalComment || finalComment === "undefined") finalComment = "哇！看起来不错！";
+                // 如果 AI 返回的是纯空字符串
+                if (!finalComment || finalComment.trim() === "") {
+                    finalComment = "❌ AI 返回了空内容。可能是模型不支持识图，请检查 Model ID。";
+                }
 
-                // D. 存入 IndexedDB (图片本体)
+                // D. 存入数据库
                 const db = await openDB();
                 const tx = db.transaction(albumStoreName, "readwrite");
                 tx.objectStore(albumStoreName).put({ id: photoId, blob: compressedBlob });
                 
-                // E. 存入 Metadata (Local Storage)
+                // E. 存入 Metadata
                 albumMeta.unshift({
                     id: photoId,
                     timestamp: Date.now(),
-                    comment: finalComment, // 修复后的评论
+                    comment: finalComment, 
                     tags: finalTags
                 });
                 saveAlbumMeta();
                 
-                // F. 刷新界面
+                // F. 刷新
                 renderAlbumGrid();
-                alert(`上传成功！${char.name} 已评价。`);
+                
+                // 提示用户
+                alert(`上传处理完成！\nAI 评价预览：${finalComment.substring(0, 20)}...`);
 
             } catch (apiErr) {
-                throw apiErr; // 抛出给外层处理
+                alert("API 请求出错: " + apiErr.message);
             }
         };
 
     } catch(err) {
         console.error(err);
-        alert("上传失败: " + err.message);
+        alert("处理失败: " + err.message);
     } finally {
         btn.innerText = oldBtnText;
         e.target.value = '';
@@ -12412,6 +12401,7 @@ function getPhotoAlbumContext(userMessage = "") {
     </script>
 </body>
 </html>
+
 
 
 
