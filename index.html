@@ -10839,13 +10839,15 @@ function parseSillyTavernJSON(json, fileName) {
     }
 
     // 遍历并分类
+    // --- 修改后的 parseSillyTavernJSON 内部循环 ---
     json.prompts.forEach(p => {
-        // 这里的 p 是每一条 prompt 对象
         const item = {
             id: p.identifier || 'id_' + Math.random(),
             name: p.name || '未命名',
             content: p.content || '',
-            enabled: p.enabled // 默认开启状态
+            // 关键修改：直接使用原文件里的 enabled 状态，如果没有则默认为 true
+            // 不再强制设为 false，也不再过滤
+            enabled: (p.enabled === undefined) ? true : p.enabled 
         };
 
         // --- 智能分类逻辑 ---
@@ -10856,16 +10858,18 @@ function parseSillyTavernJSON(json, fileName) {
             
         } else if (item.name.includes("小剧场") || item.name.includes("Theater")) {
             // B. 归类为【小剧场】 (开关)
-            // 默认全部关闭，等用户想玩的时候再开
-            item.enabled = false; 
+            // 现在的逻辑：如果原作者勾了，这就开；没勾这就关。不再强制关闭。
             theaterState.preset.modules.push(item);
+            // 顺便把 ID 加到 activeModules 数组里，以便后续逻辑兼容
+            if (item.enabled) {
+                theaterState.preset.activeModules.push(item.id);
+            }
             
         } else {
-            // C. 归类为【核心规则】 (常驻)
-            // 只有原文件里 enabled=true 的才放进来
-            if (p.enabled) {
-                theaterState.preset.core.push(item);
-            }
+            // C. 归类为【核心规则】 (常驻 -> 改为可切换)
+            // 关键修改：删除了 if (p.enabled) 的判断
+            // 无论原作者是否开启，都导入进来，让用户自己决定
+            theaterState.preset.core.push(item);
         }
     });
     // === ✨ 新增：解析世界书 (World Info) ===
@@ -10918,16 +10922,34 @@ function renderConsoleUI() {
     const p = theaterState.preset;
     document.getElementById('t-current-preset-name').innerText = p.name;
 
-    // --- A. 核心列表 (Core) ---
+    // --- A. 核心列表 (Core) [已修改：支持开关] ---
     const coreList = document.getElementById('t-core-list');
     if (coreList) {
         coreList.innerHTML = '';
-        p.core.forEach(item => {
-            coreList.innerHTML += `
-            <div class="t-item-row" style="opacity:0.7;">
-                <span class="t-item-name" style="font-size:12px;">🔒 ${item.name}</span>
-                <span style="font-size:10px; color:#34c759;">已装载</span>
+        p.core.forEach((item, index) => {
+            // 判断是否启用
+            const isActive = item.enabled;
+            const div = document.createElement('div');
+            div.className = 't-item-row';
+            
+            // 绑定点击事件：点击切换 toggleCoreItem
+            div.onclick = () => toggleCoreItem(index);
+
+            // 样式：启用是绿色，未启用是灰色
+            const toggleColor = isActive ? '#34c759' : '#444';
+            const togglePos = isActive ? '22px' : '2px';
+            const textColor = isActive ? '#fff' : '#888';
+
+            div.innerHTML = `
+            <div style="flex:1;">
+                <span class="t-item-name" style="color:${textColor}; font-size:14px;">${item.name}</span>
+            </div>
+            <!-- 仿 iOS 开关 UI -->
+            <div style="width:40px; height:22px; background:${toggleColor}; border-radius:11px; position:relative; transition:0.2s;">
+                <div style="width:18px; height:18px; background:#fff; border-radius:50%; position:absolute; top:2px; left:${togglePos}; transition:0.2s;"></div>
             </div>`;
+            
+            coreList.appendChild(div);
         });
     }
 
@@ -11050,6 +11072,15 @@ function renderConsoleUI() {
             `;
             regList.appendChild(div);
         });
+    }
+}
+        // 新增：切换核心规则的开关
+function toggleCoreItem(index) {
+    const item = theaterState.preset.core[index];
+    if (item) {
+        item.enabled = !item.enabled; // 取反状态
+        saveTheaterState(); // 保存更改
+        renderConsoleUI();  // 刷新界面
     }
 }
 
@@ -11389,9 +11420,12 @@ ${allSummaries}
     const worldInfoContext = scanWorldInfo(currentInput, char);
     if (worldInfoContext) parts.push(worldInfoContext);
 
-    // 3. 核心规则 (Core)
+    // 3. 核心规则 (Core) [已修改：增加状态检查]
     p.core.forEach(item => {
-        parts.push(process(item.content));
+        // 只有开启的才拼装进去
+        if (item.enabled) {
+            parts.push(process(item.content));
+        }
     });
 
     // 4. 文风 (Style)
@@ -12077,6 +12111,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
