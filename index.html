@@ -3074,6 +3074,33 @@ select.x-input option {
 
             <!-- Tab 2: 预设导入 (核心) -->
             <div id="tab-presets" class="t-tab-content">
+                <!-- ✨ 新增：预设库管理区 ✨ -->
+    <div class="t-group-title">📚 我的预设库 (已保存配置)</div>
+    
+    <div style="background:#1a1a1a; padding:10px; border-radius:8px; border:1px solid #333; margin-bottom:15px;">
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <select id="theater-preset-select" class="t-input" onchange="applySavedTheaterPreset()" style="margin:0;">
+                <option value="">-- 选择已有预设 --</option>
+            </select>
+        </div>
+        
+        <div style="display:flex; gap:10px;">
+            <!-- 保存当前配置 -->
+            <button onclick="saveNewTheaterPreset()" style="flex:1; padding:8px; background:#007AFF; color:#fff; border:none; border-radius:6px; font-size:13px;">
+               保存当前配置
+            </button>
+            
+            <!-- 删除选中 -->
+            <button onclick="deleteTheaterPreset()" style="flex:0.4; padding:8px; background:#333; color:#ff3b30; border:1px solid #ff3b30; border-radius:6px; font-size:13px;">
+                删除
+            </button>
+        </div>
+        <div style="font-size:10px; color:#666; margin-top:5px;">
+            * 保存将会把当前所有文风、正则、世界书及其开关状态打包存档。
+        </div>
+    </div>
+    <!-- ✨ 新增结束 ✨ -->
+
                 <div class="t-group-title">导入酒馆预设 (JSON)</div>
                 <div class="t-upload-box" onclick="document.getElementById('theaterPresetInput').click()">
                     点击上传 .json 文件
@@ -10462,7 +10489,9 @@ let theaterState = {
     currentScriptId: null, 
     
     // 依然保留这个 logs 变量作为“当前运行中的缓存”，方便 API 函数调用
-    logs: [] 
+    logs: [],
+    // ✨ 新增：存储用户保存的预设列表
+    savedPresets: []
 };
 
 // 所有的剧本数据 (从 localStorage 读取)
@@ -10641,6 +10670,95 @@ function deleteScript(id) {
         allScripts = allScripts.filter(s => s.id !== id);
         saveAllScripts();
         renderScriptList();
+    }
+}
+        // ==========================================
+// --- 🎭 剧场预设管理系统 (Preset Manager) ---
+// ==========================================
+
+// 1. 渲染下拉菜单
+function renderTheaterPresetMenu() {
+    const select = document.getElementById('theater-preset-select');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- 选择已有预设 --</option>';
+
+    if (!theaterState.savedPresets) theaterState.savedPresets = [];
+
+    theaterState.savedPresets.forEach((preset, index) => {
+        const opt = document.createElement('option');
+        opt.value = index;
+        opt.innerText = preset.name; // 显示预设名字
+        select.appendChild(opt);
+    });
+}
+
+// 2. 保存当前状态为新预设
+function saveNewTheaterPreset() {
+    // 检查当前是否有有效数据
+    if (!theaterState.preset || theaterState.preset.name === "未加载") {
+        return alert("当前没有加载任何有效数据，无法保存！\n请先导入一个 JSON 文件。");
+    }
+
+    const name = prompt("给这个配置起个名字：", theaterState.preset.name + " (自定义)");
+    if (!name) return;
+
+    // 深拷贝当前 preset 对象，防止后续修改影响存档
+    const presetCopy = JSON.parse(JSON.stringify(theaterState.preset));
+    
+    // 更新名字
+    presetCopy.name = name;
+
+    // 存入列表
+    theaterState.savedPresets.push({
+        id: Date.now(),
+        name: name,
+        data: presetCopy
+    });
+
+    saveTheaterState();       // 保存到本地存储
+    renderTheaterPresetMenu(); // 刷新下拉框
+    
+    // 自动选中刚才新建的
+    document.getElementById('theater-preset-select').value = theaterState.savedPresets.length - 1;
+    
+    alert(`✅ 预设 "${name}" 已保存！\n包含了当前的文风选择、正则脚本和所有开关状态。`);
+}
+
+// 3. 应用选中的预设
+function applySavedTheaterPreset() {
+    const index = document.getElementById('theater-preset-select').value;
+    if (index === "") return;
+
+    const savedItem = theaterState.savedPresets[index];
+    if (!savedItem) return;
+
+    if (confirm(`确定要加载预设 "${savedItem.name}" 吗？\n当前的未保存修改将被覆盖。`)) {
+        // 深拷贝回来，恢复数据
+        theaterState.preset = JSON.parse(JSON.stringify(savedItem.data));
+        
+        saveTheaterState(); // 立即持久化
+        renderConsoleUI();  // 刷新整个控制台界面 (Core/Styles/Modules/Regex 都会刷新)
+        
+        // 视觉反馈
+        if(navigator.vibrate) navigator.vibrate(50);
+    }
+}
+
+// 4. 删除预设
+function deleteTheaterPreset() {
+    const select = document.getElementById('theater-preset-select');
+    const index = select.value;
+    
+    if (index === "") return alert("请先在下拉框中选择要删除的预设");
+
+    const targetName = theaterState.savedPresets[index].name;
+
+    if (confirm(`确定要永久删除预设 "${targetName}" 吗？`)) {
+        theaterState.savedPresets.splice(index, 1);
+        saveTheaterState();
+        renderTheaterPresetMenu();
+        select.value = ""; // 重置选择
     }
 }
 
@@ -11037,6 +11155,7 @@ function parseSillyTavernJSON(json, fileName) {
 // 🛠️ 升级版：渲染控制台 (支持世界书编辑 + 新增按钮)
 // ========================================================
 function renderConsoleUI() {
+    renderTheaterPresetMenu();
     const p = theaterState.preset;
     document.getElementById('t-current-preset-name').innerText = p.name;
 
@@ -11314,6 +11433,7 @@ function saveTheaterState() {
     // 保存预设数据
     localStorage.setItem('theater_preset_data', JSON.stringify(theaterState.preset));
     localStorage.setItem('theater_chat_logs', JSON.stringify(theaterState.logs));
+    localStorage.setItem('theater_saved_presets', JSON.stringify(theaterState.savedPresets));
 }
 
 // 页面加载时恢复数据
@@ -11325,6 +11445,10 @@ function loadTheaterState() {
     if(p) {
         theaterState.preset = JSON.parse(p);
         renderConsoleUI(); // 恢复后立即渲染
+    }
+    const savedLib = localStorage.getItem('theater_saved_presets');
+    if(savedLib) {
+        theaterState.savedPresets = JSON.parse(savedLib);
     }
 }
 
@@ -12701,6 +12825,7 @@ function deleteCustomPreset() {
     </script>
 </body>
 </html>
+
 
 
 
