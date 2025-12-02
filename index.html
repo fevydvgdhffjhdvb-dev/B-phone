@@ -3924,24 +3924,41 @@ function saveData() {
             currentUserMsg = lastMsg.content;
         }
     }
-             // --- ✨ 2. 构建 System Prompt (自然融入版) ---
-    let systemPromptFull = `
-    [Roleplay Instructions]
-    You are NOT an AI assistant. You are a roleplay character.
-    Identify yourself ONLY as the character described below.
-    Stay in character strictly.
+             // --- ✨ 2. 构建 System Prompt (自然融入版 - 时间修正补丁) ---
+    // 获取更自然的时间描述，比如 "凌晨 02:15" 或 "下午 14:30"
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    const hour = now.getHours();
     
-    [Character Definition]
+    // 计算时段氛围 (这是关键，给AI具体的“状态”而不是冷冰冰的数字)
+    let timeVibe = "";
+    if (hour >= 0 && hour < 5) timeVibe = "深夜/凌晨 (Deep Night) - 你应该感到困倦，或者惊讶用户为什么还不睡。";
+    else if (hour >= 5 && hour < 9) timeVibe = "清晨 (Morning) - 刚醒来或准备开始新的一天。";
+    else if (hour >= 9 && hour < 12) timeVibe = "上午 (Late Morning) - 正常活动/工作时间。";
+    else if (hour >= 12 && hour < 14) timeVibe = "中午 (Noon) - 午饭或午休时间。";
+    else if (hour >= 14 && hour < 18) timeVibe = "下午 (Afternoon) - 下午活动时间。";
+    else if (hour >= 18 && hour < 23) timeVibe = "晚上 (Evening) - 放松、休息或夜生活时间。";
+    else timeVibe = "深夜前奏 (Late Night) - 准备睡觉的时间。";
+
+    let systemPromptFull = `
+    [Roleplay Logic]
+    You are NOT an AI. You are a living character inside a chat app.
+    Forget you are a language model.
+    
+    [Character Persona]
     ${char.systemPrompt}
     
-    [🕒 Time & Context]
-    Current Real Time: ${new Date().toLocaleString('zh-CN', { hour12: false })}
+    [📱 Real-World Anchor - CRITICAL]
+    Right now, looking at your phone, the time is: 【 ${timeString} 】
+    Current Atmosphere: ${timeVibe}
     User Name: ${char.userName}
     
-    ⚠️ INSTRUCTION: 
-    1. Use the time above ONLY to set the atmosphere (e.g., if 03:00 AM -> act sleepy or ask why user is awake).
-    2. 🚫 DO NOT announce the exact time like a clock unless asked.
-    3. 🚫 DO NOT say "It is morning" directly. Instead, say "Good morning" or "Did you sleep well?".
+    [Interaction Rules]
+    1. **Sync with Real Time**: Your biological clock MUST match the time above. 
+       - If it's 03:00 AM, do NOT say "Good afternoon". Act sleepy or ask "Why are you up so late?".
+       - If it's 12:00 PM, ask about lunch.
+    2. **Natural Reaction**: Do NOT announce the time like a robot (e.g. "It is now 14:00"). Instead, react to it naturally (e.g. "Wow, looking at the time, I should grab some food").
+    3. **Context Override**: Even if previous messages said "Good morning", if the current time is "22:00", strictly follow the CURRENT time (22:00).
     `;
     
     if (char.userPersona) systemPromptFull += `\n[User Persona]: ${char.userPersona}`;
@@ -3988,17 +4005,15 @@ function saveData() {
     // 2. 注入提示词：强调“自然融入”而非“机械复述”
     if (sensoryBlock.trim() !== "") {
         systemPromptFull += `
-        \n[🔴 SENSORY PERCEPTION (Current Situation)]
-        (System Note: The following are real-time facts about the environment.
-        ⚠️ INSTRUCTION: Know these facts, but DO NOT recite them like a robot.
-        React to them naturally through the lens of your persona (${char.name}).
+        \n[🧠 Subconscious / Current Environment]
+        (These are things you currently see, hear, or feel. DO NOT report them like a robot. Just let them influence your mood or words naturally.)
         
-        Example:
-        - If "Raining": Don't say "It is raining." -> Say "Ugh, look at this weather, don't get wet."
-        - If "Budget Low": Don't say "Budget is low." -> Say "Hey! Stop spending money, are you trying to make us starve?")
-        ---------------------------------------------------
         ${sensoryBlock}
-        ---------------------------------------------------
+        
+        [Integration Instruction]:
+        - If "Raining": Just complain about the wet floor or sound of rain. Don't say "Weather report says rain."
+        - If "Budget Low": Act stingy or worried about money.
+        - If "Period/PMS": Be gentle/patient (if user is suffering) or understanding.
         `;
     }
 
@@ -12899,6 +12914,7 @@ function deleteCustomPreset() {
     </script>
 </body>
 </html>
+
 
 
 
