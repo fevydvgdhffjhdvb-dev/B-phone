@@ -4057,8 +4057,9 @@ function saveData() {
     // --- 4. 构建消息历史 (包含同人文读取逻辑) ---
     const limit = globalConfig.historyLimit || 20;
     const history = char.messages.slice(-limit);
+    const nowTimeStr = new Date().toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
 
-    history.forEach(m => {
+    history.forEach((m, index) => {
         let contentToSend = m.content;
 
         // 🔥 【同人文核心逻辑】如果包含隐藏的同人文数据，我们需要把全文注入给 AI
@@ -4080,6 +4081,9 @@ function saveData() {
                 // 这是一个旧的分享但丢失了 hiddenContext? 做个兜底
                 contentToSend = "[用户分享了一篇同人文链接]";
             }
+        }
+        if (index === history.length - 1 && m.role === 'user') {
+            contentToSend += `\n\n（🔴 潜意识强制视觉：你无意间瞥了一眼手机右上角，时间赫然显示为 【${nowTimeStr}】。你猛然意识到之前的对话可能让你忽略了时间的流逝，现在必须根据 【${nowTimeStr}】 的天色和状态来回应。）`;
         }
 
         if (m.image) {
@@ -12914,6 +12918,7 @@ function deleteCustomPreset() {
     </script>
 </body>
 </html>
+
 
 
 
