@@ -1835,6 +1835,20 @@ select.x-input option {
             <option value="google">Google AI Studio</option>
         </select>
     </div>
+                    <!-- ✨ 新增：自定义反代预设管理器 (默认隐藏，切换到自定义时显示) -->
+<div id="customPresetManager" style="display:none; background:#f9f9f9; border-bottom:1px solid #e5e5ea; margin-bottom:10px;">
+    <div class="ios-item" style="border-bottom:none;">
+        <span class="ios-label">预设</span>
+        <select id="customPresetSelect" class="ios-input" style="direction: rtl; color:#007AFF; font-weight:bold;" onchange="applyCustomPreset()">
+            <option value="">-- 选择配置 --</option>
+        </select>
+    </div>
+    <div style="display:flex; justify-content:space-between; padding:0 15px 10px 15px;">
+        <button onclick="saveCurrentAsPreset()" style="font-size:13px; color:#007AFF; background:none; border:none; cursor:pointer;">另存为新预设</button>
+        <button onclick="deleteCustomPreset()" style="font-size:13px; color:#ff3b30; background:none; border:none; cursor:pointer;">删除该预设</button>
+    </div>
+</div>
+<!-- ✨ 新增结束 -->
                     <!-- === ✨ Google 多 Key 管理器 (默认隐藏) ✨ === -->
                     <div id="googleKeyManager" style="display:none; background:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:15px; border:1px solid #e5e5ea;">
     <div style="font-size:12px; color:#666; margin-bottom:5px;">Google Key 钥匙包 (自动轮询)</div>
@@ -3378,6 +3392,7 @@ select.x-input option {
                 // 1. 读取配置
                 const c = localStorage.getItem('ai_phone_config');
                 if (c) globalConfig = JSON.parse(c);
+                if (!globalConfig.customPresets) globalConfig.customPresets = [];
 
                 // 2. 读取联系人 (最重要的数据)
                 const ct = localStorage.getItem('ai_phone_contacts');
@@ -4052,6 +4067,113 @@ const diaryEntry = data.choices[0].message.content;
     document.getElementById('xiApiKey').value = globalConfig.xiApiKey || "";
     document.getElementById('xiVoiceId').value = globalConfig.xiVoiceId || "";
     document.getElementById('xiModelId').value = globalConfig.xiModelId || "eleven_multilingual_v2";
+
+            
+            renderCustomPresets();
+}
+        // ==========================================
+// --- ✨ 自定义反代预设逻辑 (New) ---
+// ==========================================
+
+// 1. 渲染预设列表到下拉框
+function renderCustomPresets() {
+    const select = document.getElementById('customPresetSelect');
+    // 清空现有选项，保留第一项提示
+    select.innerHTML = '<option value="">-- 选择配置 --</option>';
+    
+    if (!globalConfig.customPresets) globalConfig.customPresets = [];
+
+    globalConfig.customPresets.forEach((preset, index) => {
+        const opt = document.createElement('option');
+        opt.value = index; // 用索引作为 value
+        opt.innerText = preset.name;
+        select.appendChild(opt);
+    });
+}
+
+// 2. 另存为预设
+function saveCurrentAsPreset() {
+    const currentUrl = document.getElementById('apiUrl').value.trim();
+    const currentKey = document.getElementById('apiKey').value.trim();
+    const currentModel = document.getElementById('modelId').value.trim(); // 顺便把模型也存了
+
+    if (!currentUrl || !currentKey) {
+        return alert("请先填写 API URL 和 Key，才能保存为预设。");
+    }
+
+    const name = prompt("给这个配置起个名字 (例如: DeepSeek, 转发站A):");
+    if (!name) return;
+
+    // 检查重名（可选）
+    const exists = globalConfig.customPresets.find(p => p.name === name);
+    if (exists) {
+        if (!confirm(`预设 "${name}" 已存在，要覆盖吗？`)) return;
+        // 覆盖逻辑
+        exists.url = currentUrl;
+        exists.key = currentKey;
+        exists.model = currentModel;
+    } else {
+        // 新增逻辑
+        globalConfig.customPresets.push({
+            name: name,
+            url: currentUrl,
+            key: currentKey,
+            model: currentModel
+        });
+    }
+
+    saveData(); // 保存到本地存储
+    renderCustomPresets(); // 刷新下拉框
+    
+    // 自动选中刚才保存的
+    const select = document.getElementById('customPresetSelect');
+    select.selectedIndex = select.options.length - 1;
+    
+    alert(`预设 "${name}" 保存成功！`);
+}
+
+// 3. 应用预设 (当用户选择菜单时)
+function applyCustomPreset() {
+    const select = document.getElementById('customPresetSelect');
+    const index = select.value;
+    
+    if (index === "") return; // 选了提示项，不做操作
+
+    const preset = globalConfig.customPresets[index];
+    if (preset) {
+        document.getElementById('apiUrl').value = preset.url;
+        document.getElementById('apiKey').value = preset.key;
+        
+        // 如果预设里存了模型，也恢复模型；兼容旧数据
+        if (preset.model) {
+            document.getElementById('modelId').value = preset.model;
+        }
+
+        // 触发保存，让设置立即生效
+        saveGlobalConfig();
+        
+        // 视觉反馈
+        if(navigator.vibrate) navigator.vibrate(50);
+    }
+}
+
+// 4. 删除预设
+function deleteCustomPreset() {
+    const select = document.getElementById('customPresetSelect');
+    const index = select.value;
+
+    if (index === "") return alert("请先选择一个要删除的预设");
+
+    const presetName = globalConfig.customPresets[index].name;
+    
+    if (confirm(`确定要删除预设 "${presetName}" 吗？`)) {
+        globalConfig.customPresets.splice(index, 1);
+        saveData();
+        renderCustomPresets();
+        
+        // 清空选择
+        select.value = "";
+    }
 }
         
        function saveGlobalConfig() {
@@ -4199,6 +4321,7 @@ function toggleApiProvider() {
     
     const singleKeyContainer = document.getElementById('apiKey').closest('.ios-item');
     const googleMgr = document.getElementById('googleKeyManager');
+    const presetMgr = document.getElementById('customPresetManager');
 
     if (provider === 'google') {
         // --- Google 模式 ---
@@ -4208,6 +4331,7 @@ function toggleApiProvider() {
         
         googleMgr.style.display = 'block';
         singleKeyContainer.style.display = 'none';
+        if(presetMgr) presetMgr.style.display = 'none';
         
         renderGoogleKeyList();
     } else {
@@ -4221,6 +4345,7 @@ function toggleApiProvider() {
         googleMgr.style.display = 'none';
         singleKeyContainer.style.display = 'flex';
         document.getElementById('apiKey').placeholder = "sk-...";
+        if(presetMgr) presetMgr.style.display = 'block';
     }
     
     saveGlobalConfig();
@@ -11850,6 +11975,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
