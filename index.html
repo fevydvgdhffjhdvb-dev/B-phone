@@ -3924,20 +3924,24 @@ function saveData() {
             currentUserMsg = lastMsg.content;
         }
     }
-             // --- ✨ 2. 构建 System Prompt (加入状态指令) ---
+             // --- ✨ 2. 构建 System Prompt (自然融入版) ---
     let systemPromptFull = `
     [Roleplay Instructions]
     You are NOT an AI assistant. You are a roleplay character.
     Identify yourself ONLY as the character described below.
-    Never admit you are an AI. Never explain your behavior.
     Stay in character strictly.
     
     [Character Definition]
     ${char.systemPrompt}
     
-    [Context]
-    Current Time: ${new Date().toLocaleString()}
+    [🕒 Time & Context]
+    Current Real Time: ${new Date().toLocaleString('zh-CN', { hour12: false })}
     User Name: ${char.userName}
+    
+    ⚠️ INSTRUCTION: 
+    1. Use the time above ONLY to set the atmosphere (e.g., if 03:00 AM -> act sleepy or ask why user is awake).
+    2. 🚫 DO NOT announce the exact time like a clock unless asked.
+    3. 🚫 DO NOT say "It is morning" directly. Instead, say "Good morning" or "Did you sleep well?".
     `;
     
     if (char.userPersona) systemPromptFull += `\n[User Persona]: ${char.userPersona}`;
@@ -3974,9 +3978,29 @@ function saveData() {
         `;
     }
     
-    // 注入各种感知上下文
-    systemPromptFull += getStatusContext(char, currentUserMsg);
-    systemPromptFull += getMusicContext();
+    // --- 🛡️ 感知系统升级 (人设保护版) ---
+    let sensoryBlock = "";
+    
+    // 1. 获取数据
+    sensoryBlock += getStatusContext(char, currentUserMsg);
+    sensoryBlock += getMusicContext();
+
+    // 2. 注入提示词：强调“自然融入”而非“机械复述”
+    if (sensoryBlock.trim() !== "") {
+        systemPromptFull += `
+        \n[🔴 SENSORY PERCEPTION (Current Situation)]
+        (System Note: The following are real-time facts about the environment.
+        ⚠️ INSTRUCTION: Know these facts, but DO NOT recite them like a robot.
+        React to them naturally through the lens of your persona (${char.name}).
+        
+        Example:
+        - If "Raining": Don't say "It is raining." -> Say "Ugh, look at this weather, don't get wet."
+        - If "Budget Low": Don't say "Budget is low." -> Say "Hey! Stop spending money, are you trying to make us starve?")
+        ---------------------------------------------------
+        ${sensoryBlock}
+        ---------------------------------------------------
+        `;
+    }
 
     // --- 2. 喂入日记 (混合记忆版：收藏 + 最近) ---
     if (char.diaries && char.diaries.length > 0) {
@@ -12875,6 +12899,7 @@ function deleteCustomPreset() {
     </script>
 </body>
 </html>
+
 
 
 
