@@ -7088,22 +7088,33 @@ const storeName = "books";
 
 function openDB() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(dbName, 4);
+        // ✨ 修改点：把这里的数字改成 10 (或者比你之前用过的任何数字都大)
+        const request = indexedDB.open(dbName, 10);
+
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
+            
+            // 1. 书籍存储库
             if (!db.objectStoreNames.contains(storeName)) {
                 db.createObjectStore(storeName, { keyPath: "id" });
             }
+            
+            // 2. 音乐文件存储库
             if (!db.objectStoreNames.contains(musicStoreName)) {
                 db.createObjectStore(musicStoreName, { keyPath: "id" });
             }
+
+            // 3. 飞行棋题库 (防止报错，一并加上)
             if (!db.objectStoreNames.contains("ludo_tasks")) {
-                // keyPath: "id" 表示每一条题目都有一个唯一的 id
                 db.createObjectStore("ludo_tasks", { keyPath: "id" });
             }
         };
+
         request.onsuccess = (event) => resolve(event.target.result);
-        request.onerror = (event) => reject(event.target.error);
+        request.onerror = (event) => {
+            console.error("数据库打开失败:", event.target.error);
+            reject(event.target.error);
+        };
     });
 }
         // --- 工具：把音频文件存入 IndexedDB ---
@@ -12066,6 +12077,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
