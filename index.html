@@ -1459,6 +1459,179 @@ select.x-input option {
 .t-item-row.active .t-item-name { color: #fff; font-weight: bold; }
 
 @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        /* --- 剧本列表样式 (仿截图) --- */
+.script-item {
+    display: flex;
+    padding: 15px;
+    background: #fff;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.2s;
+    position: relative;
+    height: 90px; /* 固定高度，保持整齐 */
+}
+.script-item:active {
+    background: #fafafa;
+}
+
+.script-avatar-box {
+    position: relative;
+    margin-right: 12px;
+}
+.script-avatar {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.script-info {
+    flex: 1;
+    min-width: 0; /* 防止文本溢出 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.script-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+}
+
+.script-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+    font-family: 'Songti SC', serif; /* 标题用宋体更有剧场感 */
+}
+
+.script-time {
+    font-size: 12px;
+    color: #999;
+    font-family: sans-serif;
+}
+
+.script-preview {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* 显示两行 */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-family: 'UserCustomFont', sans-serif;
+}
+
+/* 删除按钮 (滑动或长按显示，这里简化为绝对定位的红叉) */
+.btn-del-script {
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+    padding: 10px;
+    color: #ccc;
+    font-size: 18px;
+    background: none;
+    border: none;
+}
+.btn-del-script:hover { color: #ff3b30; }
+        /* --- 剧场模式：剧情总结卡片样式 --- */
+.t-msg-block.system {
+    text-align: center;
+    margin: 30px 0;
+    opacity: 0.9;
+}
+
+.t-system-card {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.08); /* 深色背景下的微透白 */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 15px 20px;
+    text-align: left;
+    max-width: 90%;
+    color: #a0a0a0;
+    font-size: 14px;
+    font-family: sans-serif; /* 用黑体显得更像系统文字 */
+    line-height: 1.6;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.t-system-header {
+    color: #FF9500; /* 橙色标题 */
+    font-weight: bold;
+    font-size: 12px;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.t-system-header::before {
+    content: '💾';
+}
+        /* 剧场模式 - 楼层号样式 */
+.t-floor-tag {
+    position: absolute;
+    left: -25px; /* 放在气泡左侧外面 */
+    top: 0;
+    font-size: 10px;
+    color: #555;
+    font-family: monospace;
+    opacity: 0.5;
+}
+/* 给消息块加相对定位，以便放楼层号 */
+.t-msg-block {
+    position: relative; 
+    margin-left: 10px; /* 给左边留点空放楼层号 */
+}
+
+/* 档案列表样式 */
+.archive-card {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+.archive-header {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: #FF9500; font-weight: bold; margin-bottom: 5px;
+}
+.archive-body {
+    font-size: 13px; color: #ccc; line-height: 1.5;
+    max-height: 80px; overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+}
+        /* 剧场模式 - 重刷按钮 */
+.theater-reroll-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid #444;
+    background: #2a2a2a;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; /* 防止被挤扁 */
+    transition: transform 0.2s, background 0.2s;
+}
+
+.theater-reroll-btn:active {
+    transform: rotate(-180deg) scale(0.9); /* 点击时旋转一下 */
+    background: #444;
+}
     </style>
 </head>
 <body>
@@ -1678,9 +1851,7 @@ select.x-input option {
     </div>
 </div>
 
-<!-- 下面接原来的 API URL 输入框 -->
-<div class="ios-item" id="apiUrlContainer"> ... </div>
-                     <!-- 原有的 API URL (加了 id="apiUrlContainer" 方便控制样式) -->
+
     <div class="ios-item" id="apiUrlContainer">
         <span class="ios-label">API URL</span>
         <input type="text" id="apiUrl" class="ios-input" placeholder="https://api.openai.com/v1" onchange="saveGlobalConfig()">
@@ -2655,6 +2826,16 @@ select.x-input option {
         </div>
     </div>
 </div>
+        <div class="page" id="page-theater-list" style="background: #f5f5f5;">
+    <div class="app-header" style="background: #fff; border-bottom: 1px solid #eee;">
+        <button class="btn-icon-text" onclick="goHome()" style="color:#000;">‹ 桌面</button>
+        <span class="app-title" style="font-size: 18px; color:#000;">我的剧本</span>
+        <button class="btn-icon-only" onclick="createNewScript()" style="font-size: 24px; color:#000;">+</button>
+    </div>
+    
+    <div class="content-scroll" id="theater-list-container" style="background: #f7f7fa; padding: 0;">
+        </div>
+</div>
         <!-- ============ 19. 剧场模式 (Theater Mode) ============ -->
 <div class="page" id="page-theater" style="background-color: #1a1a1a; color: #d0d0d0;">
     
@@ -2664,8 +2845,15 @@ select.x-input option {
     <!-- 顶部导演栏 -->
     <div class="theater-header">
         <button class="btn-icon-only" onclick="goHome()" style="color:#999;">‹ 退出</button>
+        
         <span class="theater-title" id="theater-title">未命名剧本</span>
-        <button class="btn-icon-only" onclick="openTheaterConsole()" style="color:#007AFF;">🎬</button>
+        
+        <div style="display:flex; gap:15px;">
+            <button class="btn-icon-only" onclick="openArchiveModal()" style="color:#d4a373; font-size:20px;">📜</button>
+            <button class="btn-icon-only" onclick="generateTheaterSummary()" style="color:#FF9500; font-size:20px;">✨</button>
+            
+            <button class="btn-icon-only" onclick="openTheaterConsole()" style="color:#007AFF;">🎬</button>
+        </div>
     </div>
 
     <!-- 剧本阅读区 (取代聊天框) -->
@@ -2679,7 +2867,8 @@ select.x-input option {
 
     <!-- 底部输入区 -->
     <div class="theater-input-area">
-        <textarea id="theater-input" rows="1" placeholder="书写你的故事..." oninput="autoResizeTextArea(this)"></textarea>
+        <textarea id="theater-input" rows="1" placeholder="我猜你也想靠近吧？" oninput="autoResizeTextArea(this)"></textarea>
+        <button class="theater-reroll-btn" onclick="rerollTheaterMsg()" style="margin-right: 8px;">🔄</button>
         <button class="theater-send-btn" onclick="sendTheaterMsg()">✒️</button>
     </div>
 </div>
@@ -3132,48 +3321,87 @@ select.x-input option {
             model: "gpt-3.5-turbo",
             temp: 0.7,
             historyLimit: 20,
-    // ✨ 新增这两个：
-    xiApiKey: "",
-    xiVoiceId: "",
+            xiApiKey: "",
+            xiVoiceId: "",
             xiModelId: "eleven_multilingual_v2"
         };
 
-        // 角色列表。每个对象包含完整独立的数据
+        // 角色列表
         let contacts = []; 
         // 当前活跃的聊天ID
         let activeContactId = null;
 
-        // 临时图片
+        // 临时变量
         let currentImg = null;
-        let currentCallContext = []; // 用来存通话时的临时记忆
-        // --- 定义一个全局音频对象，作为“通行证” ---
-let globalAudioPass = new Audio();
+        let currentCallContext = []; 
+        let globalAudioPass = new Audio();
+
+        // 🛡️ 全局安全锁：默认为关闭状态
+        // 只有当 loadData 成功读取数据后，这个锁才会打开
+        // 否则 saveData 将被禁止运行，防止空数据覆盖旧存档
+        window.isDataSafeToSave = false;
 
         // --- 初始化与生命周期 ---
         window.onload = function() {
             startClock();
-            loadData();
-            if (contacts.length === 0) {
-                // 默认创建一个角色
+            loadData(); // 尝试读取数据
+
+            // 如果联系人为空，且安全锁打开了（说明是真没数据，而不是读错了），才创建默认角色
+            if (contacts.length === 0 && window.isDataSafeToSave) {
                 createCharacter("AI Assistant", "你是一个有用的助手。", "https://api.dicebear.com/7.x/bottts/svg?seed=Default");
             }
+            
             updateContactList();
             updateGlobalSettingsUI();
             loadTheme();
         };
 
-        // --- 数据持久化 ---
+        // --- 数据持久化 (带保险丝版) ---
         function saveData() {
-            localStorage.setItem('ai_phone_config', JSON.stringify(globalConfig));
-            localStorage.setItem('ai_phone_contacts', JSON.stringify(contacts));
+            // 🛑 核心防御：检查安全锁
+            if (!window.isDataSafeToSave) {
+                console.warn("🚫 拦截：由于数据读取异常或尚未完成，已阻止覆盖保存，以保护原数据。");
+                return; // 直接退出，什么都不做，保护你的数据！
+            }
+
+            try {
+                localStorage.setItem('ai_phone_config', JSON.stringify(globalConfig));
+                localStorage.setItem('ai_phone_contacts', JSON.stringify(contacts));
+            } catch (e) {
+                console.error("保存失败 (可能是存储空间满了): " + e.message);
+            }
         }
 
+        // --- 读取数据 (带报警版) ---
         function loadData() {
-            const c = localStorage.getItem('ai_phone_config');
-            if(c) globalConfig = JSON.parse(c);
-            
-            const ct = localStorage.getItem('ai_phone_contacts');
-            if(ct) contacts = JSON.parse(ct);
+            try {
+                // 1. 读取配置
+                const c = localStorage.getItem('ai_phone_config');
+                if (c) globalConfig = JSON.parse(c);
+
+                // 2. 读取联系人 (最重要的数据)
+                const ct = localStorage.getItem('ai_phone_contacts');
+                if (ct) {
+                    contacts = JSON.parse(ct);
+                    console.log("✅ 数据读取成功，共", contacts.length, "个角色");
+                } else {
+                    console.log("⚠️ 未找到联系人数据，可能是第一次使用，或者是新设备");
+                }
+
+                // 🎉 3. 关键一步：读取成功，打开安全锁！
+                // 只有运行到这一行，才允许后续的保存操作
+                window.isDataSafeToSave = true;
+
+            } catch (e) {
+                // 🚨 发生严重错误 (比如 JSON 格式错了)
+                console.error("❌ 致命错误：数据读取失败！", e);
+                
+                // 锁死保存功能
+                window.isDataSafeToSave = false; 
+                
+                // 弹出红色警报
+                alert("⚠️【严重警告】数据读取失败！\n\n可能是代码修改导致格式错误，或者是数据损坏。\n为了保护你的存档，系统已【禁止自动保存】。\n\n请不要进行任何操作，先检查代码或导出备份！");
+            }
         }
 
         function createCharacter(name, prompt, avatar) {
@@ -3634,19 +3862,18 @@ let globalAudioPass = new Audio();
                 聊天记录：
                 ${textBlock}`;
 
-                const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-                    method: "POST",
-                    headers: { "Authorization": "Bearer " + globalConfig.apiKey, "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        model: globalConfig.model,
-                        messages: [
-                            { role: "system", content: "你是一个擅长模仿人类情感和内心戏的小说家。" },
-                            { role: "user", content: prompt }
-                        ]
-                    })
-                });
-                const data = await res.json();
-                const diaryEntry = data.choices[0].message.content;
+                // ✅ 正确写法：fetchWithRetry 不需要 method 和 headers，直接传数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [
+        { role: "system", content: "你是一个擅长模仿人类情感和内心戏的小说家。" },
+        { role: "user", content: prompt }
+    ]
+});
+
+// fetchWithRetry 返回的就是 fetch 的结果，所以后面这些都不用动
+const data = await res.json();
+const diaryEntry = data.choices[0].message.content;
                 
                 // 存入日记数组
                 char.diaries.push(diaryEntry);
@@ -3827,19 +4054,30 @@ let globalAudioPass = new Audio();
     document.getElementById('xiModelId').value = globalConfig.xiModelId || "eleven_multilingual_v2";
 }
         
-        function saveGlobalConfig() {
-            globalConfig.provider = document.getElementById('apiProvider').value;
-            globalConfig.apiUrl = document.getElementById('apiUrl').value;
-            globalConfig.apiKey = document.getElementById('apiKey').value;
-            globalConfig.model = document.getElementById('modelId').value;
-            globalConfig.temp = document.getElementById('tempVal').value;
-            globalConfig.historyLimit = parseInt(document.getElementById('historyLimit').value) || 20;
-            globalConfig.xiApiKey = document.getElementById('xiApiKey').value;
+       function saveGlobalConfig() {
+    const provider = document.getElementById('apiProvider').value;
+    const urlVal = document.getElementById('apiUrl').value; // 获取当前填写的 URL
+
+    globalConfig.provider = provider;
+    globalConfig.apiUrl = urlVal;
+    
+    // 🔥 如果是自定义模式，把 URL 单独存一份“备份”
+    if (provider === 'custom') {
+        globalConfig.savedCustomUrl = urlVal;
+    }
+
+    globalConfig.apiKey = document.getElementById('apiKey').value;
+    globalConfig.model = document.getElementById('modelId').value;
+    globalConfig.temp = document.getElementById('tempVal').value;
+    globalConfig.historyLimit = parseInt(document.getElementById('historyLimit').value) || 20;
+    globalConfig.xiApiKey = document.getElementById('xiApiKey').value;
     globalConfig.xiVoiceId = document.getElementById('xiVoiceId').value;
-            globalConfig.xiModelId = document.getElementById('xiModelId').value;
-            saveData();
-        }
-        // --- Google Key 管理系统 ---
+    globalConfig.xiModelId = document.getElementById('xiModelId').value;
+    
+    saveData();
+}
+
+// --- Google Key 管理系统 ---
 
 // 1. 渲染列表
 function renderGoogleKeyList() {
@@ -3874,7 +4112,7 @@ function renderGoogleKeyList() {
     });
 }
 
-// 2. 添加 Key (修复验证版)
+// 2. 添加 Key (修复验证版 - 保持原生 fetch)
 async function addGoogleKey() {
     const input = document.getElementById('newGoogleKeyInput');
     const key = input.value.trim();
@@ -3905,7 +4143,6 @@ async function addGoogleKey() {
             newObj.status = 'valid';
             console.log("Key 验证成功");
         } else {
-            // 即便验证失败，也打印一下原因
             console.warn("Key 验证失败 status:", res.status);
             newObj.status = 'invalid';
         }
@@ -3913,23 +4150,22 @@ async function addGoogleKey() {
         console.error("验证出错:", e);
         newObj.status = 'invalid';
     }
-    // ----------------------
 
     saveGlobalConfig(); 
     renderGoogleKeyList(); 
 }
-        // --- ✨ 新增：一键重新检测所有 Key ✨ ---
+
+// --- ✨ 新增：一键重新检测所有 Key ✨ ---
 async function revalidateAllKeys() {
     if (!globalConfig.googleKeys || globalConfig.googleKeys.length === 0) return;
 
-    const btn = event.target; // 获取点击的按钮
+    const btn = event.target;
     const oldText = btn.innerText;
     btn.innerText = "检测中...";
 
-    // 遍历所有 Key 并重新验证
     for (let kObj of globalConfig.googleKeys) {
-        kObj.status = 'checking'; // 先变成检测中状态
-        renderGoogleKeyList();    // 刷新UI让用户看到变化
+        kObj.status = 'checking';
+        renderGoogleKeyList();
         
         try {
             const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/models", {
@@ -3955,39 +4191,38 @@ function removeGoogleKey(index) {
         renderGoogleKeyList();
     }
 }
-        // --- ✨ 新增：切换 API 供应商逻辑 ✨ ---
+
+// --- ✨ 新增：切换 API 供应商逻辑 (修复版) ✨ ---
 function toggleApiProvider() {
     const provider = document.getElementById('apiProvider').value;
     const urlInput = document.getElementById('apiUrl');
-    // 获取原来的单 Key 输入框，Google 模式下我们要隐藏它
+    
     const singleKeyContainer = document.getElementById('apiKey').closest('.ios-item');
     const googleMgr = document.getElementById('googleKeyManager');
 
     if (provider === 'google') {
-        // Google 模式
+        // --- Google 模式 ---
         urlInput.value = "https://generativelanguage.googleapis.com/v1beta/openai";
         urlInput.disabled = true;
         urlInput.style.color = "#999"; 
         
-        // 显示多Key管理器，隐藏单Key输入框
         googleMgr.style.display = 'block';
         singleKeyContainer.style.display = 'none';
         
-        // 渲染列表
         renderGoogleKeyList();
     } else {
-        // 自定义模式
+        // --- 自定义模式 ---
         urlInput.disabled = false;
         urlInput.style.color = "#007AFF";
-        if (urlInput.value.includes("googleapis.com")) {
-            urlInput.value = "https://api.openai.com/v1";
-        }
         
-        // 隐藏多Key管理器，显示单Key输入框
+        // 恢复备份的 URL
+        urlInput.value = globalConfig.savedCustomUrl || "https://api.openai.com/v1";
+        
         googleMgr.style.display = 'none';
         singleKeyContainer.style.display = 'flex';
         document.getElementById('apiKey').placeholder = "sk-...";
     }
+    
     saveGlobalConfig();
 }
         // --- 美化/主题系统 (终极版: 图标+字体+壁纸) ---
@@ -4607,18 +4842,15 @@ async function generateDiaryReply(char, userDiaryContent) {
     `;
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [
-                    { role: "system", content: "你是一个正在写日记的角色。" },
-                    { role: "user", content: prompt }
-                ],
-                temperature: 0.8
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [
+        { role: "system", content: "你是一个正在写日记的角色。" },
+        { role: "user", content: prompt }
+    ],
+    temperature: 0.8
+});
 
         const data = await res.json();
         const reply = data.choices[0].message.content;
@@ -4978,18 +5210,15 @@ async function triggerPomoAI(reason) {
     if(reason === "finish") userTrigger = "计时结束了！夸奖我！";
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [
-                    { role: "system", content: systemInstruction },
-                    { role: "user", content: userTrigger }
-                ],
-                temperature: 0.7
-            })
-        });
+       // ✅ 正确写法：去掉 method, headers 和 stringify，只留纯数据
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [
+        { role: "system", content: systemInstruction },
+        { role: "user", content: userTrigger }
+    ],
+    temperature: 0.7
+});
         
         const data = await res.json();
         const reply = data.choices[0].message.content;
@@ -5116,20 +5345,16 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
             content: m.content 
         }));
 
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [
-                    { role: "system", content: char.systemPrompt },
-                    ...history,
-                    // 【核心修改】将 role 改为 user，强制模型必须回应，防止空回
-                    { role: "user", content: backfillPrompt }
-                ],
-                temperature: 0.85 
-            })
-        });
+        // ✅ 正确写法：去掉 method, headers 和 stringify，只留纯数据
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [
+        { role: "system", content: char.systemPrompt },
+        ...history,
+        { role: "user", content: backfillPrompt }
+    ],
+    temperature: 0.85
+});
         
         if (!res.ok) {
             throw new Error(`API error: ${res.status}`);
@@ -5465,15 +5690,12 @@ async function checkAndSendHolidayGreeting(char) {
             { role: "user", content: greetingPrompt }
         ];
 
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: msgs,
-                temperature: 0.85
-            })
-        });
+       // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: msgs,
+    temperature: 0.85
+});
 
         if (!res.ok) {
             throw new Error(`网络错误: ${res.status}`);
@@ -6170,15 +6392,12 @@ async function generateXTweetAI(charId) {
     }`;
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [{ role: "user", content: prompt }],
-                temperature: 0.9
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.9
+});
         const data = await res.json();
         const result = JSON.parse(data.choices[0].message.content.replace(/```json|```/g, '').trim());
         
@@ -6232,18 +6451,15 @@ async function generateFanOrNPCTweetAI(type) {
     }
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [
-                    { role: "system", content: "你是一个推特模拟生成器。请只返回纯 JSON 格式: {name, handle, content}。" },
-                    { role: "user", content: systemInstruction }
-                ],
-                temperature: 0.95
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [
+        { role: "system", content: "你是一个推特模拟生成器。请只返回纯 JSON 格式: {name, handle, content}。" },
+        { role: "user", content: systemInstruction }
+    ],
+    temperature: 0.95
+});
 
         const data = await res.json();
         let aiText = data.choices[0].message.content;
@@ -6294,15 +6510,12 @@ async function generateFanOrNPCCommentForUser(tweetId) {
     必须返回纯JSON数组：[{"name": "网名", "content": "内容"}, ...]`;
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [{ role: "user", content: prompt }],
-                temperature: 0.9
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.9
+});
         const data = await res.json();
         const comments = JSON.parse(data.choices[0].message.content.replace(/```json|```/g, '').trim());
         
@@ -6520,14 +6733,11 @@ async function triggerDetailAiReply(tweet, userComment) {
     if(!systemPrompt) { btn.innerText="回复"; return; }
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [{ role: "user", content: systemPrompt }]
-            })
-        });
+        // ✅ 正确写法：
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [{ role: "user", content: systemPrompt }]
+});
         const data = await res.json();
         const replyText = data.choices[0].message.content;
 
@@ -6713,14 +6923,11 @@ async function generateCharacterCommentForUser(tweetId) {
     `;
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [{ role: "user", content: prompt }]
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [{ role: "user", content: prompt }]
+});
         const data = await res.json();
         const replyText = data.choices[0].message.content;
 
@@ -7172,14 +7379,11 @@ async function generateChapterSummary() {
 
         // 注意：这里 model 用的是你设置里的全局 model。
         // 建议在设置里填支持长文本的模型，如 gpt-3.5-turbo-16k 或 gpt-4o
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model, // 确保这个模型能吃得下几千字
-                messages: [{ role: "user", content: prompt }]
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model, // 确保这个模型能吃得下几千字
+    messages: [{ role: "user", content: prompt }]
+});
         
         if (!res.ok) {
             const errData = await res.json();
@@ -7286,14 +7490,11 @@ async function manualShareReport() {
         3. 字数控制在 100 字以内。
         `;
 
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [{ role: "user", content: prompt }]
-            })
-        });
+        // ✅ 修复版：移除 method/headers/body，只传纯数据
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [{ role: "user", content: prompt }]
+});
 
         const data = await res.json();
         const aiSummary = data.choices[0].message.content;
@@ -7435,14 +7636,11 @@ async function sendReaderMsg() {
     btn.innerText = "⏳";
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: apiMessages // 使用包含历史的数组
-            })
-        });
+       // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: apiMessages // 使用包含历史的数组
+});
         const data = await res.json();
         const reply = data.choices[0].message.content;
 
@@ -8697,15 +8895,12 @@ async function triggerCallAI(userText) {
     ];
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: apiMessages, // 发送完整的上下文
-                temperature: 0.8
-            })
-        });
+        // ✅ 正确写法：只传纯数据对象
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: apiMessages, // 发送完整的上下文
+    temperature: 0.8
+});
         const data = await res.json();
         const reply = data.choices[0].message.content;
 
@@ -9012,14 +9207,11 @@ async function submitFicRequest() {
     `;
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: [{ role: "user", content: prompt }]
-            })
-        });
+        // ✅ 粘贴这段新的 (注意没有 headers, 没有 stringify)
+const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+    model: globalConfig.model,
+    messages: [{ role: "user", content: prompt }]
+});
         
         const data = await res.json();
         let jsonStr = data.choices[0].message.content;
@@ -9570,10 +9762,11 @@ async function sendLudoMsg() {
     triggerLudoAI(txt, "chat");
 }
 
-// --- 升级版 AI 互动函数 (带主聊天记忆) ---
+// --- 升级版 AI 互动函数 (已修复 Google Key 掉线问题) ---
 async function triggerLudoAI(userContent, contextType) {
     const char = getLudoChar();
-    if(!globalConfig.apiKey) return;
+    // 这里的校验改宽一点，只要是 Google 模式或者有 Key 就可以
+    if(globalConfig.provider !== 'google' && !globalConfig.apiKey) return; 
 
     // 1. 获取主聊天记录 (最近10条即可，太多容易干扰)
     const mainHistory = char.messages.slice(-10).map(m => ({
@@ -9591,7 +9784,7 @@ async function triggerLudoAI(userContent, contextType) {
 
     // 3. 获取游戏内的即时记录
     const gameLogs = ludoState.logs.slice(-6).map(l => `[刚刚发生了]: ${l.content}`).join('\n');
-    
+
     // 4. 核心系统指令 (强逻辑版)
     let systemInstruction = `
     你正在和用户玩“飞行棋”游戏。你的角色：${char.name}。人设：${char.systemPrompt}
@@ -9605,14 +9798,10 @@ async function triggerLudoAI(userContent, contextType) {
     - "chat": 正常闲聊。
     `;
 
-    // 5. ✨ 组装最终消息列表 (关键修改：加入明确的时间分割线)
+    // 5. 组装最终消息列表
     const apiMessages = [
         { role: "system", content: systemInstruction },
-        
-        // 插入历史聊天作为背景
         ...mainHistory, 
-        
-        // 🔥🔥🔥 强力分割线：告诉 AI 上面是过去，下面是现在 🔥🔥🔥
         { role: "system", content: `
         -------------------------------------------------------------
         【系统提示】：
@@ -9623,21 +9812,20 @@ async function triggerLudoAI(userContent, contextType) {
         【游戏内最新动态】：
         ${gameLogs}
         `},
-        
-        // 用户的最新发言
         { role: "user", content: userContent }
     ];
 
     try {
-        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
-            body: JSON.stringify({
-                model: globalConfig.model,
-                messages: apiMessages,
-                temperature: 0.8
-            })
+        // 🔥🔥🔥 核心修复点：改用 fetchWithRetry 🔥🔥🔥
+        // 这样它就会自动去你的 Google Key 列表里找能用的 Key，而不是傻傻地用空 Key
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: apiMessages,
+            temperature: 0.8
         });
+
+        if (!res.ok) throw new Error("连接断开");
+
         const data = await res.json();
         let reply = data.choices[0].message.content;
         
@@ -9648,14 +9836,14 @@ async function triggerLudoAI(userContent, contextType) {
         }
 
         addLudoLog('ai', reply);
-        
         if (contextType === "do_task" || isTaskDone) {
-             setTimeout(nextTurn, 2000); 
+             setTimeout(nextTurn, 2000);
         }
 
     } catch(e) {
         console.error(e);
-        addLudoLog('system', 'AI 掉线了...');
+        addLudoLog('system', 'AI 掉线了... (请检查 Key 或网络)');
+        // 如果是做任务途中掉线，强制跳过回合，防止卡死
         if (contextType === "do_task") nextTurn(); 
     }
 }
@@ -9910,34 +10098,199 @@ function deleteBank(index) {
 // --- 20. 剧场模式 (Theater Mode) 基础逻辑 ---
 // ==========================================
 
+// ========================================================
+// 🎭 剧场模式 2.0：多剧本列表版 (数据结构升级)
+// ========================================================
+
+// 1. 新的状态管理
 let theaterState = {
-    config: {
-        apiUrl: "",
-        apiKey: "",
-        model: ""
-    },
-    // ✨ 新增：预设数据仓
-    preset: {
-        name: "未加载",
-        core: [],     // 核心规则 (如：去八股、人设)
-        styles: [],   // 文风 (如：古风、港风)
-        modules: [],  // 小剧场 (如：论坛体、日记)
-        
-        // 当前选中的状态
-        activeStyleId: null, // 单选
-        activeModules: [],
-        worldInfo: [],      // 这是你上次加的世界书
-        regexScripts: []    // 多选 (存 ID)
-    },
+    config: { apiUrl: "", apiKey: "", model: "" },
+    preset: { name: "未加载", core: [], styles: [], modules: [], activeStyleId: null, activeModules: [], worldInfo: [], regexScripts: [] },
+    
+    // --- 新增：当前正在玩的剧本 ID ---
+    currentScriptId: null, 
+    
+    // 依然保留这个 logs 变量作为“当前运行中的缓存”，方便 API 函数调用
     logs: [] 
 };
 
-// 1. 初始化入口
+// 所有的剧本数据 (从 localStorage 读取)
+// 格式: [{ id, title, charId, logs: [], lastModified: timestamp }]
+let allScripts = [];
+
+// ========================================================
+// 2. 入口改写
+// ========================================================
+
+// 初始化：不再直接进舞台，而是进列表
 initTheaterMode = function() {
-    navigateTo('page-theater');
     loadTheaterConfig();
-    loadTheaterState(); // 加载预设
-    loadTheaterLogs();  // ✨ 新增：加载历史聊天
+    loadAllScripts(); // 加载列表数据
+    renderScriptList(); // 渲染列表UI
+    navigateTo('page-theater-list'); // 跳转到列表页
+}
+
+// 加载所有剧本
+function loadAllScripts() {
+    const s = localStorage.getItem('theater_all_scripts');
+    if(s) {
+        allScripts = JSON.parse(s);
+    } else {
+        // 兼容旧数据：如果用户之前有单剧本数据，把它迁移过来
+        const oldLogs = localStorage.getItem('theater_chat_logs');
+        if(oldLogs) {
+            const logs = JSON.parse(oldLogs);
+            if(logs.length > 0) {
+                // 创建一个“旧存档”
+                const defaultCharId = contacts.length > 0 ? contacts[0].id : null;
+                const migrationScript = {
+                    id: 'script_' + Date.now(),
+                    title: "旧的存档",
+                    charId: defaultCharId,
+                    logs: logs,
+                    lastModified: Date.now()
+                };
+                allScripts.push(migrationScript);
+                saveAllScripts();
+                localStorage.removeItem('theater_chat_logs'); // 清理旧数据
+            }
+        }
+    }
+}
+
+function saveAllScripts() {
+    localStorage.setItem('theater_all_scripts', JSON.stringify(allScripts));
+}
+
+// 渲染列表 (仿截图)
+function renderScriptList() {
+    const container = document.getElementById('theater-list-container');
+    container.innerHTML = '';
+
+    if(allScripts.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:50px; color:#999;">暂无剧本<br>点击右上角 + 开始</div>`;
+        return;
+    }
+
+    // 按时间倒序
+    const sorted = [...allScripts].sort((a,b) => b.lastModified - a.lastModified);
+
+    sorted.forEach(script => {
+        // 获取主角头像和名字
+        const char = contacts.find(c => c.id === script.charId);
+        const avatarUrl = char ? char.avatar : 'https://api.dicebear.com/7.x/shapes/svg?seed=Unknown';
+        const charName = char ? char.name : '未知角色';
+        
+        // 获取预览文字 (最后一条内容)
+        const lastLog = script.logs.length > 0 ? script.logs[script.logs.length-1].content : "无内容";
+        // 清洗一下预览文字 (去掉换行符)
+        const previewText = lastLog.replace(/<[^>]+>/g, '').substring(0, 50); // 简单去标签
+
+        // 格式化时间
+        const date = new Date(script.lastModified);
+        const timeStr = `${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2,'0')}`;
+
+        const div = document.createElement('div');
+        div.className = 'script-item';
+        div.onclick = (e) => {
+            // 如果点的是删除按钮，不进剧本
+            if(e.target.classList.contains('btn-del-script')) return;
+            openScript(script.id);
+        };
+
+        div.innerHTML = `
+            <div class="script-avatar-box">
+                <img src="${avatarUrl}" class="script-avatar">
+            </div>
+            <div class="script-info">
+                <div class="script-header">
+                    <span class="script-title">${charName} - ${script.title}</span>
+                    <span class="script-time">${timeStr}</span>
+                </div>
+                <div class="script-preview">${previewText}</div>
+            </div>
+            <button class="btn-del-script" onclick="deleteScript('${script.id}')">×</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// ========================================================
+// 3. 交互逻辑：新建与打开
+// ========================================================
+
+// 新建剧本 (先选人，再起名)
+function createNewScript() {
+    if(contacts.length === 0) return alert("请先在信息列表创建角色！");
+    
+    // 弹窗让用户输入标题
+    const title = prompt("给新剧本起个名字：", "未命名剧本");
+    if(!title) return;
+
+    // 选择角色 (默认用当前活跃角色或第一个)
+    let charId = activeContactId;
+    if(!charId) {
+        charId = contacts[0].id;
+        alert(`未选择当前角色，默认使用：${contacts[0].name}`);
+    }
+
+    const newScript = {
+        id: 'script_' + Date.now(),
+        title: title,
+        charId: charId,
+        logs: [], // 空记录
+        lastModified: Date.now()
+    };
+
+    allScripts.unshift(newScript);
+    saveAllScripts();
+    openScript(newScript.id); // 直接进入
+}
+
+// 打开具体剧本 (进入舞台)
+function openScript(scriptId) {
+    const script = allScripts.find(s => s.id === scriptId);
+    if(!script) return;
+
+    // 1. 更新全局状态
+    theaterState.currentScriptId = scriptId;
+    theaterState.logs = script.logs; // 加载这个剧本的日志
+    
+    // 2. 加载预设
+    loadTheaterState(); 
+
+    // 3. 设置 UI
+    const char = contacts.find(c => c.id === script.charId);
+    document.getElementById('theater-title').innerText = script.title;
+    
+    // 如果角色不存在了，用默认名
+    const charName = char ? char.name : "未知";
+    
+    // 渲染舞台内容
+    const stage = document.getElementById('theater-stage');
+    stage.innerHTML = ''; // 清空上一场戏
+    
+    theaterState.logs.forEach(log => {
+        const displayName = log.role === 'user' ? "我" : charName;
+        appendTheaterLog(log.role, log.content, displayName);
+    });
+
+    // 4. 跳转
+    navigateTo('page-theater');
+    
+    // 滚动到底部
+    setTimeout(() => {
+        stage.scrollTop = stage.scrollHeight;
+    }, 100);
+}
+
+// 删除剧本
+function deleteScript(id) {
+    if(confirm("确定要删除这个剧本存档吗？无法恢复。")) {
+        allScripts = allScripts.filter(s => s.id !== id);
+        saveAllScripts();
+        renderScriptList();
+    }
 }
 
 function loadTheaterConfig() {
@@ -10011,39 +10364,54 @@ async function sendTheaterMsg() {
 }
         // === 【修复补丁】补充缺失的保存函数 ===
 function saveTheaterLogs() {
-    // 确保 theaterState.logs 存在
-    if (!theaterState.logs) theaterState.logs = [];
-    // 保存到本地存储
-    localStorage.setItem('theater_chat_logs', JSON.stringify(theaterState.logs));
+    if (!theaterState.currentScriptId) return;
+
+    // 找到当前剧本
+    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+    if (script) {
+        script.logs = theaterState.logs; // 更新日志
+        script.lastModified = Date.now(); // 更新时间
+        saveAllScripts(); // 存入 localStorage
+    }
 }
 
 
 function appendTheaterLog(role, text, name) {
     const stage = document.getElementById('theater-stage');
-    
-    // 移除初始提示
     const tip = document.querySelector('.theater-start-tip');
     if(tip) tip.remove();
 
+    // 计算楼层：当前 DOM 里的 .t-msg-block 数量 + 1
+    const floor = stage.querySelectorAll('.t-msg-block').length + 1;
+
     const div = document.createElement('div');
     div.className = 't-msg-block';
-    
-    // 格式化文本 (换行转<br>)
+    if(role === 'system') div.classList.add('system');
+
+    // 格式化文本
     const formattedText = text.replace(/\n/g, '<br>');
-    
-    div.innerHTML = `
-        <div class="t-role-label">${name}</div>
-        <div class="t-text ${role}">${formattedText}</div>
-    `;
+
+    // 如果是系统消息，用特殊卡片 (之前的逻辑)
+    if (role === 'system') {
+        // 系统消息通常不占楼层号，或者占了但不显示，看你喜好。这里选择显示。
+        div.innerHTML = `
+            <span class="t-floor-tag">#${floor}</span>
+            <div class="t-system-card">
+                <div class="t-system-header">剧情回顾 / 记忆存档</div>
+                <div>${formattedText}</div>
+            </div>`;
+    } else {
+        // 普通对话
+        div.innerHTML = `
+            <span class="t-floor-tag">#${floor}</span>
+            <div class="t-role-label">${name}</div>
+            <div class="t-text ${role}">${formattedText}</div>
+        `;
+    }
     
     stage.appendChild(div);
-    
-    // 自动滚动到底部
-    setTimeout(() => {
-        stage.scrollTop = stage.scrollHeight;
-    }, 100);
-    
-    return div.querySelector('.t-text'); // 返回文本容器引用，方便流式输出
+    setTimeout(() => { stage.scrollTop = stage.scrollHeight; }, 100);
+    return div.querySelector('.t-text');
 }
 
 
@@ -10648,21 +11016,34 @@ async function triggerTheaterAI(char) {
             { role: "user", content: finalUserContent }
         ];
 
-        // 4. 发起请求 (强制开启流式)
-        const res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json", 
-                "Authorization": "Bearer " + apiKey 
-            },
-            body: JSON.stringify({
-                model: model,
-                messages: messagesToSend,
-                temperature: 1.0, 
-                stream: true 
-            })
-        });
+        // 1. 先定义好请求内容 (Payload)，避免重复写
+        const requestPayload = {
+            model: model,
+            messages: messagesToSend,
+            temperature: 1.0, 
+            stream: true 
+        };
 
+        let res; // 声明响应变量
+
+        // 2. 智能判断逻辑 🔥
+        // 情况 A: 剧场有独立 Key -> 使用原生 fetch (直连，保持独立性)
+        if (theaterState.config.apiKey) {
+            res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json", 
+                    "Authorization": "Bearer " + apiKey 
+                },
+                body: JSON.stringify(requestPayload)
+            });
+        } 
+        // 情况 B: 剧场没填 Key (想用全局) -> 使用 fetchWithRetry (自动去 Google 钥匙包里找)
+        else {
+            res = await fetchWithRetry(normalizeUrl(apiUrl) + '/chat/completions', requestPayload);
+        }
+
+        // 3. 错误处理 (保持原样)
         if (!res.ok) {
             const errText = await res.text();
             throw new Error(`API请求失败 ${res.status}: ${errText.substring(0, 100)}`);
@@ -10741,51 +11122,58 @@ async function triggerTheaterAI(char) {
 }
 
 
-// 5. 核心：积木拼装师 (Assembler)
+// 5. 核心：积木拼装师 (Assembler) - 升级版
 function assembleSystemPrompt(char) {
     const p = theaterState.preset;
     let parts = [];
 
-    // --- 第一层：占位符替换函数 ---
-    // 把 {{user}} 换成玩家名，{{char}} 换成角色名
+    // --- 占位符处理 ---
     const process = (text) => {
         if(!text) return "";
         let res = text;
-        // 简单的全局替换
         const userName = char.userName || "我";
         const charName = char.name || "AI";
-        res = res.replace(/{{user}}/gi, userName).replace(/{{user}}/g, userName); // 兼容大小写
+        res = res.replace(/{{user}}/gi, userName).replace(/{{user}}/g, userName);
         res = res.replace(/{{char}}/gi, charName).replace(/{{char}}/g, charName);
         return res;
     };
-    // === ✨ 新增：第一层 - 世界书 (World Info) ===
-    // 获取用户当前输入框里的文字
-    const inputEl = document.getElementById('theater-input');
-    const currentInput = inputEl ? inputEl.value : "";
-    
-    // 扫描并获取激活的词条
-    const worldInfoContext = scanWorldInfo(currentInput, char);
-    if (worldInfoContext) {
-        parts.push(worldInfoContext);
+
+    // 1. 获取当前剧本的【历史剧情存档】 (这就是你要的功能！)
+    if (theaterState.currentScriptId) {
+        const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+        if (script && script.archives && script.archives.length > 0) {
+            // 把所有存档拼接起来
+            const allSummaries = script.archives.map(a => 
+                `[📜 剧情存档 #${a.startFloor}-${a.endFloor}]:\n${a.summary}`
+            ).join('\n\n');
+            
+            parts.push(`
+========== 📜 历史剧情回顾 (Previous Story) ==========
+(以下是之前的剧情摘要，请以此为背景继续扮演)
+${allSummaries}
+====================================================
+`);
+        }
     }
 
-    // --- 第二层：核心规则 (Core) ---
-    // 这些是必须带上的 (比如小说家设定、去八股)
+    // 2. 世界书 (World Info)
+    const inputEl = document.getElementById('theater-input');
+    const currentInput = inputEl ? inputEl.value : "";
+    const worldInfoContext = scanWorldInfo(currentInput, char);
+    if (worldInfoContext) parts.push(worldInfoContext);
+
+    // 3. 核心规则 (Core)
     p.core.forEach(item => {
         parts.push(process(item.content));
     });
 
-    // --- 第三层：文风 (Style) ---
-    // 只有选中的那个文风才会被加入
+    // 4. 文风 (Style)
     if (p.activeStyleId) {
         const style = p.styles.find(s => s.id === p.activeStyleId);
-        if (style) {
-            parts.push(`\n【当前激活文风】：\n` + process(style.content));
-        }
+        if (style) parts.push(`\n【当前激活文风】：\n` + process(style.content));
     }
 
-    // --- 第四层：角色卡信息 (Persona) ---
-    // 这是从我们 App 的 contacts 里读来的基础设定
+    // 5. 角色设定
     parts.push(`
     <CharSetting>
     Name: ${char.name}
@@ -10797,20 +11185,15 @@ function assembleSystemPrompt(char) {
     </UserSetting>
     `);
 
-    // --- 第五层：小剧场模块 (Modules) ---
-    // 只有开关打开的剧场指令才会被加入
-    // 比如你开了“论坛体”，这里就会加入论坛体的 Prompt
+    // 6. 小剧场模块
     if (p.activeModules.length > 0) {
         parts.push(`\n【特殊剧场模式已开启】：\n`);
         p.activeModules.forEach(mid => {
             const mod = p.modules.find(m => m.id === mid);
-            if (mod) {
-                parts.push(process(mod.content));
-            }
+            if (mod) parts.push(process(mod.content));
         });
     }
 
-    // 将所有积木用换行符连接
     return parts.join('\n\n');
 }
         // === 🌍 世界书核心引擎 ===
@@ -11085,9 +11468,403 @@ async function testTheaterConnection() {
     // 插入到 body 末尾
     document.body.insertAdjacentHTML('beforeend', html);
 })();
+        // ==========================================
+// --- 🎭 剧场模式：剧情总结与存档功能 ---
+// ==========================================
+
+async function generateTheaterSummary() {
+    // 1. 安全检查
+    if (!theaterState.currentScriptId) return alert("请先进入一个剧本！");
+    if (!theaterState.logs || theaterState.logs.length === 0) return alert("剧本还是空的，没法总结哦。");
+    if (!globalConfig.apiKey) return alert("请先在设置中配置 API Key。");
+
+    // 2. 准备按钮动画
+    const btn = event.currentTarget; // 获取点击的按钮
+    const oldIcon = btn.innerText;
+    btn.innerText = "⏳"; // 变成漏斗
+    btn.disabled = true;
+
+    try {
+        // 3. 整理全文 (提取纯文本)
+        // 注意：为了省钱和防超长，我们可以限制只取最近的 15000 字，或者全部
+        // 这里默认全部，如果太长可能会被 API 截断
+        const fullStory = theaterState.logs
+            .map(l => {
+                const roleName = l.role === 'user' ? '用户' : '角色';
+                // 过滤掉之前的总结卡片，防止总结套总结
+                if (l.role === 'system') return ""; 
+                return `${roleName}: ${l.content}`;
+            })
+            .join('\n');
+
+        if (fullStory.length < 100) {
+            throw new Error("剧情太短了，还是多聊几句再总结吧！");
+        }
+
+        // 4. 构建 Prompt
+        const prompt = `
+        你是一个专业的剧情记录员。请阅读以下【剧本对话记录】，并生成一份【剧情摘要存档】。
+        
+        【要求】：
+        1. 概括从开头到现在发生的核心事件、关键转折、人物关系进展。
+        2. 忽略无关紧要的闲聊。
+        3. 格式清晰，分段落。
+        4. 字数控制在 300-500 字以内。
+        5. 这是为了让你（AI）在后续扮演中能记得之前的剧情，所以请保留重要细节（如物品、约定、秘密）。
+
+        【对话记录】：
+        ${fullStory.substring(0, 30000)} 
+        `; // 限制 3万字符防止爆 Token
+
+        // 5. 发送请求
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.5 // 总结需要准确，温度低一点
+        });
+
+        if (!res.ok) throw new Error("API 请求失败");
+        
+        const data = await res.json();
+        const summary = data.choices[0].message.content;
+
+        // 6. 构造系统存档消息 (Formatted for AI context)
+        const systemNote = `
+--- 剧情存档点 (${new Date().toLocaleString()}) ---
+${summary}
+---------------------------------------------
+[系统指令]: 以上是截止目前的剧情摘要。请将其作为【长期记忆】纳入考量，保持剧情连贯性。
+`;
+
+        // 7. 写入数据
+        const newLog = { 
+            role: 'system', // 标记为系统消息
+            content: systemNote 
+        };
+        theaterState.logs.push(newLog);
+        saveTheaterLogs();
+
+        // 8. 上屏渲染 (使用我们刚才写的特殊样式)
+        appendSystemCard(systemNote);
+
+        // 9. 滚动到底部
+        const stage = document.getElementById('theater-stage');
+        setTimeout(() => { stage.scrollTop = stage.scrollHeight; }, 100);
+
+    } catch (e) {
+        alert("总结失败: " + e.message);
+    } finally {
+        btn.innerText = oldIcon;
+        btn.disabled = false;
+    }
+}
+
+// 辅助：渲染系统卡片到舞台
+function appendSystemCard(text) {
+    const stage = document.getElementById('theater-stage');
+    const div = document.createElement('div');
+    div.className = 't-msg-block system';
+    
+    // 清洗文本，去掉不需要显示的指令部分，只显示摘要给用户看
+    // 让显示稍微美观一点
+    let displayText = text.replace("[系统指令]: 以上是截止目前的剧情摘要。请将其作为【长期记忆】纳入考量，保持剧情连贯性。", "");
+    displayText = displayText.replace(/\n/g, '<br>');
+
+    div.innerHTML = `
+        <div class="t-system-card">
+            <div class="t-system-header">记忆存档</div>
+            <div>${displayText}</div>
+        </div>
+    `;
+    stage.appendChild(div);
+}
+        (function injectArchiveModal() {
+    if (document.getElementById('modal-theater-archives')) return;
+
+    const html = `
+    <div class="modal-overlay" id="modal-theater-archives" style="z-index: 650;">
+        <div class="modal-box" style="height: 70%; background: #222; color: #eee; border: 1px solid #444;">
+            <div class="modal-header" style="background: #1a1a1a; border-bottom: 1px solid #333; display:flex; justify-content:space-between; align-items:center;">
+                <button onclick="closeModal('modal-theater-archives')" style="color:#999; background:none; border:none;">关闭</button>
+                <span style="color:#fff; font-weight:bold;">剧情档案室</span>
+                <button onclick="openCreateArchiveView()" style="color:#007AFF; font-weight:bold; font-size:24px; background:none; border:none;">+</button>
+            </div>
+            
+            <div id="archive-list-view" class="modal-body" style="padding: 15px; background: #222;">
+                </div>
+
+            <div id="archive-create-view" class="modal-body" style="padding: 20px; background: #222; display:none;">
+                <div class="t-group-title">选择剧情范围 (楼层号)</div>
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <input type="number" id="arc-start" class="t-input" placeholder="开始楼层" style="text-align:center;">
+                    <span style="line-height:40px;">至</span>
+                    <input type="number" id="arc-end" class="t-input" placeholder="结束楼层" style="text-align:center;">
+                </div>
+                <div style="text-align:center; font-size:12px; color:#666; margin-bottom:20px;">
+                    当前共 <span id="arc-total-floors">0</span> 层
+                </div>
+                <button onclick="doGenerateArchive()" class="ios-btn" style="background:#007AFF; color:#fff; border-radius:8px;">AI 生成剧情摘要</button>
+                <button onclick="backToArchiveList()" class="ios-btn" style="background:#333; color:#ccc; border-radius:8px; margin-top:10px;">返回列表</button>
+            </div>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+})();
+        // ==========================================
+// --- 📜 剧场模式：后台档案室逻辑 ---
+// ==========================================
+
+// 1. 打开档案室
+function openArchiveModal() {
+    if (!theaterState.currentScriptId) return alert("请先进入剧本");
+    renderArchiveList();
+    
+    // 重置视图
+    document.getElementById('archive-list-view').style.display = 'block';
+    document.getElementById('archive-create-view').style.display = 'none';
+    
+    openModal('modal-theater-archives');
+}
+
+// 2. 渲染列表 (升级版：带同步功能)
+function renderArchiveList() {
+    const container = document.getElementById('archive-list-view');
+    container.innerHTML = '';
+
+    // 获取当前剧本
+    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+    if (!script.archives) script.archives = [];
+
+    if (script.archives.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#666; margin-top:50px;">暂无存档<br>点击右上角 + 创建阶段性总结</div>';
+        return;
+    }
+
+    // 倒序显示
+    [...script.archives].reverse().forEach((arc, index) => {
+        // 原始索引
+        const realIndex = script.archives.length - 1 - index;
+        
+        const div = document.createElement('div');
+        div.className = 'archive-card';
+        div.innerHTML = `
+            <div class="archive-header">
+                <span>存档: #${arc.startFloor} - #${arc.endFloor}</span>
+                <div style="display:flex; gap:10px;">
+                    <span onclick="syncArchiveToMemory(${realIndex})" style="cursor:pointer; color:#007AFF;" title="同步到平时聊天的记忆库">📤 同步</span>
+                    <span onclick="deleteArchive(${realIndex})" style="cursor:pointer; color:#ff3b30;">×</span>
+                </div>
+            </div>
+            <div class="archive-body" onclick="alert('${arc.summary.replace(/\n/g, '\\n')}')">${arc.summary}</div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// ✨ 新增：同步功能
+function syncArchiveToMemory(index) {
+    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+    if(!script || !script.archives[index]) return;
+
+    const summary = script.archives[index].summary;
+    const charId = script.charId; // 剧本关联的角色ID
+    
+    const char = contacts.find(c => c.id === charId);
+    if (!char) return alert("找不到关联的角色，无法同步！");
+
+    if (!char.memories) char.memories = [];
+
+    // 构造一条记忆
+    const memoryText = `[剧场剧情回忆]: ${summary}`;
+    
+    // 查重：避免重复添加
+    if (char.memories.includes(memoryText)) {
+        return alert("这条存档已经同步过了！");
+    }
+
+    char.memories.push(memoryText);
+    saveData(); // 保存到全局联系人数据
+
+    alert(`✅ 已同步！\n\n现在 "${char.name}" 在平时聊天时，也能记得这段剧情了。`);
+}
+
+// 3. 打开新建视图
+function openCreateArchiveView() {
+    document.getElementById('archive-list-view').style.display = 'none';
+    document.getElementById('archive-create-view').style.display = 'block';
+    
+    // 自动填入楼层建议
+    const total = theaterState.logs.length;
+    document.getElementById('arc-total-floors').innerText = total;
+    
+    // 智能建议：从上次存档的结束位置+1 开始，到最新
+    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+    let suggestStart = 1;
+    if (script && script.archives && script.archives.length > 0) {
+        const lastArc = script.archives[script.archives.length - 1];
+        suggestStart = lastArc.endFloor + 1;
+    }
+    
+    document.getElementById('arc-start').value = Math.min(suggestStart, total);
+    document.getElementById('arc-end').value = total;
+}
+
+function backToArchiveList() {
+    document.getElementById('archive-list-view').style.display = 'block';
+    document.getElementById('archive-create-view').style.display = 'none';
+}
+
+// 4. 执行生成 (AI)
+async function doGenerateArchive() {
+    const start = parseInt(document.getElementById('arc-start').value);
+    const end = parseInt(document.getElementById('arc-end').value);
+    const total = theaterState.logs.length;
+
+    if (isNaN(start) || isNaN(end) || start > end || start < 1) return alert("楼层范围无效");
+    if (end > total) return alert(`目前只有 ${total} 层`);
+
+    const btn = event.target;
+    const oldText = btn.innerText;
+    btn.innerText = "正在阅读并总结...";
+    btn.disabled = true;
+
+    try {
+        // 提取指定范围的文本
+        // logs 索引是 0-based，楼层是 1-based
+        const slice = theaterState.logs.slice(start - 1, end);
+        const contextText = slice.map(l => `${l.role==='user'?'用户': l.role}: ${l.content}`).join('\n');
+
+        const prompt = `
+        你是一个剧本记录员。请阅读以下【${start}楼 到 ${end}楼】的剧情片段。
+        请生成一段详细的【剧情存档总结】。
+        
+        要求：
+        1. 概括这段时间内发生的核心事件、角色情感变化、关键线索。
+        2. 忽略无意义的闲聊，只保留对后续剧情有影响的信息。
+        3. 字数 200-400 字。
+        4. 这是为了存入数据库供后续检索，所以要客观、准确。
+        
+        剧情片段：
+        ${contextText.substring(0, 20000)}
+        `;
+
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.5
+        });
+
+        if (!res.ok) throw new Error("API Error");
+        const data = await res.json();
+        const summary = data.choices[0].message.content;
+
+        // 存入当前剧本的 archives 数组
+        const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+        if (!script.archives) script.archives = [];
+        
+        script.archives.push({
+            id: Date.now(),
+            startFloor: start,
+            endFloor: end,
+            summary: summary,
+            timestamp: Date.now()
+        });
+        
+        // 保存到 localStorage
+        saveAllScripts();
+
+        alert("✅ 存档成功！");
+        backToArchiveList();
+        renderArchiveList();
+
+    } catch(e) {
+        alert("生成失败: " + e.message);
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
+
+function deleteArchive(index) {
+    if(confirm("确定删除这条存档吗？")) {
+        const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+        if(script && script.archives) {
+            script.archives.splice(index, 1);
+            saveAllScripts();
+            renderArchiveList();
+        }
+    }
+}
+        // ==========================================
+// --- 🎭 剧场模式：重刷功能 (智能容错版) ---
+// ==========================================
+
+async function rerollTheaterMsg() {
+    // 1. 安全检查
+    if (!theaterState.currentScriptId) return;
+    const logs = theaterState.logs;
+    
+    if (!logs || logs.length === 0) return;
+
+    // 2. 获取最后一条消息
+    const lastMsg = logs[logs.length - 1];
+    
+    // === 核心修改逻辑 ===
+    
+    // 情况 A: 最后一条是 AI 发的 (或者系统报错信息)
+    // -> 也就是你要“推倒重来”，需要先删掉这一条
+    if (lastMsg.role === 'assistant') {
+        // 删除数据
+        logs.pop(); 
+        saveTheaterLogs();
+
+        // 删除界面上的气泡
+        const stage = document.getElementById('theater-stage');
+        const blocks = stage.querySelectorAll('.t-msg-block');
+        if (blocks.length > 0) {
+            blocks[blocks.length - 1].remove();
+        }
+    }
+    
+    // 情况 B: 最后一条是 User 发的 (说明上次请求彻底失败了，连记录都没留下)
+    // -> 不需要删任何东西，直接让 AI 再试一次就行
+
+    // 情况 C: 如果删完 AI 消息后，发现上一条不是 User (比如是系统提示)，那也没法接话
+    // 稍微检查一下现在的“最后一条”
+    const newLast = logs[logs.length - 1];
+    if (!newLast || newLast.role === 'system') {
+        // 虽然通常不会发生，但也防一手
+        // 如果你想让它强行续写系统提示，也可以去掉这个 return
+        return alert("找不到上一条用户发言，无法重刷。");
+    }
+
+    // 3. 重新召唤 AI
+    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
+    if (script) {
+        const char = contacts.find(c => c.id === script.charId);
+        if (char) {
+            await triggerTheaterAI(char);
+        }
+    }
+}
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
