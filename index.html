@@ -1459,286 +1459,6 @@ select.x-input option {
 .t-item-row.active .t-item-name { color: #fff; font-weight: bold; }
 
 @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        /* --- 剧本列表样式 (仿截图) --- */
-.script-item {
-    display: flex;
-    padding: 15px;
-    background: #fff;
-    border-bottom: 1px solid #f0f0f0;
-    cursor: pointer;
-    transition: background 0.2s;
-    position: relative;
-    height: 90px; /* 固定高度，保持整齐 */
-}
-.script-item:active {
-    background: #fafafa;
-}
-
-.script-avatar-box {
-    position: relative;
-    margin-right: 12px;
-}
-.script-avatar {
-    width: 55px;
-    height: 55px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid rgba(0,0,0,0.1);
-}
-
-.script-info {
-    flex: 1;
-    min-width: 0; /* 防止文本溢出 */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.script-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 4px;
-}
-
-.script-title {
-    font-size: 16px;
-    font-weight: bold;
-    color: #333;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 180px;
-    font-family: 'Songti SC', serif; /* 标题用宋体更有剧场感 */
-}
-
-.script-time {
-    font-size: 12px;
-    color: #999;
-    font-family: sans-serif;
-}
-
-.script-preview {
-    font-size: 13px;
-    color: #666;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2; /* 显示两行 */
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    font-family: 'UserCustomFont', sans-serif;
-}
-
-/* 删除按钮 (滑动或长按显示，这里简化为绝对定位的红叉) */
-.btn-del-script {
-    position: absolute;
-    right: 5px;
-    bottom: 5px;
-    padding: 10px;
-    color: #ccc;
-    font-size: 18px;
-    background: none;
-    border: none;
-}
-.btn-del-script:hover { color: #ff3b30; }
-        /* --- 剧场模式：剧情总结卡片样式 --- */
-.t-msg-block.system {
-    text-align: center;
-    margin: 30px 0;
-    opacity: 0.9;
-}
-
-.t-system-card {
-    display: inline-block;
-    background: rgba(255, 255, 255, 0.08); /* 深色背景下的微透白 */
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    padding: 15px 20px;
-    text-align: left;
-    max-width: 90%;
-    color: #a0a0a0;
-    font-size: 14px;
-    font-family: sans-serif; /* 用黑体显得更像系统文字 */
-    line-height: 1.6;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-}
-
-.t-system-header {
-    color: #FF9500; /* 橙色标题 */
-    font-weight: bold;
-    font-size: 12px;
-    margin-bottom: 8px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.t-system-header::before {
-    content: '💾';
-}
-        /* 剧场模式 - 楼层号样式 */
-.t-floor-tag {
-    position: absolute;
-    left: -25px; /* 放在气泡左侧外面 */
-    top: 0;
-    font-size: 10px;
-    color: #555;
-    font-family: monospace;
-    opacity: 0.5;
-}
-/* 给消息块加相对定位，以便放楼层号 */
-.t-msg-block {
-    position: relative; 
-    margin-left: 10px; /* 给左边留点空放楼层号 */
-}
-
-/* 档案列表样式 */
-.archive-card {
-    background: #2a2a2a;
-    border: 1px solid #444;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 10px;
-}
-.archive-header {
-    display: flex; justify-content: space-between;
-    font-size: 12px; color: #FF9500; font-weight: bold; margin-bottom: 5px;
-}
-.archive-body {
-    font-size: 13px; color: #ccc; line-height: 1.5;
-    max-height: 80px; overflow: hidden; text-overflow: ellipsis;
-    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-}
-        /* 剧场模式 - 重刷按钮 */
-.theater-reroll-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid #444;
-    background: #2a2a2a;
-    color: #fff;
-    font-size: 18px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0; /* 防止被挤扁 */
-    transition: transform 0.2s, background 0.2s;
-}
-
-.theater-reroll-btn:active {
-    transform: rotate(-180deg) scale(0.9); /* 点击时旋转一下 */
-    background: #444;
-}
-        /* --- ✨ 新增：Ins 风状态栏样式 --- */
-.chat-header-center {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden; /* 防止文字太长溢出 */
-}
-
-/* 名字样式微调 */
-.chat-contact-name {
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 1.2;
-    margin: 0; /* 去掉边距，紧凑一点 */
-}
-
-/* 状态栏容器 */
-.chat-status-bar {
-    display: flex;
-    align-items: center;
-    gap: 5px; /* 点和字的间距 */
-    opacity: 0; /* 默认隐藏，有字才显示 */
-    transform: translateY(5px);
-    transition: all 0.3s ease-out; /* 丝滑动画 */
-}
-
-/* 状态显示时的动画类 */
-.chat-status-bar.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* 那个 Ins 风的小绿点 */
-.status-dot {
-    width: 8px;
-    height: 8px;
-    background-color: #34c759; /* 苹果绿 */
-    border-radius: 50%;
-    border: 1px solid #fff; /* 加个白边更精致 */
-    box-shadow: 0 0 4px rgba(52, 199, 89, 0.4);
-}
-
-/* 状态文字 */
-.status-text {
-    font-size: 11px;
-    color: #8e8e93; /* 灰色 */
-    font-weight: 400;
-    white-space: nowrap;
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-        /* --- 相册专属样式 --- */
-.album-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2px;
-    padding: 2px;
-}
-.album-item {
-    aspect-ratio: 1/1;
-    background: #eee;
-    overflow: hidden;
-    position: relative;
-    cursor: pointer;
-}
-.album-img {
-    width: 100%; height: 100%; object-fit: cover;
-    transition: transform 0.3s;
-}
-.album-item:active .album-img { transform: scale(0.95); }
-
-/* 查看器翻转效果 */
-.photo-viewer-container {
-    width: 90%; height: 70%;
-    perspective: 1000px; /* 3D透视 */
-}
-.photo-card-inner {
-    position: relative; width: 100%; height: 100%;
-    text-align: center;
-    transition: transform 0.6s;
-    transform-style: preserve-3d;
-}
-/* 添加翻转类 */
-.photo-card-inner.flipped {
-    transform: rotateY(180deg);
-}
-.photo-card-front, .photo-card-back {
-    position: absolute; width: 100%; height: 100%;
-    backface-visibility: hidden; /* 背面不可见 */
-    border-radius: 20px;
-    overflow: hidden;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-}
-.photo-card-front { background: transparent; }
-.photo-card-back { 
-    background: #fff; color: #000; 
-    transform: rotateY(180deg); 
-    padding: 30px; box-shadow: 0 0 20px rgba(255,255,255,0.2);
-}
-.photo-hint {
-    position: absolute; bottom: 20px; left:0; width:100%;
-    text-align: center; color: rgba(255,255,255,0.7); font-size: 12px;
-    text-shadow: 0 1px 2px black; pointer-events: none;
-}
     </style>
 </head>
 <body>
@@ -1843,11 +1563,6 @@ select.x-input option {
     <div class="app-icon" id="app-icon-theater" style="background: linear-gradient(to bottom, #2b2b2b, #000000); border:1px solid #444;">🎭</div>
     <div class="app-name">剧场</div>
 </div>
-                <!-- 17. 智能相册 (Gallery) -->
-<div class="app-icon-container" onclick="navigateTo('page-album'); renderAlbumGrid();">
-    <div class="app-icon" id="app-icon-album" style="background: linear-gradient(to bottom, #ff9a9e, #fecfef);">🖼️</div>
-    <div class="app-name">相册</div>
-</div>
             </div>
         </div>
 
@@ -1869,15 +1584,7 @@ select.x-input option {
                 <button class="chat-back-btn" onclick="navigateTo('page-msg-list')">
                     <span style="font-size:24px; margin-right:5px;">‹</span> 信息
                 </button>
-                <!-- 新的中间部分：名字 + 状态 -->
-<div class="chat-header-center">
-    <div class="chat-contact-name" id="chat-title-name">AI</div>
-    <!-- 状态栏 -->
-    <div class="chat-status-bar" id="chat-status-container">
-        <div class="status-dot"></div>
-        <div class="status-text" id="chat-status-text">在线</div>
-    </div>
-</div>
+                <span class="chat-contact-name" id="chat-title-name">AI</span>
                 <div class="chat-header-actions">
                 <button class="btn-icon-only" onclick="openChatSettings()" title="角色设置" style="font-size: 20px;">⚙️</button>
             </div>
@@ -1970,31 +1677,10 @@ select.x-input option {
         <!-- 动态生成 -->
     </div>
 </div>
-                    <!-- === ✨ 新增：自定义反代预设管理器 (默认隐藏) ✨ === -->
-<div id="customPresetManager" style="display:none; background:#f9f9f9; padding:10px; border-radius:10px; margin-bottom:15px; border:1px solid #e5e5ea;">
-    <div style="font-size:12px; color:#666; margin-bottom:5px;">常用反代预设</div>
-    
-    <!-- 预设选择下拉框 -->
-    <div class="ios-item" style="border:1px solid #ddd; border-radius:8px; margin-bottom:10px; background:#fff;">
-        <span class="ios-label">选择预设</span>
-        <select id="presetSelect" class="ios-input" style="direction: rtl;" onchange="applyCustomPreset()">
-            <option value="">-- 请选择 --</option>
-        </select>
-    </div>
 
-    <!-- 操作按钮 -->
-    <div style="display:flex; gap:10px;">
-        <button onclick="saveNewCustomPreset()" style="flex:1; border:none; background:#007AFF; color:white; border-radius:8px; padding:8px; font-weight:bold; font-size:13px;">
-            另存为新预设
-        </button>
-        <button onclick="deleteCustomPreset()" style="flex:0.4; border:none; background:#fff; color:#ff3b30; border:1px solid #ff3b30; border-radius:8px; padding:8px; font-weight:bold; font-size:13px;">
-            删除
-        </button>
-    </div>
-</div>
-<!-- === 新增结束 === -->
-
-
+<!-- 下面接原来的 API URL 输入框 -->
+<div class="ios-item" id="apiUrlContainer"> ... </div>
+                     <!-- 原有的 API URL (加了 id="apiUrlContainer" 方便控制样式) -->
     <div class="ios-item" id="apiUrlContainer">
         <span class="ios-label">API URL</span>
         <input type="text" id="apiUrl" class="ios-input" placeholder="https://api.openai.com/v1" onchange="saveGlobalConfig()">
@@ -2144,11 +1830,6 @@ select.x-input option {
                     <div class="ios-item">
     <span class="ios-label">剧场图标</span>
     <input type="text" id="iconInput-theater" class="ios-input" placeholder="http://..." onchange="saveTheme()">
-</div>
-                    <!-- 新增：相册图标设置 -->
-<div class="ios-item">
-    <span class="ios-label">相册图标</span>
-    <input type="text" id="iconInput-album" class="ios-input" placeholder="http://..." onchange="saveTheme()">
 </div>
                 </div>
 
@@ -2974,16 +2655,6 @@ select.x-input option {
         </div>
     </div>
 </div>
-        <div class="page" id="page-theater-list" style="background: #f5f5f5;">
-    <div class="app-header" style="background: #fff; border-bottom: 1px solid #eee;">
-        <button class="btn-icon-text" onclick="goHome()" style="color:#000;">‹ 桌面</button>
-        <span class="app-title" style="font-size: 18px; color:#000;">我的剧本</span>
-        <button class="btn-icon-only" onclick="createNewScript()" style="font-size: 24px; color:#000;">+</button>
-    </div>
-    
-    <div class="content-scroll" id="theater-list-container" style="background: #f7f7fa; padding: 0;">
-        </div>
-</div>
         <!-- ============ 19. 剧场模式 (Theater Mode) ============ -->
 <div class="page" id="page-theater" style="background-color: #1a1a1a; color: #d0d0d0;">
     
@@ -2993,15 +2664,8 @@ select.x-input option {
     <!-- 顶部导演栏 -->
     <div class="theater-header">
         <button class="btn-icon-only" onclick="goHome()" style="color:#999;">‹ 退出</button>
-        
         <span class="theater-title" id="theater-title">未命名剧本</span>
-        
-        <div style="display:flex; gap:15px;">
-            <button class="btn-icon-only" onclick="openArchiveModal()" style="color:#d4a373; font-size:20px;">📜</button>
-            <button class="btn-icon-only" onclick="generateTheaterSummary()" style="color:#FF9500; font-size:20px;">✨</button>
-            
-            <button class="btn-icon-only" onclick="openTheaterConsole()" style="color:#007AFF;">🎬</button>
-        </div>
+        <button class="btn-icon-only" onclick="openTheaterConsole()" style="color:#007AFF;">🎬</button>
     </div>
 
     <!-- 剧本阅读区 (取代聊天框) -->
@@ -3015,8 +2679,7 @@ select.x-input option {
 
     <!-- 底部输入区 -->
     <div class="theater-input-area">
-        <textarea id="theater-input" rows="1" placeholder="我猜你也想靠近吧？" oninput="autoResizeTextArea(this)"></textarea>
-        <button class="theater-reroll-btn" onclick="rerollTheaterMsg()" style="margin-right: 8px;">🔄</button>
+        <textarea id="theater-input" rows="1" placeholder="书写你的故事..." oninput="autoResizeTextArea(this)"></textarea>
         <button class="theater-send-btn" onclick="sendTheaterMsg()">✒️</button>
     </div>
 </div>
@@ -3074,33 +2737,6 @@ select.x-input option {
 
             <!-- Tab 2: 预设导入 (核心) -->
             <div id="tab-presets" class="t-tab-content">
-                <!-- ✨ 新增：预设库管理区 ✨ -->
-    <div class="t-group-title">📚 我的预设库 (已保存配置)</div>
-    
-    <div style="background:#1a1a1a; padding:10px; border-radius:8px; border:1px solid #333; margin-bottom:15px;">
-        <div style="display:flex; gap:10px; margin-bottom:10px;">
-            <select id="theater-preset-select" class="t-input" onchange="applySavedTheaterPreset()" style="margin:0;">
-                <option value="">-- 选择已有预设 --</option>
-            </select>
-        </div>
-        
-        <div style="display:flex; gap:10px;">
-            <!-- 保存当前配置 -->
-            <button onclick="saveNewTheaterPreset()" style="flex:1; padding:8px; background:#007AFF; color:#fff; border:none; border-radius:6px; font-size:13px;">
-               保存当前配置
-            </button>
-            
-            <!-- 删除选中 -->
-            <button onclick="deleteTheaterPreset()" style="flex:0.4; padding:8px; background:#333; color:#ff3b30; border:1px solid #ff3b30; border-radius:6px; font-size:13px;">
-                删除
-            </button>
-        </div>
-        <div style="font-size:10px; color:#666; margin-top:5px;">
-            * 保存将会把当前所有文风、正则、世界书及其开关状态打包存档。
-        </div>
-    </div>
-    <!-- ✨ 新增结束 ✨ -->
-
                 <div class="t-group-title">导入酒馆预设 (JSON)</div>
                 <div class="t-upload-box" onclick="document.getElementById('theaterPresetInput').click()">
                     点击上传 .json 文件
@@ -3158,48 +2794,6 @@ select.x-input option {
                 </div>
             </div>
 
-        </div>
-    </div>
-</div>
-        <!-- ============ 20. 智能相册 (Gallery) ============ -->
-<div class="page" id="page-album" style="background: #fff;">
-    <div class="app-header">
-        <button class="btn-icon-text" onclick="goHome()">‹ 桌面</button>
-        <span class="app-title">美好回忆</span>
-        <button class="btn-icon-only" onclick="document.getElementById('albumUploadInput').click()">+</button>
-        <input type="file" id="albumUploadInput" accept="image/*" hidden onchange="handleAlbumUpload(event)">
-    </div>
-    
-    <div class="content-scroll">
-        <div id="album-grid" class="album-grid">
-            <!-- 动态生成照片流 -->
-        </div>
-        <div style="padding:20px; text-align:center; color:#999; font-size:12px;">
-            每一张照片，Ta 都会认真看并写下批注。<br>
-            这些回忆会被写入长期记忆中。
-        </div>
-    </div>
-</div>
-
-<!-- 照片详情查看器 (大图 + 翻转看批注) -->
-<div class="modal-overlay" id="modal-photo-viewer" style="background: rgba(0,0,0,0.9);">
-    <!-- 点击关闭 -->
-    <button onclick="closeModal('modal-photo-viewer')" style="position:absolute; top:40px; left:20px; color:white; background:none; border:none; font-size:30px; z-index:100;">×</button>
-    
-    <div class="photo-viewer-container" onclick="flipPhotoCard()">
-        <div class="photo-card-inner" id="photo-card-inner">
-            <!-- 正面：图片 -->
-            <div class="photo-card-front">
-                <img id="viewer-img" src="" style="width:100%; height:100%; object-fit:contain;">
-                <div class="photo-hint">点击翻转看 Ta 的评价</div>
-            </div>
-            <!-- 背面：AI 批注 -->
-            <div class="photo-card-back">
-                <div style="font-size:24px; margin-bottom:20px;">✨</div>
-                <div id="viewer-comment" style="font-size:16px; line-height:1.6; color:#333; white-space: pre-wrap;"></div>
-                <div id="viewer-date" style="margin-top:20px; font-size:12px; color:#888;"></div>
-                <div class="btn-del-mem" onclick="event.stopPropagation(); deleteCurrentPhoto()" style="bottom:20px; right:20px; top:auto;">删除这张</div>
-            </div>
         </div>
     </div>
 </div>
@@ -3538,118 +3132,48 @@ select.x-input option {
             model: "gpt-3.5-turbo",
             temp: 0.7,
             historyLimit: 20,
-            xiApiKey: "",
-            xiVoiceId: "",
+    // ✨ 新增这两个：
+    xiApiKey: "",
+    xiVoiceId: "",
             xiModelId: "eleven_multilingual_v2"
         };
 
-        // 角色列表
+        // 角色列表。每个对象包含完整独立的数据
         let contacts = []; 
         // 当前活跃的聊天ID
         let activeContactId = null;
 
-        // 临时变量
+        // 临时图片
         let currentImg = null;
-        let currentCallContext = []; 
-        let globalAudioPass = new Audio();
-
-        // 🛡️ 全局安全锁：默认为关闭状态
-        // 只有当 loadData 成功读取数据后，这个锁才会打开
-        // 否则 saveData 将被禁止运行，防止空数据覆盖旧存档
-        window.isDataSafeToSave = false;
+        let currentCallContext = []; // 用来存通话时的临时记忆
+        // --- 定义一个全局音频对象，作为“通行证” ---
+let globalAudioPass = new Audio();
 
         // --- 初始化与生命周期 ---
         window.onload = function() {
             startClock();
-            loadData(); // 尝试读取数据
-
-            // 如果联系人为空，且安全锁打开了（说明是真没数据，而不是读错了），才创建默认角色
-            if (contacts.length === 0 && window.isDataSafeToSave) {
+            loadData();
+            if (contacts.length === 0) {
+                // 默认创建一个角色
                 createCharacter("AI Assistant", "你是一个有用的助手。", "https://api.dicebear.com/7.x/bottts/svg?seed=Default");
             }
-            
             updateContactList();
             updateGlobalSettingsUI();
             loadTheme();
         };
 
-        // --- 数据持久化 (带智能回滚机制) ---
-function saveData() {
-    // 🛑 核心防御：检查安全锁
-    if (!window.isDataSafeToSave) return;
-
-    try {
-        localStorage.setItem('ai_phone_config', JSON.stringify(globalConfig));
-        localStorage.setItem('ai_phone_contacts', JSON.stringify(contacts));
-    } catch (e) {
-        // 🔥 捕获存储空间已满错误
-        if (e.name === 'QuotaExceededError' || e.code === 22) {
-            console.warn("存储空间已满，尝试执行【弃车保帅】策略...");
-
-            // 1. 找到当前正在聊天的角色
-            const char = contacts.find(c => c.id === activeContactId);
-            
-            // 2. 检查最后一条消息是否有图片
-            if (char && char.messages.length > 0) {
-                const lastMsg = char.messages[char.messages.length - 1];
-                
-                if (lastMsg.image) {
-                    // ✂️ 动作：删除图片数据，保留文字
-                    lastMsg.image = null; 
-                    // 给文字加个备注，让你知道发生过惨案
-                    lastMsg.content += "\n(⚠️系统: 图片因空间不足已丢弃)";
-
-                    // 3. 二次尝试保存
-                    try {
-                        localStorage.setItem('ai_phone_contacts', JSON.stringify(contacts));
-                        // 成功挽救！弹窗告知
-                        alert("💾【空间告急】\n刚才发的图片太大存不下，系统自动丢弃了图片，但【保留了文字记录】。\n\n请尽快清理旧数据释放空间！");
-                        return; // 挽救成功，退出
-                    } catch (retryE) {
-                        // 依然失败，说明连文字都存不下了
-                        alert("❌【保存失败】即使删除了图片，空间依然不足！\n刚才的对话已丢失，请立即去设置里备份并清理数据！");
-                    }
-                } else {
-                    // 最后一条没图，说明是纯文字都存不下了
-                    alert("❌【保存失败】存储空间已满！\n无法保存新消息，请立即清理数据。");
-                }
-            }
-        } else {
-            console.error("保存出错:", e);
+        // --- 数据持久化 ---
+        function saveData() {
+            localStorage.setItem('ai_phone_config', JSON.stringify(globalConfig));
+            localStorage.setItem('ai_phone_contacts', JSON.stringify(contacts));
         }
-    }
-}
 
-        // --- 读取数据 (带报警版) ---
         function loadData() {
-            try {
-                // 1. 读取配置
-                const c = localStorage.getItem('ai_phone_config');
-                if (c) globalConfig = JSON.parse(c);
-
-                // 2. 读取联系人 (最重要的数据)
-                const ct = localStorage.getItem('ai_phone_contacts');
-                if (ct) {
-                    contacts = JSON.parse(ct);
-                    console.log("✅ 数据读取成功，共", contacts.length, "个角色");
-                } else {
-                    console.log("⚠️ 未找到联系人数据，可能是第一次使用，或者是新设备");
-                }
-
-                // 🎉 3. 关键一步：读取成功，打开安全锁！
-                // 只有运行到这一行，才允许后续的保存操作
-                window.isDataSafeToSave = true;
-
-            } catch (e) {
-                // 🚨 发生严重错误 (比如 JSON 格式错了)
-                console.error("❌ 致命错误：数据读取失败！", e);
-                
-                // 锁死保存功能
-                window.isDataSafeToSave = false; 
-                
-                // 弹出红色警报
-                alert("⚠️【严重警告】数据读取失败！\n\n可能是代码修改导致格式错误，或者是数据损坏。\n为了保护你的存档，系统已【禁止自动保存】。\n\n请不要进行任何操作，先检查代码或导出备份！");
-            }
+            const c = localStorage.getItem('ai_phone_config');
+            if(c) globalConfig = JSON.parse(c);
+            
+            const ct = localStorage.getItem('ai_phone_contacts');
+            if(ct) contacts = JSON.parse(ct);
         }
 
         function createCharacter(name, prompt, avatar) {
@@ -3769,13 +3293,6 @@ function saveData() {
         function renderChat(id) {
             const char = contacts.find(c => c.id === id);
             if(!char) return;
-            const statusContainer = document.getElementById('chat-status-container');
-    if(statusContainer) {
-        statusContainer.classList.remove('show');
-        // 可选：也可以默认显示“在线”
-        // document.getElementById('chat-status-text').innerText = "在线";
-        // statusContainer.classList.add('show');
-    }
 
             document.getElementById('chat-title-name').innerText = char.name;
             
@@ -3917,70 +3434,9 @@ function saveData() {
     const originalBtnContent = btn.innerHTML;
     btn.innerHTML = '<span class="typing-indicator"></span><span class="typing-indicator"></span>';
     btn.disabled = true;
-            let currentUserMsg = "";
-    if (char.messages.length > 0) {
-        const lastMsg = char.messages[char.messages.length - 1];
-        if (lastMsg.role === 'user') {
-            currentUserMsg = lastMsg.content;
-        }
-    }
-             // --- ✨ 2. 构建 System Prompt (自然融入版 - 时间修正补丁) ---
-    // 获取更自然的时间描述，比如 "凌晨 02:15" 或 "下午 14:30"
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
-    const hour = now.getHours();
-    
-    // 计算时段氛围 (这是关键，给AI具体的“状态”而不是冷冰冰的数字)
-    let timeVibe = "";
-    if (hour >= 0 && hour < 5) timeVibe = "深夜/凌晨 (Deep Night) - 你应该感到困倦，或者惊讶用户为什么还不睡。";
-    else if (hour >= 5 && hour < 9) timeVibe = "清晨 (Morning) - 刚醒来或准备开始新的一天。";
-    else if (hour >= 9 && hour < 12) timeVibe = "上午 (Late Morning) - 正常活动/工作时间。";
-    else if (hour >= 12 && hour < 14) timeVibe = "中午 (Noon) - 午饭或午休时间。";
-    else if (hour >= 14 && hour < 18) timeVibe = "下午 (Afternoon) - 下午活动时间。";
-    else if (hour >= 18 && hour < 23) timeVibe = "晚上 (Evening) - 放松、休息或夜生活时间。";
-    else timeVibe = "深夜前奏 (Late Night) - 准备睡觉的时间。";
-
-    let systemPromptFull = `
-    [Roleplay Logic]
-    You are NOT an AI. You are a living character inside a chat app.
-    Forget you are a language model.
-    
-    [Character Persona]
-    ${char.systemPrompt}
-    
-    [📱 Real-World Anchor - CRITICAL]
-    Right now, looking at your phone, the time is: 【 ${timeString} 】
-    Current Atmosphere: ${timeVibe}
-    User Name: ${char.userName}
-    
-    [Interaction Rules]
-    1. **Sync with Real Time**: Your biological clock MUST match the time above. 
-       - If it's 03:00 AM, do NOT say "Good afternoon". Act sleepy or ask "Why are you up so late?".
-       - If it's 12:00 PM, ask about lunch.
-    2. **Natural Reaction**: Do NOT announce the time like a robot (e.g. "It is now 14:00"). Instead, react to it naturally (e.g. "Wow, looking at the time, I should grab some food").
-    3. **Context Override**: Even if previous messages said "Good morning", if the current time is "22:00", strictly follow the CURRENT time (22:00).
-    `;
-    
-    if (char.userPersona) systemPromptFull += `\n[User Persona]: ${char.userPersona}`;
-
-    // 👇👇👇 状态栏指令 (移到最前，防止 Gemini 跳戏) 👇👇👇
-    systemPromptFull += `
-    \n[🔴 强制指令 - 状态栏生成规则]:
-    在你的回复内容的【最后面】，必须附带你当下的心理状态或动作。
-    格式必须严格为：{{STATUS: 状态内容}}
-    
-    【内容严格要求】：
-    1. 🚫 **绝对禁止英语**！(No "Amused", "Happy")
-    2. 🚫 **禁止单调形容词**！
-    3. ✅ **必须生动鲜活**！使用微动作、心理吐槽。
-       - ❌ 错误: {{STATUS: 生气}}
-       - ✅ 正确: {{STATUS: 被你气成河豚}}
-       - ✅ 正确: {{STATUS: 计划通√}}
-    4. 这个标签不要出现在正文中，只放在最后。
-    `;
 
     // --- 1. 构建 System Prompt (基础设定) ---
-    
+    let systemPromptFull = char.systemPrompt + `\n[当前时间: ${new Date().toLocaleString()}]\n[用户名称: ${char.userName}]`;
     if (char.userPersona) systemPromptFull += `\n[用户设定: ${char.userPersona}]`;
             if (char.languageMode === 'en') {
         systemPromptFull += `
@@ -3995,27 +3451,9 @@ function saveData() {
         `;
     }
     
-    // --- 🛡️ 感知系统升级 (人设保护版) ---
-    let sensoryBlock = "";
-    
-    // 1. 获取数据
-    sensoryBlock += getStatusContext(char, currentUserMsg);
-    sensoryBlock += getMusicContext();
-
-    // 2. 注入提示词：强调“自然融入”而非“机械复述”
-    if (sensoryBlock.trim() !== "") {
-        systemPromptFull += `
-        \n[🧠 Subconscious / Current Environment]
-        (These are things you currently see, hear, or feel. DO NOT report them like a robot. Just let them influence your mood or words naturally.)
-        
-        ${sensoryBlock}
-        
-        [Integration Instruction]:
-        - If "Raining": Just complain about the wet floor or sound of rain. Don't say "Weather report says rain."
-        - If "Budget Low": Act stingy or worried about money.
-        - If "Period/PMS": Be gentle/patient (if user is suffering) or understanding.
-        `;
-    }
+    // 注入各种感知上下文
+    systemPromptFull += getStatusContext(char);
+    systemPromptFull += getMusicContext();
 
     // --- 2. 喂入日记 (混合记忆版：收藏 + 最近) ---
     if (char.diaries && char.diaries.length > 0) {
@@ -4057,9 +3495,8 @@ function saveData() {
     // --- 4. 构建消息历史 (包含同人文读取逻辑) ---
     const limit = globalConfig.historyLimit || 20;
     const history = char.messages.slice(-limit);
-    const nowTimeStr = new Date().toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' });
 
-    history.forEach((m, index) => {
+    history.forEach(m => {
         let contentToSend = m.content;
 
         // 🔥 【同人文核心逻辑】如果包含隐藏的同人文数据，我们需要把全文注入给 AI
@@ -4082,9 +3519,6 @@ function saveData() {
                 contentToSend = "[用户分享了一篇同人文链接]";
             }
         }
-        if (index === history.length - 1 && m.role === 'user') {
-            contentToSend += `\n\n（🔴 潜意识强制视觉：你无意间瞥了一眼手机右上角，时间赫然显示为 【${nowTimeStr}】。你猛然意识到之前的对话可能让你忽略了时间的流逝，现在必须根据 【${nowTimeStr}】 的天色和状态来回应。）`;
-        }
 
         if (m.image) {
             apiMsgs.push({
@@ -4098,14 +3532,11 @@ function saveData() {
             apiMsgs.push({ role: m.role, content: contentToSend });
         }
     });
-            
 
     // --- 5. UI 占位与 API 调用 ---
     const aiMsgIndex = char.messages.length + 1;
     const aiUiSpan = appendMsgUI('assistant', '...', null, aiMsgIndex, true);
     let fullText = "";
-    let capturedStatus = "";
-    const statusRegex = /\{\{\s*STATUS\s*[：:]\s*(.*?)\s*\}\}/gi;
 
     try {
         const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
@@ -4131,28 +3562,15 @@ function saveData() {
                         const json = JSON.parse(line.replace('data: ', ''));
                         const delta = json.choices[0].delta.content || "";
                         fullText += delta;
-                        let displayText = fullText.replace(statusRegex, "");
-                        aiUiSpan.innerHTML = formatText(displayText);
+                        aiUiSpan.innerHTML = formatText(fullText);
                         scrollToBottom();
                     } catch (e) { }
                 }
             }
         }
-        // --- ✨ 4. 提取状态并更新顶部 UI ---
-        const match = statusRegex.exec(fullText);
-        if (match && match[1]) {
-            capturedStatus = match[1].trim();
-            updateChatStatus(capturedStatus); 
-        } else {
-            // 🛠️ 修正 3：增加 else 分支，没抓到就恢复默认，防止卡死
-            updateChatStatus("在线"); // ✅ 加这行
-        }
-
-        // 保存时，把标签去掉，只留纯净文本 (或者你想保留标签也可以，这里选择去掉)
-        const cleanContent = fullText.replace(statusRegex, "").trim();
 
         // 保存 AI 回复 (加上时间戳)
-        char.messages.push({ role: 'assistant', content: cleanContent, timestamp: Date.now() });
+        char.messages.push({ role: 'assistant', content: fullText, timestamp: Date.now() });
         saveData();
 
         // 再次刷新以确保格式正确 (特别是时间戳显示)
@@ -4166,21 +3584,6 @@ function saveData() {
 
     btn.innerHTML = originalBtnContent;
     btn.disabled = false;
-}
-        function updateChatStatus(text) {
-    const container = document.getElementById('chat-status-container');
-    const textEl = document.getElementById('chat-status-text');
-    
-    if (!container || !textEl) return;
-
-    // 先淡出
-    container.classList.remove('show');
-    
-    setTimeout(() => {
-        textEl.innerText = text; // 更新文字
-        // 再淡入
-        container.classList.add('show');
-    }, 300); // 配合 CSS 的 transition 时间
 }
 
         // --- 3. 智能总结功能 ---
@@ -4231,18 +3634,19 @@ function saveData() {
                 聊天记录：
                 ${textBlock}`;
 
-                // ✅ 正确写法：fetchWithRetry 不需要 method 和 headers，直接传数据对象
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: [
-        { role: "system", content: "你是一个擅长模仿人类情感和内心戏的小说家。" },
-        { role: "user", content: prompt }
-    ]
-});
-
-// fetchWithRetry 返回的就是 fetch 的结果，所以后面这些都不用动
-const data = await res.json();
-const diaryEntry = data.choices[0].message.content;
+                const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+                    method: "POST",
+                    headers: { "Authorization": "Bearer " + globalConfig.apiKey, "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model: globalConfig.model,
+                        messages: [
+                            { role: "system", content: "你是一个擅长模仿人类情感和内心戏的小说家。" },
+                            { role: "user", content: prompt }
+                        ]
+                    })
+                });
+                const data = await res.json();
+                const diaryEntry = data.choices[0].message.content;
                 
                 // 存入日记数组
                 char.diaries.push(diaryEntry);
@@ -4386,7 +3790,6 @@ const diaryEntry = data.choices[0].message.content;
     const googleMgr = document.getElementById('googleKeyManager');
     // 获取单 Key 输入框的外层容器 (整行)，以便隐藏
     const singleKeyContainer = document.getElementById('apiKey').closest('.ios-item');
-    const presetMgr = document.getElementById('customPresetManager');
 
     // 3. 根据供应商切换界面状态
     if (provider === 'google') {
@@ -4399,7 +3802,6 @@ const diaryEntry = data.choices[0].message.content;
         // ✨✨✨ 关键修改：显示钥匙包，隐藏单 Key ✨✨✨
         googleMgr.style.display = 'block';
         singleKeyContainer.style.display = 'none';
-        if(presetMgr) presetMgr.style.display = 'none';
         
         // ✨✨✨ 关键修改：必须调用渲染函数，否则列表是空的 ✨✨✨
         renderGoogleKeyList(); 
@@ -4413,10 +3815,6 @@ const diaryEntry = data.choices[0].message.content;
         // 隐藏钥匙包，显示单 Key
         googleMgr.style.display = 'none';
         singleKeyContainer.style.display = 'flex';
-         if(presetMgr) {
-            presetMgr.style.display = 'block';
-            renderCustomPresetMenu();
-        }
     }
 
     // 4. 还原其他通用设置 (保持不变)
@@ -4429,30 +3827,19 @@ const diaryEntry = data.choices[0].message.content;
     document.getElementById('xiModelId').value = globalConfig.xiModelId || "eleven_multilingual_v2";
 }
         
-       function saveGlobalConfig() {
-    const provider = document.getElementById('apiProvider').value;
-    const urlVal = document.getElementById('apiUrl').value; // 获取当前填写的 URL
-
-    globalConfig.provider = provider;
-    globalConfig.apiUrl = urlVal;
-    
-    // 🔥 如果是自定义模式，把 URL 单独存一份“备份”
-    if (provider === 'custom') {
-        globalConfig.savedCustomUrl = urlVal;
-    }
-
-    globalConfig.apiKey = document.getElementById('apiKey').value;
-    globalConfig.model = document.getElementById('modelId').value;
-    globalConfig.temp = document.getElementById('tempVal').value;
-    globalConfig.historyLimit = parseInt(document.getElementById('historyLimit').value) || 20;
-    globalConfig.xiApiKey = document.getElementById('xiApiKey').value;
+        function saveGlobalConfig() {
+            globalConfig.provider = document.getElementById('apiProvider').value;
+            globalConfig.apiUrl = document.getElementById('apiUrl').value;
+            globalConfig.apiKey = document.getElementById('apiKey').value;
+            globalConfig.model = document.getElementById('modelId').value;
+            globalConfig.temp = document.getElementById('tempVal').value;
+            globalConfig.historyLimit = parseInt(document.getElementById('historyLimit').value) || 20;
+            globalConfig.xiApiKey = document.getElementById('xiApiKey').value;
     globalConfig.xiVoiceId = document.getElementById('xiVoiceId').value;
-    globalConfig.xiModelId = document.getElementById('xiModelId').value;
-    
-    saveData();
-}
-
-// --- Google Key 管理系统 ---
+            globalConfig.xiModelId = document.getElementById('xiModelId').value;
+            saveData();
+        }
+        // --- Google Key 管理系统 ---
 
 // 1. 渲染列表
 function renderGoogleKeyList() {
@@ -4487,7 +3874,7 @@ function renderGoogleKeyList() {
     });
 }
 
-// 2. 添加 Key (修复验证版 - 保持原生 fetch)
+// 2. 添加 Key (修复验证版)
 async function addGoogleKey() {
     const input = document.getElementById('newGoogleKeyInput');
     const key = input.value.trim();
@@ -4518,6 +3905,7 @@ async function addGoogleKey() {
             newObj.status = 'valid';
             console.log("Key 验证成功");
         } else {
+            // 即便验证失败，也打印一下原因
             console.warn("Key 验证失败 status:", res.status);
             newObj.status = 'invalid';
         }
@@ -4525,22 +3913,23 @@ async function addGoogleKey() {
         console.error("验证出错:", e);
         newObj.status = 'invalid';
     }
+    // ----------------------
 
     saveGlobalConfig(); 
     renderGoogleKeyList(); 
 }
-
-// --- ✨ 新增：一键重新检测所有 Key ✨ ---
+        // --- ✨ 新增：一键重新检测所有 Key ✨ ---
 async function revalidateAllKeys() {
     if (!globalConfig.googleKeys || globalConfig.googleKeys.length === 0) return;
 
-    const btn = event.target;
+    const btn = event.target; // 获取点击的按钮
     const oldText = btn.innerText;
     btn.innerText = "检测中...";
 
+    // 遍历所有 Key 并重新验证
     for (let kObj of globalConfig.googleKeys) {
-        kObj.status = 'checking';
-        renderGoogleKeyList();
+        kObj.status = 'checking'; // 先变成检测中状态
+        renderGoogleKeyList();    // 刷新UI让用户看到变化
         
         try {
             const res = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/models", {
@@ -4566,47 +3955,39 @@ function removeGoogleKey(index) {
         renderGoogleKeyList();
     }
 }
-
-// --- ✨ 修改后的 toggleApiProvider ---
+        // --- ✨ 新增：切换 API 供应商逻辑 ✨ ---
 function toggleApiProvider() {
     const provider = document.getElementById('apiProvider').value;
     const urlInput = document.getElementById('apiUrl');
-    
+    // 获取原来的单 Key 输入框，Google 模式下我们要隐藏它
     const singleKeyContainer = document.getElementById('apiKey').closest('.ios-item');
     const googleMgr = document.getElementById('googleKeyManager');
-    
-    // 获取新加的预设管理器元素
-    const presetMgr = document.getElementById('customPresetManager'); 
 
     if (provider === 'google') {
-        // --- Google 模式 ---
+        // Google 模式
         urlInput.value = "https://generativelanguage.googleapis.com/v1beta/openai";
         urlInput.disabled = true;
         urlInput.style.color = "#999"; 
         
-        googleMgr.style.display = 'block';       // 显示 Google 钥匙包
-        singleKeyContainer.style.display = 'none'; // 隐藏单 Key
-        if(presetMgr) presetMgr.style.display = 'none'; // 隐藏反代预设
+        // 显示多Key管理器，隐藏单Key输入框
+        googleMgr.style.display = 'block';
+        singleKeyContainer.style.display = 'none';
         
+        // 渲染列表
         renderGoogleKeyList();
     } else {
-        // --- 自定义模式 ---
+        // 自定义模式
         urlInput.disabled = false;
         urlInput.style.color = "#007AFF";
-        
-        // 恢复备份的 URL
-        urlInput.value = globalConfig.savedCustomUrl || "https://api.openai.com/v1";
-        
-        googleMgr.style.display = 'none';        // 隐藏 Google 钥匙包
-        singleKeyContainer.style.display = 'flex'; // 显示单 Key
-        if(presetMgr) {
-            presetMgr.style.display = 'block';   // ✨ 显示反代预设
-            renderCustomPresetMenu();            // ✨ 渲染列表
+        if (urlInput.value.includes("googleapis.com")) {
+            urlInput.value = "https://api.openai.com/v1";
         }
         
+        // 隐藏多Key管理器，显示单Key输入框
+        googleMgr.style.display = 'none';
+        singleKeyContainer.style.display = 'flex';
         document.getElementById('apiKey').placeholder = "sk-...";
     }
-    
     saveGlobalConfig();
 }
         // --- 美化/主题系统 (终极版: 图标+字体+壁纸) ---
@@ -4663,9 +4044,6 @@ if(iconLudo) iconLudo.value = themeConfig.icons.ludo || "";
             const iconTheater = document.getElementById('iconInput-theater');
 if(iconTheater) iconTheater.value = themeConfig.icons.theater || "";
 
-            const iconAlbum = document.getElementById('iconInput-album');
-if(iconAlbum) iconAlbum.value = themeConfig.icons.album || "";
-
             // 2. 恢复CSS和字体
             const cssInput = document.getElementById('customCssInput');
             if(cssInput) cssInput.value = themeConfig.customCss || "";
@@ -4702,7 +4080,6 @@ if(iconAlbum) iconAlbum.value = themeConfig.icons.album || "";
         themeConfig.icons.forum = document.getElementById('iconInput-forum')?.value || "";
         themeConfig.icons.ludo = document.getElementById('iconInput-ludo')?.value || "";
         themeConfig.icons.theater = document.getElementById('iconInput-theater')?.value || "";
-        themeConfig.icons.album = document.getElementById('iconInput-album')?.value || "";
         
         themeConfig.customCss = document.getElementById('customCssInput')?.value || "";
         themeConfig.bubbleCss = document.getElementById('bubbleCssInput')?.value || ""; // 气泡美化
@@ -4732,7 +4109,6 @@ if(iconAlbum) iconAlbum.value = themeConfig.icons.album || "";
         updateAppIcon('app-icon-forum', themeConfig.icons.forum);
         updateAppIcon('app-icon-ludo', themeConfig.icons.ludo);
         updateAppIcon('app-icon-theater', themeConfig.icons.theater);
-        updateAppIcon('app-icon-album', themeConfig.icons.album);
 
         // B. 应用壁纸
         const homePage = document.getElementById('page-home');
@@ -4875,24 +4251,7 @@ const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/models', {
         }
         function formatText(text) { return text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); }
         function normalizeUrl(u) { return u.endsWith('/') ? u.slice(0,-1) : u; }
-        // --- 📱 iOS/iPad 滚动修复版 ---
-function scrollToBottom() { 
-    const box = document.getElementById('chatBox');
-    if (!box) return;
-
-    // 1. 立即滚一次
-    box.scrollTop = box.scrollHeight;
-
-    // 2. 下一帧再滚一次 (强制渲染更新)
-    requestAnimationFrame(() => {
-        box.scrollTop = box.scrollHeight;
-        
-        // 3. 延时 100ms 再滚一次 (防 iPad 键盘动画延迟)
-        setTimeout(() => {
-            box.scrollTop = box.scrollHeight;
-        }, 100);
-    });
-}
+        function scrollToBottom() { const b = document.getElementById('chatBox'); b.scrollTop = b.scrollHeight; }
         function startClock() {
             setInterval(() => {
                 const now = new Date();
@@ -4910,32 +4269,22 @@ function scrollToBottom() {
             });
         }
         function clearUpload() { currentImg=null; document.getElementById('uploadPreview').style.display='none'; document.getElementById('fileInput').value=''; }
-       // --- 图片压缩工具 (强力压缩版) ---
-function fileToBase64(file) {
-    return new Promise(resolve => {
-        const reader = new FileReader(); 
-        reader.readAsDataURL(file);
-        reader.onload = e => {
-            const img = new Image(); 
-            img.src = e.target.result;
-            img.onload = () => {
-                const cvs = document.createElement('canvas');
-                // 🔥 修改1：限制最大宽度从 800 降到 480 (够聊天看了)
-                const maxSide = 480; 
-                const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-                
-                cvs.width = img.width * scale; 
-                cvs.height = img.height * scale;
-                
-                const ctx = cvs.getContext('2d');
-                ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
-                
-                // 🔥 修改2：质量从 0.7 降到 0.5 (大幅减小体积)
-                resolve(cvs.toDataURL('image/jpeg', 0.5));
-            }
+        function fileToBase64(file) {
+            return new Promise(resolve => {
+                const reader = new FileReader(); reader.readAsDataURL(file);
+                reader.onload = e => {
+                    // 简单压缩
+                    const img = new Image(); img.src = e.target.result;
+                    img.onload = () => {
+                        const cvs = document.createElement('canvas');
+                        const scale = Math.min(1, 800/img.width); // 限制最大宽度800
+                        cvs.width = img.width * scale; cvs.height = img.height * scale;
+                        cvs.getContext('2d').drawImage(img,0,0,cvs.width,cvs.height);
+                        resolve(cvs.toDataURL('image/jpeg', 0.7));
+                    }
+                }
+            });
         }
-    });
-}
         
         // 导出/导入
         // --- 数据备份与恢复 (全量版) ---
@@ -4992,62 +4341,12 @@ function fileToBase64(file) {
             // 清空 input 防止同名文件无法再次触发
             e.target.value = ''; 
         }
-        // --- 🛠️ 升级版：真实生成测试 ---
-async function testConn() {
-    const btn = event.target;
-    const oldText = btn.innerText;
-    btn.innerText = "正在握手...";
-    btn.disabled = true;
-
-    try {
-        // 1. 获取当前填写的配置
-        const apiUrl = document.getElementById('apiUrl').value.trim();
-        const apiKey = document.getElementById('apiKey').value.trim();
-        const model = document.getElementById('modelId').value.trim();
-
-        if(!apiKey) throw new Error("请输入 API Key");
-        
-        // 2. 只有在自定义模式且没填 URL 时才拦截
-        if (document.getElementById('apiProvider').value === 'custom' && !apiUrl) {
-            throw new Error("请输入 API URL");
+        async function testConn() {
+            try { 
+                await fetch(normalizeUrl(globalConfig.apiUrl)+'/models', {headers:{Authorization:"Bearer "+globalConfig.apiKey}}); 
+                alert("连接成功！"); 
+            } catch(e) { alert("连接失败: "+e.message); }
         }
-
-        // 3. 如果没填模型，先尝试拉取列表（这是旧逻辑，保留作为兜底）
-        if (!model) {
-            btn.innerText = "拉取列表...";
-            await fetch(normalizeUrl(globalConfig.apiUrl)+'/models', {
-                headers:{Authorization:"Bearer "+apiKey}
-            });
-            alert("✅ 连接服务器成功！\n(但你还没填 Model ID，请从列表选择模型后再测一次)");
-            return;
-        }
-
-        // 4. 🔥 核心：发起一次真实的对话请求 (只生成1个词，极速验证)
-        // 使用 fetchWithRetry 自动适配 Google/Custom 逻辑
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            model: model,
-            messages: [{ role: "user", content: "Hi" }],
-            max_tokens: 5 // ⚡️ 关键：限制只生成 5 个 Token，速度极快且省钱
-        });
-
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(`错误 ${res.status}: ${errData.error?.message || res.statusText}`);
-        }
-
-        const data = await res.json();
-        const reply = data.choices?.[0]?.message?.content || "OK";
-
-        // 5. 成功反馈
-        alert(`🎉 测试完美通过！\n\n✅ 服务器连接正常\n✅ API Key 有效\n✅ 模型 [${model}] 可生成回复\n🤖 AI回应: "${reply}"`);
-
-    } catch(e) {
-        alert("❌ 测试失败:\n" + e.message);
-    } finally {
-        btn.innerText = oldText;
-        btn.disabled = false;
-    }
-}
         // --- 5. 日记本渲染逻辑 (新增) ---
     // ==========================================
 // --- 新版日记本逻辑 (交换日记系统) ---
@@ -5308,15 +4607,18 @@ async function generateDiaryReply(char, userDiaryContent) {
     `;
 
     try {
-        // ✅ 正确写法：只传纯数据对象
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: [
-        { role: "system", content: "你是一个正在写日记的角色。" },
-        { role: "user", content: prompt }
-    ],
-    temperature: 0.8
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [
+                    { role: "system", content: "你是一个正在写日记的角色。" },
+                    { role: "user", content: prompt }
+                ],
+                temperature: 0.8
+            })
+        });
 
         const data = await res.json();
         const reply = data.choices[0].message.content;
@@ -5676,15 +4978,18 @@ async function triggerPomoAI(reason) {
     if(reason === "finish") userTrigger = "计时结束了！夸奖我！";
 
     try {
-       // ✅ 正确写法：去掉 method, headers 和 stringify，只留纯数据
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: [
-        { role: "system", content: systemInstruction },
-        { role: "user", content: userTrigger }
-    ],
-    temperature: 0.7
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [
+                    { role: "system", content: systemInstruction },
+                    { role: "user", content: userTrigger }
+                ],
+                temperature: 0.7
+            })
+        });
         
         const data = await res.json();
         const reply = data.choices[0].message.content;
@@ -5811,16 +5116,20 @@ async function generateBackfillMessage(char, simulatedTime, chainIndex) {
             content: m.content 
         }));
 
-        // ✅ 正确写法：去掉 method, headers 和 stringify，只留纯数据
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: [
-        { role: "system", content: char.systemPrompt },
-        ...history,
-        { role: "user", content: backfillPrompt }
-    ],
-    temperature: 0.85
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [
+                    { role: "system", content: char.systemPrompt },
+                    ...history,
+                    // 【核心修改】将 role 改为 user，强制模型必须回应，防止空回
+                    { role: "user", content: backfillPrompt }
+                ],
+                temperature: 0.85 
+            })
+        });
         
         if (!res.ok) {
             throw new Error(`API error: ${res.status}`);
@@ -6041,7 +5350,7 @@ function formatDateKey(year, month, day) {
 }
         // --- 10. AI 感知逻辑 (大脑升级) ---
 
-function getStatusContext(char, userMessage = "") {
+function getStatusContext(char) {
     let context = "";
     const now = new Date();
     const todayKey = formatDateKey(now.getFullYear(), now.getMonth(), now.getDate());
@@ -6104,7 +5413,6 @@ function getStatusContext(char, userMessage = "") {
     context += getScheduleContext();
     // === ✨ 插入钱包感知 ===
     context += getWalletContext();
-    context += getPhotoAlbumContext(userMessage);
 
     return context;
 }
@@ -6157,12 +5465,15 @@ async function checkAndSendHolidayGreeting(char) {
             { role: "user", content: greetingPrompt }
         ];
 
-       // ✅ 正确写法：只传纯数据对象
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: msgs,
-    temperature: 0.85
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: msgs,
+                temperature: 0.85
+            })
+        });
 
         if (!res.ok) {
             throw new Error(`网络错误: ${res.status}`);
@@ -6859,12 +6170,15 @@ async function generateXTweetAI(charId) {
     }`;
 
     try {
-        // ✅ 正确写法：只传纯数据对象
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.9
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.9
+            })
+        });
         const data = await res.json();
         const result = JSON.parse(data.choices[0].message.content.replace(/```json|```/g, '').trim());
         
@@ -6918,15 +6232,18 @@ async function generateFanOrNPCTweetAI(type) {
     }
 
     try {
-        // ✅ 正确写法：只传纯数据对象
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: [
-        { role: "system", content: "你是一个推特模拟生成器。请只返回纯 JSON 格式: {name, handle, content}。" },
-        { role: "user", content: systemInstruction }
-    ],
-    temperature: 0.95
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [
+                    { role: "system", content: "你是一个推特模拟生成器。请只返回纯 JSON 格式: {name, handle, content}。" },
+                    { role: "user", content: systemInstruction }
+                ],
+                temperature: 0.95
+            })
+        });
 
         const data = await res.json();
         let aiText = data.choices[0].message.content;
@@ -6977,12 +6294,15 @@ async function generateFanOrNPCCommentForUser(tweetId) {
     必须返回纯JSON数组：[{"name": "网名", "content": "内容"}, ...]`;
 
     try {
-        // ✅ 正确写法：只传纯数据对象
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.9
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.9
+            })
+        });
         const data = await res.json();
         const comments = JSON.parse(data.choices[0].message.content.replace(/```json|```/g, '').trim());
         
@@ -7200,11 +6520,14 @@ async function triggerDetailAiReply(tweet, userComment) {
     if(!systemPrompt) { btn.innerText="回复"; return; }
 
     try {
-        // ✅ 正确写法：
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: [{ role: "user", content: systemPrompt }]
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [{ role: "user", content: systemPrompt }]
+            })
+        });
         const data = await res.json();
         const replyText = data.choices[0].message.content;
 
@@ -7390,11 +6713,14 @@ async function generateCharacterCommentForUser(tweetId) {
     `;
 
     try {
-        // ✅ 正确写法：只传纯数据对象
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: [{ role: "user", content: prompt }]
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
         const data = await res.json();
         const replyText = data.choices[0].message.content;
 
@@ -7425,11 +6751,10 @@ const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/comp
 const dbName = "AIPhoneDB";
 const storeName = "books";
         const musicStoreName = "music_files";
-        const albumStoreName = "album_photos";
 
 function openDB() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(dbName, 5);
+        const request = indexedDB.open(dbName, 4);
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
             if (!db.objectStoreNames.contains(storeName)) {
@@ -7441,9 +6766,6 @@ function openDB() {
             if (!db.objectStoreNames.contains("ludo_tasks")) {
                 // keyPath: "id" 表示每一条题目都有一个唯一的 id
                 db.createObjectStore("ludo_tasks", { keyPath: "id" });
-            }
-            if (!db.objectStoreNames.contains(albumStoreName)) {
-                db.createObjectStore(albumStoreName, { keyPath: "id" });
             }
         };
         request.onsuccess = (event) => resolve(event.target.result);
@@ -7850,11 +7172,14 @@ async function generateChapterSummary() {
 
         // 注意：这里 model 用的是你设置里的全局 model。
         // 建议在设置里填支持长文本的模型，如 gpt-3.5-turbo-16k 或 gpt-4o
-        // ✅ 正确写法：只传纯数据对象
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model, // 确保这个模型能吃得下几千字
-    messages: [{ role: "user", content: prompt }]
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model, // 确保这个模型能吃得下几千字
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
         
         if (!res.ok) {
             const errData = await res.json();
@@ -7961,11 +7286,14 @@ async function manualShareReport() {
         3. 字数控制在 100 字以内。
         `;
 
-        // ✅ 修复版：移除 method/headers/body，只传纯数据
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: [{ role: "user", content: prompt }]
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
 
         const data = await res.json();
         const aiSummary = data.choices[0].message.content;
@@ -8107,11 +7435,14 @@ async function sendReaderMsg() {
     btn.innerText = "⏳";
 
     try {
-       // ✅ 正确写法：只传纯数据对象
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: apiMessages // 使用包含历史的数组
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: apiMessages // 使用包含历史的数组
+            })
+        });
         const data = await res.json();
         const reply = data.choices[0].message.content;
 
@@ -9366,12 +8697,15 @@ async function triggerCallAI(userText) {
     ];
 
     try {
-        // ✅ 正确写法：只传纯数据对象
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: apiMessages, // 发送完整的上下文
-    temperature: 0.8
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: apiMessages, // 发送完整的上下文
+                temperature: 0.8
+            })
+        });
         const data = await res.json();
         const reply = data.choices[0].message.content;
 
@@ -9678,11 +9012,14 @@ async function submitFicRequest() {
     `;
 
     try {
-        // ✅ 粘贴这段新的 (注意没有 headers, 没有 stringify)
-const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-    model: globalConfig.model,
-    messages: [{ role: "user", content: prompt }]
-});
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
         
         const data = await res.json();
         let jsonStr = data.choices[0].message.content;
@@ -10233,11 +9570,10 @@ async function sendLudoMsg() {
     triggerLudoAI(txt, "chat");
 }
 
-// --- 升级版 AI 互动函数 (已修复 Google Key 掉线问题) ---
+// --- 升级版 AI 互动函数 (带主聊天记忆) ---
 async function triggerLudoAI(userContent, contextType) {
     const char = getLudoChar();
-    // 这里的校验改宽一点，只要是 Google 模式或者有 Key 就可以
-    if(globalConfig.provider !== 'google' && !globalConfig.apiKey) return; 
+    if(!globalConfig.apiKey) return;
 
     // 1. 获取主聊天记录 (最近10条即可，太多容易干扰)
     const mainHistory = char.messages.slice(-10).map(m => ({
@@ -10255,7 +9591,7 @@ async function triggerLudoAI(userContent, contextType) {
 
     // 3. 获取游戏内的即时记录
     const gameLogs = ludoState.logs.slice(-6).map(l => `[刚刚发生了]: ${l.content}`).join('\n');
-
+    
     // 4. 核心系统指令 (强逻辑版)
     let systemInstruction = `
     你正在和用户玩“飞行棋”游戏。你的角色：${char.name}。人设：${char.systemPrompt}
@@ -10269,10 +9605,14 @@ async function triggerLudoAI(userContent, contextType) {
     - "chat": 正常闲聊。
     `;
 
-    // 5. 组装最终消息列表
+    // 5. ✨ 组装最终消息列表 (关键修改：加入明确的时间分割线)
     const apiMessages = [
         { role: "system", content: systemInstruction },
+        
+        // 插入历史聊天作为背景
         ...mainHistory, 
+        
+        // 🔥🔥🔥 强力分割线：告诉 AI 上面是过去，下面是现在 🔥🔥🔥
         { role: "system", content: `
         -------------------------------------------------------------
         【系统提示】：
@@ -10283,20 +9623,21 @@ async function triggerLudoAI(userContent, contextType) {
         【游戏内最新动态】：
         ${gameLogs}
         `},
+        
+        // 用户的最新发言
         { role: "user", content: userContent }
     ];
 
     try {
-        // 🔥🔥🔥 核心修复点：改用 fetchWithRetry 🔥🔥🔥
-        // 这样它就会自动去你的 Google Key 列表里找能用的 Key，而不是傻傻地用空 Key
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            model: globalConfig.model,
-            messages: apiMessages,
-            temperature: 0.8
+        const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + globalConfig.apiKey },
+            body: JSON.stringify({
+                model: globalConfig.model,
+                messages: apiMessages,
+                temperature: 0.8
+            })
         });
-
-        if (!res.ok) throw new Error("连接断开");
-
         const data = await res.json();
         let reply = data.choices[0].message.content;
         
@@ -10307,14 +9648,14 @@ async function triggerLudoAI(userContent, contextType) {
         }
 
         addLudoLog('ai', reply);
+        
         if (contextType === "do_task" || isTaskDone) {
-             setTimeout(nextTurn, 2000);
+             setTimeout(nextTurn, 2000); 
         }
 
     } catch(e) {
         console.error(e);
-        addLudoLog('system', 'AI 掉线了... (请检查 Key 或网络)');
-        // 如果是做任务途中掉线，强制跳过回合，防止卡死
+        addLudoLog('system', 'AI 掉线了...');
         if (contextType === "do_task") nextTurn(); 
     }
 }
@@ -10569,290 +9910,34 @@ function deleteBank(index) {
 // --- 20. 剧场模式 (Theater Mode) 基础逻辑 ---
 // ==========================================
 
-// ========================================================
-// 🎭 剧场模式 2.0：多剧本列表版 (数据结构升级)
-// ========================================================
-
-// 1. 新的状态管理
 let theaterState = {
-    config: { apiUrl: "", apiKey: "", model: "" },
-    preset: { name: "未加载", core: [], styles: [], modules: [], activeStyleId: null, activeModules: [], worldInfo: [], regexScripts: [] },
-    
-    // --- 新增：当前正在玩的剧本 ID ---
-    currentScriptId: null, 
-    
-    // 依然保留这个 logs 变量作为“当前运行中的缓存”，方便 API 函数调用
-    logs: [],
-    // ✨ 新增：存储用户保存的预设列表
-    savedPresets: []
+    config: {
+        apiUrl: "",
+        apiKey: "",
+        model: ""
+    },
+    // ✨ 新增：预设数据仓
+    preset: {
+        name: "未加载",
+        core: [],     // 核心规则 (如：去八股、人设)
+        styles: [],   // 文风 (如：古风、港风)
+        modules: [],  // 小剧场 (如：论坛体、日记)
+        
+        // 当前选中的状态
+        activeStyleId: null, // 单选
+        activeModules: [],
+        worldInfo: [],      // 这是你上次加的世界书
+        regexScripts: []    // 多选 (存 ID)
+    },
+    logs: [] 
 };
 
-// 所有的剧本数据 (从 localStorage 读取)
-// 格式: [{ id, title, charId, logs: [], lastModified: timestamp }]
-let allScripts = [];
-
-// ========================================================
-// 2. 入口改写
-// ========================================================
-
-// 初始化：不再直接进舞台，而是进列表
+// 1. 初始化入口
 initTheaterMode = function() {
-    loadTheaterConfig();
-    loadAllScripts(); // 加载列表数据
-    renderScriptList(); // 渲染列表UI
-    navigateTo('page-theater-list'); // 跳转到列表页
-}
-
-// 加载所有剧本
-function loadAllScripts() {
-    const s = localStorage.getItem('theater_all_scripts');
-    if(s) {
-        allScripts = JSON.parse(s);
-    } else {
-        // 兼容旧数据：如果用户之前有单剧本数据，把它迁移过来
-        const oldLogs = localStorage.getItem('theater_chat_logs');
-        if(oldLogs) {
-            const logs = JSON.parse(oldLogs);
-            if(logs.length > 0) {
-                // 创建一个“旧存档”
-                const defaultCharId = contacts.length > 0 ? contacts[0].id : null;
-                const migrationScript = {
-                    id: 'script_' + Date.now(),
-                    title: "旧的存档",
-                    charId: defaultCharId,
-                    logs: logs,
-                    lastModified: Date.now()
-                };
-                allScripts.push(migrationScript);
-                saveAllScripts();
-                localStorage.removeItem('theater_chat_logs'); // 清理旧数据
-            }
-        }
-    }
-}
-
-function saveAllScripts() {
-    localStorage.setItem('theater_all_scripts', JSON.stringify(allScripts));
-}
-
-// 渲染列表 (仿截图)
-function renderScriptList() {
-    const container = document.getElementById('theater-list-container');
-    container.innerHTML = '';
-
-    if(allScripts.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding:50px; color:#999;">暂无剧本<br>点击右上角 + 开始</div>`;
-        return;
-    }
-
-    // 按时间倒序
-    const sorted = [...allScripts].sort((a,b) => b.lastModified - a.lastModified);
-
-    sorted.forEach(script => {
-        // 获取主角头像和名字
-        const char = contacts.find(c => c.id === script.charId);
-        const avatarUrl = char ? char.avatar : 'https://api.dicebear.com/7.x/shapes/svg?seed=Unknown';
-        const charName = char ? char.name : '未知角色';
-        
-        // 获取预览文字 (最后一条内容)
-        const lastLog = script.logs.length > 0 ? script.logs[script.logs.length-1].content : "无内容";
-        // 清洗一下预览文字 (去掉换行符)
-        const previewText = lastLog.replace(/<[^>]+>/g, '').substring(0, 50); // 简单去标签
-
-        // 格式化时间
-        const date = new Date(script.lastModified);
-        const timeStr = `${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2,'0')}`;
-
-        const div = document.createElement('div');
-        div.className = 'script-item';
-        div.onclick = (e) => {
-            // 如果点的是删除按钮，不进剧本
-            if(e.target.classList.contains('btn-del-script')) return;
-            openScript(script.id);
-        };
-
-        div.innerHTML = `
-            <div class="script-avatar-box">
-                <img src="${avatarUrl}" class="script-avatar">
-            </div>
-            <div class="script-info">
-                <div class="script-header">
-                    <span class="script-title">${charName} - ${script.title}</span>
-                    <span class="script-time">${timeStr}</span>
-                </div>
-                <div class="script-preview">${previewText}</div>
-            </div>
-            <button class="btn-del-script" onclick="deleteScript('${script.id}')">×</button>
-        `;
-        container.appendChild(div);
-    });
-}
-
-// ========================================================
-// 3. 交互逻辑：新建与打开
-// ========================================================
-
-// 新建剧本 (先选人，再起名)
-function createNewScript() {
-    if(contacts.length === 0) return alert("请先在信息列表创建角色！");
-    
-    // 弹窗让用户输入标题
-    const title = prompt("给新剧本起个名字：", "未命名剧本");
-    if(!title) return;
-
-    // 选择角色 (默认用当前活跃角色或第一个)
-    let charId = activeContactId;
-    if(!charId) {
-        charId = contacts[0].id;
-        alert(`未选择当前角色，默认使用：${contacts[0].name}`);
-    }
-
-    const newScript = {
-        id: 'script_' + Date.now(),
-        title: title,
-        charId: charId,
-        logs: [], // 空记录
-        lastModified: Date.now()
-    };
-
-    allScripts.unshift(newScript);
-    saveAllScripts();
-    openScript(newScript.id); // 直接进入
-}
-
-// 打开具体剧本 (进入舞台)
-function openScript(scriptId) {
-    const script = allScripts.find(s => s.id === scriptId);
-    if(!script) return;
-
-    // 1. 更新全局状态
-    theaterState.currentScriptId = scriptId;
-    theaterState.logs = script.logs; // 加载这个剧本的日志
-    
-    // 2. 加载预设
-    loadTheaterState(); 
-
-    // 3. 设置 UI
-    const char = contacts.find(c => c.id === script.charId);
-    document.getElementById('theater-title').innerText = script.title;
-    
-    // 如果角色不存在了，用默认名
-    const charName = char ? char.name : "未知";
-    
-    // 渲染舞台内容
-    const stage = document.getElementById('theater-stage');
-    stage.innerHTML = ''; // 清空上一场戏
-    
-    theaterState.logs.forEach(log => {
-        const displayName = log.role === 'user' ? "我" : charName;
-        appendTheaterLog(log.role, log.content, displayName);
-    });
-
-    // 4. 跳转
     navigateTo('page-theater');
-    
-    // 滚动到底部
-    setTimeout(() => {
-        stage.scrollTop = stage.scrollHeight;
-    }, 100);
-}
-
-// 删除剧本
-function deleteScript(id) {
-    if(confirm("确定要删除这个剧本存档吗？无法恢复。")) {
-        allScripts = allScripts.filter(s => s.id !== id);
-        saveAllScripts();
-        renderScriptList();
-    }
-}
-        // ==========================================
-// --- 🎭 剧场预设管理系统 (Preset Manager) ---
-// ==========================================
-
-// 1. 渲染下拉菜单
-function renderTheaterPresetMenu() {
-    const select = document.getElementById('theater-preset-select');
-    if (!select) return;
-
-    select.innerHTML = '<option value="">-- 选择已有预设 --</option>';
-
-    if (!theaterState.savedPresets) theaterState.savedPresets = [];
-
-    theaterState.savedPresets.forEach((preset, index) => {
-        const opt = document.createElement('option');
-        opt.value = index;
-        opt.innerText = preset.name; // 显示预设名字
-        select.appendChild(opt);
-    });
-}
-
-// 2. 保存当前状态为新预设
-function saveNewTheaterPreset() {
-    // 检查当前是否有有效数据
-    if (!theaterState.preset || theaterState.preset.name === "未加载") {
-        return alert("当前没有加载任何有效数据，无法保存！\n请先导入一个 JSON 文件。");
-    }
-
-    const name = prompt("给这个配置起个名字：", theaterState.preset.name + " (自定义)");
-    if (!name) return;
-
-    // 深拷贝当前 preset 对象，防止后续修改影响存档
-    const presetCopy = JSON.parse(JSON.stringify(theaterState.preset));
-    
-    // 更新名字
-    presetCopy.name = name;
-
-    // 存入列表
-    theaterState.savedPresets.push({
-        id: Date.now(),
-        name: name,
-        data: presetCopy
-    });
-
-    saveTheaterState();       // 保存到本地存储
-    renderTheaterPresetMenu(); // 刷新下拉框
-    
-    // 自动选中刚才新建的
-    document.getElementById('theater-preset-select').value = theaterState.savedPresets.length - 1;
-    
-    alert(`✅ 预设 "${name}" 已保存！\n包含了当前的文风选择、正则脚本和所有开关状态。`);
-}
-
-// 3. 应用选中的预设
-function applySavedTheaterPreset() {
-    const index = document.getElementById('theater-preset-select').value;
-    if (index === "") return;
-
-    const savedItem = theaterState.savedPresets[index];
-    if (!savedItem) return;
-
-    if (confirm(`确定要加载预设 "${savedItem.name}" 吗？\n当前的未保存修改将被覆盖。`)) {
-        // 深拷贝回来，恢复数据
-        theaterState.preset = JSON.parse(JSON.stringify(savedItem.data));
-        
-        saveTheaterState(); // 立即持久化
-        renderConsoleUI();  // 刷新整个控制台界面 (Core/Styles/Modules/Regex 都会刷新)
-        
-        // 视觉反馈
-        if(navigator.vibrate) navigator.vibrate(50);
-    }
-}
-
-// 4. 删除预设
-function deleteTheaterPreset() {
-    const select = document.getElementById('theater-preset-select');
-    const index = select.value;
-    
-    if (index === "") return alert("请先在下拉框中选择要删除的预设");
-
-    const targetName = theaterState.savedPresets[index].name;
-
-    if (confirm(`确定要永久删除预设 "${targetName}" 吗？`)) {
-        theaterState.savedPresets.splice(index, 1);
-        saveTheaterState();
-        renderTheaterPresetMenu();
-        select.value = ""; // 重置选择
-    }
+    loadTheaterConfig();
+    loadTheaterState(); // 加载预设
+    loadTheaterLogs();  // ✨ 新增：加载历史聊天
 }
 
 function loadTheaterConfig() {
@@ -10926,54 +10011,39 @@ async function sendTheaterMsg() {
 }
         // === 【修复补丁】补充缺失的保存函数 ===
 function saveTheaterLogs() {
-    if (!theaterState.currentScriptId) return;
-
-    // 找到当前剧本
-    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-    if (script) {
-        script.logs = theaterState.logs; // 更新日志
-        script.lastModified = Date.now(); // 更新时间
-        saveAllScripts(); // 存入 localStorage
-    }
+    // 确保 theaterState.logs 存在
+    if (!theaterState.logs) theaterState.logs = [];
+    // 保存到本地存储
+    localStorage.setItem('theater_chat_logs', JSON.stringify(theaterState.logs));
 }
 
 
 function appendTheaterLog(role, text, name) {
     const stage = document.getElementById('theater-stage');
+    
+    // 移除初始提示
     const tip = document.querySelector('.theater-start-tip');
     if(tip) tip.remove();
 
-    // 计算楼层：当前 DOM 里的 .t-msg-block 数量 + 1
-    const floor = stage.querySelectorAll('.t-msg-block').length + 1;
-
     const div = document.createElement('div');
     div.className = 't-msg-block';
-    if(role === 'system') div.classList.add('system');
-
-    // 格式化文本
+    
+    // 格式化文本 (换行转<br>)
     const formattedText = text.replace(/\n/g, '<br>');
-
-    // 如果是系统消息，用特殊卡片 (之前的逻辑)
-    if (role === 'system') {
-        // 系统消息通常不占楼层号，或者占了但不显示，看你喜好。这里选择显示。
-        div.innerHTML = `
-            <span class="t-floor-tag">#${floor}</span>
-            <div class="t-system-card">
-                <div class="t-system-header">剧情回顾 / 记忆存档</div>
-                <div>${formattedText}</div>
-            </div>`;
-    } else {
-        // 普通对话
-        div.innerHTML = `
-            <span class="t-floor-tag">#${floor}</span>
-            <div class="t-role-label">${name}</div>
-            <div class="t-text ${role}">${formattedText}</div>
-        `;
-    }
+    
+    div.innerHTML = `
+        <div class="t-role-label">${name}</div>
+        <div class="t-text ${role}">${formattedText}</div>
+    `;
     
     stage.appendChild(div);
-    setTimeout(() => { stage.scrollTop = stage.scrollHeight; }, 100);
-    return div.querySelector('.t-text');
+    
+    // 自动滚动到底部
+    setTimeout(() => {
+        stage.scrollTop = stage.scrollHeight;
+    }, 100);
+    
+    return div.querySelector('.t-text'); // 返回文本容器引用，方便流式输出
 }
 
 
@@ -11196,9 +10266,11 @@ function parseSillyTavernJSON(json, fileName) {
             theaterState.preset.modules.push(item);
             
         } else {
-            // C. 归类为【核心规则】
-            // 修改：不再过滤 enabled，全部放入，状态由 item.enabled 决定
-            theaterState.preset.core.push(item);
+            // C. 归类为【核心规则】 (常驻)
+            // 只有原文件里 enabled=true 的才放进来
+            if (p.enabled) {
+                theaterState.preset.core.push(item);
+            }
         }
     });
     // === ✨ 新增：解析世界书 (World Info) ===
@@ -11248,7 +10320,6 @@ function parseSillyTavernJSON(json, fileName) {
 // 🛠️ 升级版：渲染控制台 (支持世界书编辑 + 新增按钮)
 // ========================================================
 function renderConsoleUI() {
-    renderTheaterPresetMenu();
     const p = theaterState.preset;
     document.getElementById('t-current-preset-name').innerText = p.name;
 
@@ -11256,25 +10327,12 @@ function renderConsoleUI() {
     const coreList = document.getElementById('t-core-list');
     if (coreList) {
         coreList.innerHTML = '';
-        if (p.core.length === 0) coreList.innerHTML = '<div class="t-tip">无核心规则</div>';
-        
-        p.core.forEach((item, index) => {
-            const isActive = item.enabled; // 读取条目自身状态
-            const div = document.createElement('div');
-            div.className = 't-item-row';
-            // 绑定点击事件，切换 Core 状态
-            div.onclick = () => toggleCoreRule(index);
-            
-            const toggleColor = isActive ? '#34c759' : '#444';
-            const togglePos = isActive ? '22px' : '2px';
-            const nameColor = isActive ? '#fff' : '#aaa'; // 未启用变灰
-
-            div.innerHTML = `
-            <span class="t-item-name" style="color:${nameColor}; flex:1;">${item.name}</span>
-            <div style="width:40px; height:22px; background:${toggleColor}; border-radius:11px; position:relative; transition:0.2s; flex-shrink:0;">
-                <div style="width:18px; height:18px; background:#fff; border-radius:50%; position:absolute; top:2px; left:${togglePos}; transition:0.2s;"></div>
+        p.core.forEach(item => {
+            coreList.innerHTML += `
+            <div class="t-item-row" style="opacity:0.7;">
+                <span class="t-item-name" style="font-size:12px;">🔒 ${item.name}</span>
+                <span style="font-size:10px; color:#34c759;">已装载</span>
             </div>`;
-            coreList.appendChild(div);
         });
     }
 
@@ -11495,15 +10553,6 @@ function selectTheaterStyle(id) {
     saveTheaterState();
     renderConsoleUI();
 }
-        // 切换核心规则的开关状态
-function toggleCoreRule(index) {
-    const item = theaterState.preset.core[index];
-    if (item) {
-        item.enabled = !item.enabled;
-        saveTheaterState(); // 保存状态
-        renderConsoleUI();  // 刷新界面
-    }
-}
 
 function toggleTheaterModule(id) {
     const list = theaterState.preset.activeModules;
@@ -11526,7 +10575,6 @@ function saveTheaterState() {
     // 保存预设数据
     localStorage.setItem('theater_preset_data', JSON.stringify(theaterState.preset));
     localStorage.setItem('theater_chat_logs', JSON.stringify(theaterState.logs));
-    localStorage.setItem('theater_saved_presets', JSON.stringify(theaterState.savedPresets));
 }
 
 // 页面加载时恢复数据
@@ -11538,10 +10586,6 @@ function loadTheaterState() {
     if(p) {
         theaterState.preset = JSON.parse(p);
         renderConsoleUI(); // 恢复后立即渲染
-    }
-    const savedLib = localStorage.getItem('theater_saved_presets');
-    if(savedLib) {
-        theaterState.savedPresets = JSON.parse(savedLib);
     }
 }
 
@@ -11604,34 +10648,21 @@ async function triggerTheaterAI(char) {
             { role: "user", content: finalUserContent }
         ];
 
-        // 1. 先定义好请求内容 (Payload)，避免重复写
-        const requestPayload = {
-            model: model,
-            messages: messagesToSend,
-            temperature: 1.0, 
-            stream: true 
-        };
+        // 4. 发起请求 (强制开启流式)
+        const res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authorization": "Bearer " + apiKey 
+            },
+            body: JSON.stringify({
+                model: model,
+                messages: messagesToSend,
+                temperature: 1.0, 
+                stream: true 
+            })
+        });
 
-        let res; // 声明响应变量
-
-        // 2. 智能判断逻辑 🔥
-        // 情况 A: 剧场有独立 Key -> 使用原生 fetch (直连，保持独立性)
-        if (theaterState.config.apiKey) {
-            res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
-                method: "POST",
-                headers: { 
-                    "Content-Type": "application/json", 
-                    "Authorization": "Bearer " + apiKey 
-                },
-                body: JSON.stringify(requestPayload)
-            });
-        } 
-        // 情况 B: 剧场没填 Key (想用全局) -> 使用 fetchWithRetry (自动去 Google 钥匙包里找)
-        else {
-            res = await fetchWithRetry(normalizeUrl(apiUrl) + '/chat/completions', requestPayload);
-        }
-
-        // 3. 错误处理 (保持原样)
         if (!res.ok) {
             const errText = await res.text();
             throw new Error(`API请求失败 ${res.status}: ${errText.substring(0, 100)}`);
@@ -11710,61 +10741,51 @@ async function triggerTheaterAI(char) {
 }
 
 
-// 5. 核心：积木拼装师 (Assembler) - 升级版
+// 5. 核心：积木拼装师 (Assembler)
 function assembleSystemPrompt(char) {
     const p = theaterState.preset;
     let parts = [];
 
-    // --- 占位符处理 ---
+    // --- 第一层：占位符替换函数 ---
+    // 把 {{user}} 换成玩家名，{{char}} 换成角色名
     const process = (text) => {
         if(!text) return "";
         let res = text;
+        // 简单的全局替换
         const userName = char.userName || "我";
         const charName = char.name || "AI";
-        res = res.replace(/{{user}}/gi, userName).replace(/{{user}}/g, userName);
+        res = res.replace(/{{user}}/gi, userName).replace(/{{user}}/g, userName); // 兼容大小写
         res = res.replace(/{{char}}/gi, charName).replace(/{{char}}/g, charName);
         return res;
     };
-
-    // 1. 获取当前剧本的【历史剧情存档】 (这就是你要的功能！)
-    if (theaterState.currentScriptId) {
-        const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-        if (script && script.archives && script.archives.length > 0) {
-            // 把所有存档拼接起来
-            const allSummaries = script.archives.map(a => 
-                `[📜 剧情存档 #${a.startFloor}-${a.endFloor}]:\n${a.summary}`
-            ).join('\n\n');
-            
-            parts.push(`
-========== 📜 历史剧情回顾 (Previous Story) ==========
-(以下是之前的剧情摘要，请以此为背景继续扮演)
-${allSummaries}
-====================================================
-`);
-        }
-    }
-
-    // 2. 世界书 (World Info)
+    // === ✨ 新增：第一层 - 世界书 (World Info) ===
+    // 获取用户当前输入框里的文字
     const inputEl = document.getElementById('theater-input');
     const currentInput = inputEl ? inputEl.value : "";
+    
+    // 扫描并获取激活的词条
     const worldInfoContext = scanWorldInfo(currentInput, char);
-    if (worldInfoContext) parts.push(worldInfoContext);
-
-    // 3. 核心规则 (Core)
-    p.core.forEach(item => {
-        // 修改：只拼接启用的条目
-        if (item.enabled) {
-            parts.push(process(item.content));
-        }
-    });
-
-    // 4. 文风 (Style)
-    if (p.activeStyleId) {
-        const style = p.styles.find(s => s.id === p.activeStyleId);
-        if (style) parts.push(`\n【当前激活文风】：\n` + process(style.content));
+    if (worldInfoContext) {
+        parts.push(worldInfoContext);
     }
 
-    // 5. 角色设定
+    // --- 第二层：核心规则 (Core) ---
+    // 这些是必须带上的 (比如小说家设定、去八股)
+    p.core.forEach(item => {
+        parts.push(process(item.content));
+    });
+
+    // --- 第三层：文风 (Style) ---
+    // 只有选中的那个文风才会被加入
+    if (p.activeStyleId) {
+        const style = p.styles.find(s => s.id === p.activeStyleId);
+        if (style) {
+            parts.push(`\n【当前激活文风】：\n` + process(style.content));
+        }
+    }
+
+    // --- 第四层：角色卡信息 (Persona) ---
+    // 这是从我们 App 的 contacts 里读来的基础设定
     parts.push(`
     <CharSetting>
     Name: ${char.name}
@@ -11776,15 +10797,20 @@ ${allSummaries}
     </UserSetting>
     `);
 
-    // 6. 小剧场模块
+    // --- 第五层：小剧场模块 (Modules) ---
+    // 只有开关打开的剧场指令才会被加入
+    // 比如你开了“论坛体”，这里就会加入论坛体的 Prompt
     if (p.activeModules.length > 0) {
         parts.push(`\n【特殊剧场模式已开启】：\n`);
         p.activeModules.forEach(mid => {
             const mod = p.modules.find(m => m.id === mid);
-            if (mod) parts.push(process(mod.content));
+            if (mod) {
+                parts.push(process(mod.content));
+            }
         });
     }
 
+    // 将所有积木用换行符连接
     return parts.join('\n\n');
 }
         // === 🌍 世界书核心引擎 ===
@@ -12059,903 +11085,9 @@ async function testTheaterConnection() {
     // 插入到 body 末尾
     document.body.insertAdjacentHTML('beforeend', html);
 })();
-        // ==========================================
-// --- 🎭 剧场模式：剧情总结与存档功能 ---
-// ==========================================
-
-async function generateTheaterSummary() {
-    // 1. 安全检查
-    if (!theaterState.currentScriptId) return alert("请先进入一个剧本！");
-    if (!theaterState.logs || theaterState.logs.length === 0) return alert("剧本还是空的，没法总结哦。");
-    if (!globalConfig.apiKey) return alert("请先在设置中配置 API Key。");
-
-    // 2. 准备按钮动画
-    const btn = event.currentTarget; // 获取点击的按钮
-    const oldIcon = btn.innerText;
-    btn.innerText = "⏳"; // 变成漏斗
-    btn.disabled = true;
-
-    try {
-        // 3. 整理全文 (提取纯文本)
-        // 注意：为了省钱和防超长，我们可以限制只取最近的 15000 字，或者全部
-        // 这里默认全部，如果太长可能会被 API 截断
-        const fullStory = theaterState.logs
-            .map(l => {
-                const roleName = l.role === 'user' ? '用户' : '角色';
-                // 过滤掉之前的总结卡片，防止总结套总结
-                if (l.role === 'system') return ""; 
-                return `${roleName}: ${l.content}`;
-            })
-            .join('\n');
-
-        if (fullStory.length < 100) {
-            throw new Error("剧情太短了，还是多聊几句再总结吧！");
-        }
-
-        // 4. 构建 Prompt
-        const prompt = `
-        你是一个专业的剧情记录员。请阅读以下【剧本对话记录】，并生成一份【剧情摘要存档】。
-        
-        【要求】：
-        1. 概括从开头到现在发生的核心事件、关键转折、人物关系进展。
-        2. 忽略无关紧要的闲聊。
-        3. 格式清晰，分段落。
-        4. 字数控制在 300-500 字以内。
-        5. 这是为了让你（AI）在后续扮演中能记得之前的剧情，所以请保留重要细节（如物品、约定、秘密）。
-
-        【对话记录】：
-        ${fullStory.substring(0, 30000)} 
-        `; // 限制 3万字符防止爆 Token
-
-        // 5. 发送请求
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            model: globalConfig.model,
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.5 // 总结需要准确，温度低一点
-        });
-
-        if (!res.ok) throw new Error("API 请求失败");
-        
-        const data = await res.json();
-        const summary = data.choices[0].message.content;
-
-        // 6. 构造系统存档消息 (Formatted for AI context)
-        const systemNote = `
---- 💾 剧情存档点 (${new Date().toLocaleString()}) ---
-${summary}
----------------------------------------------
-[系统指令]: 以上是截止目前的剧情摘要。请将其作为【长期记忆】纳入考量，保持剧情连贯性。
-`;
-
-        // 7. 写入数据
-        const newLog = { 
-            role: 'system', // 标记为系统消息
-            content: systemNote 
-        };
-        theaterState.logs.push(newLog);
-        saveTheaterLogs();
-
-        // 8. 上屏渲染 (使用我们刚才写的特殊样式)
-        appendSystemCard(systemNote);
-
-        // 9. 滚动到底部
-        const stage = document.getElementById('theater-stage');
-        setTimeout(() => { stage.scrollTop = stage.scrollHeight; }, 100);
-
-    } catch (e) {
-        alert("总结失败: " + e.message);
-    } finally {
-        btn.innerText = oldIcon;
-        btn.disabled = false;
-    }
-}
-
-// 辅助：渲染系统卡片到舞台
-function appendSystemCard(text) {
-    const stage = document.getElementById('theater-stage');
-    const div = document.createElement('div');
-    div.className = 't-msg-block system';
-    
-    // 清洗文本，去掉不需要显示的指令部分，只显示摘要给用户看
-    // 让显示稍微美观一点
-    let displayText = text.replace("[系统指令]: 以上是截止目前的剧情摘要。请将其作为【长期记忆】纳入考量，保持剧情连贯性。", "");
-    displayText = displayText.replace(/\n/g, '<br>');
-
-    div.innerHTML = `
-        <div class="t-system-card">
-            <div class="t-system-header">记忆存档</div>
-            <div>${displayText}</div>
-        </div>
-    `;
-    stage.appendChild(div);
-}
-        (function injectArchiveModal() {
-    if (document.getElementById('modal-theater-archives')) return;
-
-    const html = `
-    <div class="modal-overlay" id="modal-theater-archives" style="z-index: 650;">
-        <div class="modal-box" style="height: 70%; background: #222; color: #eee; border: 1px solid #444;">
-            <div class="modal-header" style="background: #1a1a1a; border-bottom: 1px solid #333; display:flex; justify-content:space-between; align-items:center;">
-                <button onclick="closeModal('modal-theater-archives')" style="color:#999; background:none; border:none;">关闭</button>
-                <span style="color:#fff; font-weight:bold;">剧情档案室</span>
-                <button onclick="openCreateArchiveView()" style="color:#007AFF; font-weight:bold; font-size:24px; background:none; border:none;">+</button>
-            </div>
-            
-            <div id="archive-list-view" class="modal-body" style="padding: 15px; background: #222;">
-                </div>
-
-            <div id="archive-create-view" class="modal-body" style="padding: 20px; background: #222; display:none;">
-                <div class="t-group-title">选择剧情范围 (楼层号)</div>
-                <div style="display:flex; gap:10px; margin-bottom:20px;">
-                    <input type="number" id="arc-start" class="t-input" placeholder="开始楼层" style="text-align:center;">
-                    <span style="line-height:40px;">至</span>
-                    <input type="number" id="arc-end" class="t-input" placeholder="结束楼层" style="text-align:center;">
-                </div>
-                <div style="text-align:center; font-size:12px; color:#666; margin-bottom:20px;">
-                    当前共 <span id="arc-total-floors">0</span> 层
-                </div>
-                <button onclick="doGenerateArchive()" class="ios-btn" style="background:#007AFF; color:#fff; border-radius:8px;">AI 生成剧情摘要</button>
-                <button onclick="backToArchiveList()" class="ios-btn" style="background:#333; color:#ccc; border-radius:8px; margin-top:10px;">返回列表</button>
-            </div>
-        </div>
-    </div>`;
-    document.body.insertAdjacentHTML('beforeend', html);
-})();
-        // ==========================================
-// --- 📜 剧场模式：后台档案室逻辑 ---
-// ==========================================
-
-// 1. 打开档案室
-function openArchiveModal() {
-    if (!theaterState.currentScriptId) return alert("请先进入剧本");
-    renderArchiveList();
-    
-    // 重置视图
-    document.getElementById('archive-list-view').style.display = 'block';
-    document.getElementById('archive-create-view').style.display = 'none';
-    
-    openModal('modal-theater-archives');
-}
-
-// 2. 渲染列表 (升级版：带同步功能)
-function renderArchiveList() {
-    const container = document.getElementById('archive-list-view');
-    container.innerHTML = '';
-
-    // 获取当前剧本
-    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-    if (!script.archives) script.archives = [];
-
-    if (script.archives.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:#666; margin-top:50px;">暂无存档<br>点击右上角 + 创建阶段性总结</div>';
-        return;
-    }
-
-    // 倒序显示
-    [...script.archives].reverse().forEach((arc, index) => {
-        // 原始索引
-        const realIndex = script.archives.length - 1 - index;
-        
-        const div = document.createElement('div');
-        div.className = 'archive-card';
-        div.innerHTML = `
-            <div class="archive-header">
-                <span>存档: #${arc.startFloor} - #${arc.endFloor}</span>
-                <div style="display:flex; gap:10px;">
-                    <span onclick="syncArchiveToMemory(${realIndex})" style="cursor:pointer; color:#007AFF;" title="同步到平时聊天的记忆库">📤 同步</span>
-                    <span onclick="deleteArchive(${realIndex})" style="cursor:pointer; color:#ff3b30;">×</span>
-                </div>
-            </div>
-            <div class="archive-body" onclick="alert('${arc.summary.replace(/\n/g, '\\n')}')">${arc.summary}</div>
-        `;
-        container.appendChild(div);
-    });
-}
-
-// ✨ 新增：同步功能
-function syncArchiveToMemory(index) {
-    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-    if(!script || !script.archives[index]) return;
-
-    const summary = script.archives[index].summary;
-    const charId = script.charId; // 剧本关联的角色ID
-    
-    const char = contacts.find(c => c.id === charId);
-    if (!char) return alert("找不到关联的角色，无法同步！");
-
-    if (!char.memories) char.memories = [];
-
-    // 构造一条记忆
-    const memoryText = `[剧场剧情回忆]: ${summary}`;
-    
-    // 查重：避免重复添加
-    if (char.memories.includes(memoryText)) {
-        return alert("这条存档已经同步过了！");
-    }
-
-    char.memories.push(memoryText);
-    saveData(); // 保存到全局联系人数据
-
-    alert(`✅ 已同步！\n\n现在 "${char.name}" 在平时聊天时，也能记得这段剧情了。`);
-}
-
-// 3. 打开新建视图
-function openCreateArchiveView() {
-    document.getElementById('archive-list-view').style.display = 'none';
-    document.getElementById('archive-create-view').style.display = 'block';
-    
-    // 自动填入楼层建议
-    const total = theaterState.logs.length;
-    document.getElementById('arc-total-floors').innerText = total;
-    
-    // 智能建议：从上次存档的结束位置+1 开始，到最新
-    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-    let suggestStart = 1;
-    if (script && script.archives && script.archives.length > 0) {
-        const lastArc = script.archives[script.archives.length - 1];
-        suggestStart = lastArc.endFloor + 1;
-    }
-    
-    document.getElementById('arc-start').value = Math.min(suggestStart, total);
-    document.getElementById('arc-end').value = total;
-}
-
-function backToArchiveList() {
-    document.getElementById('archive-list-view').style.display = 'block';
-    document.getElementById('archive-create-view').style.display = 'none';
-}
-
-// 4. 执行生成 (AI)
-async function doGenerateArchive() {
-    const start = parseInt(document.getElementById('arc-start').value);
-    const end = parseInt(document.getElementById('arc-end').value);
-    const total = theaterState.logs.length;
-
-    if (isNaN(start) || isNaN(end) || start > end || start < 1) return alert("楼层范围无效");
-    if (end > total) return alert(`目前只有 ${total} 层`);
-
-    const btn = event.target;
-    const oldText = btn.innerText;
-    btn.innerText = "正在阅读并总结...";
-    btn.disabled = true;
-
-    try {
-        // 提取指定范围的文本
-        // logs 索引是 0-based，楼层是 1-based
-        const slice = theaterState.logs.slice(start - 1, end);
-        const contextText = slice.map(l => `${l.role==='user'?'用户': l.role}: ${l.content}`).join('\n');
-
-        const prompt = `
-        你是一个剧本记录员。请阅读以下【${start}楼 到 ${end}楼】的剧情片段。
-        请生成一段详细的【剧情存档总结】。
-        
-        要求：
-        1. 概括这段时间内发生的核心事件、角色情感变化、关键线索。
-        2. 忽略无意义的闲聊，只保留对后续剧情有影响的信息。
-        3. 字数 200-400 字。
-        4. 这是为了存入数据库供后续检索，所以要客观、准确。
-        
-        剧情片段：
-        ${contextText.substring(0, 20000)}
-        `;
-
-        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-            model: globalConfig.model,
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.5
-        });
-
-        if (!res.ok) throw new Error("API Error");
-        const data = await res.json();
-        const summary = data.choices[0].message.content;
-
-        // 存入当前剧本的 archives 数组
-        const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-        if (!script.archives) script.archives = [];
-        
-        script.archives.push({
-            id: Date.now(),
-            startFloor: start,
-            endFloor: end,
-            summary: summary,
-            timestamp: Date.now()
-        });
-        
-        // 保存到 localStorage
-        saveAllScripts();
-
-        alert("✅ 存档成功！");
-        backToArchiveList();
-        renderArchiveList();
-
-    } catch(e) {
-        alert("生成失败: " + e.message);
-    } finally {
-        btn.innerText = oldText;
-        btn.disabled = false;
-    }
-}
-
-function deleteArchive(index) {
-    if(confirm("确定删除这条存档吗？")) {
-        const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-        if(script && script.archives) {
-            script.archives.splice(index, 1);
-            saveAllScripts();
-            renderArchiveList();
-        }
-    }
-}
-        // ==========================================
-// --- 🎭 剧场模式：重刷功能 (智能容错版) ---
-// ==========================================
-
-async function rerollTheaterMsg() {
-    // 1. 安全检查
-    if (!theaterState.currentScriptId) return;
-    const logs = theaterState.logs;
-    
-    if (!logs || logs.length === 0) return;
-
-    // 2. 获取最后一条消息
-    const lastMsg = logs[logs.length - 1];
-    
-    // === 核心修改逻辑 ===
-    
-    // 情况 A: 最后一条是 AI 发的 (或者系统报错信息)
-    // -> 也就是你要“推倒重来”，需要先删掉这一条
-    if (lastMsg.role === 'assistant') {
-        // 删除数据
-        logs.pop(); 
-        saveTheaterLogs();
-
-        // 删除界面上的气泡
-        const stage = document.getElementById('theater-stage');
-        const blocks = stage.querySelectorAll('.t-msg-block');
-        if (blocks.length > 0) {
-            blocks[blocks.length - 1].remove();
-        }
-    }
-    
-    // 情况 B: 最后一条是 User 发的 (说明上次请求彻底失败了，连记录都没留下)
-    // -> 不需要删任何东西，直接让 AI 再试一次就行
-
-    // 情况 C: 如果删完 AI 消息后，发现上一条不是 User (比如是系统提示)，那也没法接话
-    // 稍微检查一下现在的“最后一条”
-    const newLast = logs[logs.length - 1];
-    if (!newLast || newLast.role === 'system') {
-        // 虽然通常不会发生，但也防一手
-        // 如果你想让它强行续写系统提示，也可以去掉这个 return
-        return alert("找不到上一条用户发言，无法重刷。");
-    }
-
-    // 3. 重新召唤 AI
-    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-    if (script) {
-        const char = contacts.find(c => c.id === script.charId);
-        if (char) {
-            await triggerTheaterAI(char);
-        }
-    }
-}
-        // ==========================================
-// --- 🖼️ 智能相册 (AI Album) 核心逻辑 ---
-// ==========================================
-
-let albumMeta = []; // 存 metadata: {id, time, aiComment, aiTags}
-let currentViewingPhotoId = null;
-
-// 1. 初始化与加载
-window.addEventListener('load', () => {
-    const saved = localStorage.getItem('ai_phone_album_meta');
-    if(saved) albumMeta = JSON.parse(saved);
-});
-
-function saveAlbumMeta() {
-    localStorage.setItem('ai_phone_album_meta', JSON.stringify(albumMeta));
-}
-
-// 2. 压缩图片 (核心优化：不损失太多画质但大幅减小体积)
-function compressPhoto(file) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (e) => {
-            const img = new Image();
-            img.src = e.target.result;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                // 限制最大边长为 1280 (够手机看高清了)
-                const maxSide = 1280;
-                let w = img.width;
-                let h = img.height;
-                
-                if (w > maxSide || h > maxSide) {
-                    if (w > h) {
-                        h = Math.round(h * (maxSide / w));
-                        w = maxSide;
-                    } else {
-                        w = Math.round(w * (maxSide / h));
-                        h = maxSide;
-                    }
-                }
-                
-                canvas.width = w;
-                canvas.height = h;
-                ctx.drawImage(img, 0, 0, w, h);
-                
-                // 输出 JPEG, 质量 0.8
-                canvas.toBlob((blob) => {
-                    resolve(blob);
-                }, 'image/jpeg', 0.8);
-            };
-        };
-    });
-}
-
-// 3. 处理上传 & AI 分析 (Token 扩容修复版)
-async function handleAlbumUpload(e) {
-    const file = e.target.files[0];
-    if(!file) return;
-    
-    // 检查配置
-    if(!globalConfig.apiKey && globalConfig.provider !== 'google') return alert("请先在设置中配置 API Key。");
-
-    const btn = document.querySelector('#page-album .btn-icon-only');
-    const oldBtnText = btn.innerText;
-    btn.innerText = "⏳"; 
-
-    try {
-        // A. 压缩图片
-        const compressedBlob = await compressPhoto(file);
-        const photoId = Date.now().toString();
-        
-        // B. 转换 Base64
-        const reader = new FileReader();
-        reader.readAsDataURL(compressedBlob);
-        
-        reader.onloadend = async () => {
-            const base64Data = reader.result;
-            
-            const char = contacts.find(c => c.id === activeContactId) || contacts[0];
-            if(!char) throw new Error("请先创建一个角色");
-
-            // 提示词：自然语言模式，防止 JSON 格式占用太多 Token
-            const visionPrompt = `
-            [图片分析任务]
-            这是一张用户上传到手机相册的照片。
-            请你以 "${char.name}" 的身份（人设：${char.systemPrompt}）来看这张照片。
-            
-            1. 写一段 50 字以内的“照片批注/评价”。语气要符合你的人设。
-            2. 提取 5-8 个关键视觉元素标签（Tags）。
-            ⚠️ 标签要求：
-            - 必须全部使用中文。
-            - 包含物体名 (如: 猫, 汽车)、场景 (如: 海边, 卧室)、氛围 (如: 温馨, 搞笑)、颜色等。
-            - 这将用于未来的记忆检索，所以请尽可能丰富。
-            
-            请严格按照以下格式返回：
-            Comment: [在这里写你的评价]
-            Tags: [标签1, 标签2, 标签3]
-            `;
-
-            try {
-                // 发送请求
-                const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
-                    model: globalConfig.model, 
-                    messages: [
-                        {
-                            role: "user",
-                            content: [
-                                { type: "text", text: visionPrompt },
-                                { type: "image_url", image_url: { url: base64Data } }
-                            ]
-                        }
-                    ],
-                    // 🔥🔥🔥 核心修改：把 Token 上限拉满，防止话没说完被掐断
-                    max_tokens: 4096, 
-                    temperature: 0.7
-                });
-
-                if (!res.ok) {
-                    const errText = await res.text();
-                    throw new Error(`API报错: ${res.status} - ${errText}`);
-                }
-
-                const data = await res.json();
-                console.log("🔍 API完整返回:", data);
-
-                if (!data.choices || data.choices.length === 0) {
-                    throw new Error("API 返回了空数组 (No choices)");
-                }
-
-                const choice = data.choices[0];
-                const rawContent = choice.message.content || "";
-                
-                // 1. 检查截断 (Length)
-                if (choice.finish_reason === 'length') {
-                    console.warn("⚠️ 警告：回复因达到 Token 上限被截断，尝试使用已生成的部分。");
-                }
-                
-                // 2. 检查安全拦截
-                if (choice.finish_reason === 'safety') {
-                    alert("⚠️ 图片被 Google 安全系统拦截，无法生成评价。");
-                    throw new Error("Safety Filter Triggered");
-                }
-
-                // === 解析逻辑 (兼容截断情况) ===
-                let finalComment = rawContent;
-                let finalTags = ["照片"];
-
-                // 如果内容为空，但 finish_reason 是 length，说明连第一个字都没憋出来就被掐了（极少见）
-                if (!rawContent.trim() && choice.finish_reason === 'length') {
-                    finalComment = "❌ AI 想说的话太长被系统拦截了，请重试。";
-                } 
-                else if (rawContent.trim()) {
-                    // 尝试提取 Comment
-                    const commentMatch = rawContent.match(/Comment:\s*([\s\S]+?)(?=Tags:|$)/i);
-                    if (commentMatch) {
-                        finalComment = commentMatch[1].trim();
-                    } else {
-                        // 没按格式来，直接用全文
-                        finalComment = rawContent;
-                    }
-
-                    // 尝试提取 Tags
-                    const tagsMatch = rawContent.match(/Tags:\s*(.+)/i);
-                    if (tagsMatch) {
-                        finalTags = tagsMatch[1].replace(/[\[\]]/g, '').split(/[,，]/).map(t => t.trim());
-                    }
-                } else {
-                    finalComment = "❌ AI 看到了图片，但保持了沉默。";
-                }
-
-                // D. 存入数据库
-                const db = await openDB();
-                const tx = db.transaction(albumStoreName, "readwrite");
-                tx.objectStore(albumStoreName).put({ id: photoId, blob: compressedBlob });
-                
-                // E. 存入 Metadata
-                albumMeta.unshift({
-                    id: photoId,
-                    timestamp: Date.now(),
-                    comment: finalComment, 
-                    tags: finalTags
-                });
-                saveAlbumMeta();
-                
-                // F. 刷新
-                renderAlbumGrid();
-                alert(`评价已生成：${finalComment.substring(0, 15)}...`);
-
-            } catch (apiErr) {
-                console.error(apiErr);
-                if (apiErr.message !== "Safety Filter Triggered") {
-                    alert("API 错误: " + apiErr.message);
-                }
-            }
-        };
-
-    } catch(err) {
-        console.error(err);
-        alert("图片处理失败: " + err.message);
-    } finally {
-        btn.innerText = oldBtnText;
-        e.target.value = '';
-    }
-}
-
-// 4. 渲染相册网格 (懒加载优化)
-async function renderAlbumGrid() {
-    const grid = document.getElementById('album-grid');
-    grid.innerHTML = '';
-    
-    if(albumMeta.length === 0) return;
-
-    // 从 IndexedDB 读取所有图片有点慢，这里我们只渲染格子
-    // 图片数据我们在创建 img 标签时异步去取
-    
-    const db = await openDB();
-    const tx = db.transaction(albumStoreName, "readonly");
-    const store = tx.objectStore(albumStoreName);
-
-    albumMeta.forEach(meta => {
-        const div = document.createElement('div');
-        div.className = 'album-item';
-        div.onclick = () => openPhotoDetail(meta.id);
-        
-        const img = document.createElement('img');
-        img.className = 'album-img';
-        // 占位图
-        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48cmVjdCB3aWR0PSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlZWUiLz48L3N2Zz4='; 
-        
-        // 异步加载真实图片 blob
-        const req = store.get(meta.id);
-        req.onsuccess = () => {
-            if(req.result) {
-                const url = URL.createObjectURL(req.result.blob);
-                img.src = url;
-            }
-        };
-        
-        div.appendChild(img);
-        grid.appendChild(div);
-    });
-}
-
-// 5. 查看详情 (升级版：显示隐藏标签)
-async function openPhotoDetail(id) {
-    const meta = albumMeta.find(m => m.id === id);
-    if(!meta) return;
-    
-    currentViewingPhotoId = id;
-    
-    // 恢复卡片翻转状态 (默认看图)
-    document.getElementById('photo-card-inner').classList.remove('flipped');
-    
-    // 1. 设置评价内容 (保持原样)
-    document.getElementById('viewer-comment').innerText = meta.comment;
-    
-    // 2. ✨✨✨ 核心修改：把标签显示出来！✨✨✨
-    // 将标签数组转换成漂亮的小气泡 HTML
-    const tags = meta.tags || ["无标签"];
-    const tagsHtml = tags.map(t => 
-        `<span style="background:#f2f2f7; color:#8e8e93; padding:4px 8px; border-radius:6px; font-size:12px; margin:2px;">#${t}</span>`
-    ).join('');
-
-    // 将标签插入到日期上方
-    const dateStr = new Date(meta.timestamp).toLocaleString();
-    document.getElementById('viewer-date').innerHTML = `
-        <div style="margin-bottom:15px; display:flex; flex-wrap:wrap; justify-content:center; gap:5px;">
-            ${tagsHtml}
-        </div>
-        <div style="font-size:10px; opacity:0.6;">${dateStr}</div>
-    `;
-    
-    // 从 DB 取大图 (保持原样)
-    const db = await openDB();
-    const blob = await new Promise((resolve) => {
-        const tx = db.transaction(albumStoreName, "readonly");
-        const store = tx.objectStore(albumStoreName);
-        const req = store.get(id);
-        req.onsuccess = () => resolve(req.result ? req.result.blob : null);
-    });
-    
-    if(blob) {
-        document.getElementById('viewer-img').src = URL.createObjectURL(blob);
-    }
-    
-    openModal('modal-photo-viewer');
-}
-function flipPhotoCard() {
-    document.getElementById('photo-card-inner').classList.toggle('flipped');
-}
-
-async function deleteCurrentPhoto() {
-    if(!confirm("确定要删除这张照片吗？")) return;
-    
-    const id = currentViewingPhotoId;
-    
-    // 1. 删 DB
-    const db = await openDB();
-    const tx = db.transaction(albumStoreName, "readwrite");
-    tx.objectStore(albumStoreName).delete(id);
-    
-    // 2. 删 Meta
-    albumMeta = albumMeta.filter(m => m.id !== id);
-    saveAlbumMeta();
-    
-    closeModal('modal-photo-viewer');
-    renderAlbumGrid();
-}
-
-// ==========================================
-// --- 🧠 核心：智能相册检索 (加强版) ---
-// ==========================================
-function getPhotoAlbumContext(userMessage = "") {
-    if (albumMeta.length === 0) return "";
-
-    console.log(`[相册检索] 用户正在说: "${userMessage}"`);
-
-    let selectedPhotos = [];
-    
-    // 1. 【短期记忆】最近 2 张直接入选
-    const recentPhotos = albumMeta.slice(0, 2);
-    selectedPhotos.push(...recentPhotos);
-    
-    // 调试：看看最近照片有没有命中关键词（纯粹为了让你放心）
-    if (userMessage && userMessage.trim().length > 0) {
-        recentPhotos.forEach(p => {
-            const hit = p.tags && p.tags.some(t => userMessage.includes(t) || t.includes(userMessage));
-            if (hit) console.log(`🚀 [VIP通道] 最近上传的照片ID:${p.id} 命中关键词！(必然发送)`);
-        });
-    }
-
-    // 2. 【长期记忆】检索老照片
-    if (userMessage && userMessage.trim().length > 0) {
-        const searchResults = albumMeta.filter(photo => {
-            // 排除已经在最近列表里的
-            if (recentPhotos.find(r => r.id === photo.id)) return false;
-
-            // 标签匹配
-            const tagHit = photo.tags && photo.tags.some(tag => {
-                return userMessage.includes(tag) || tag.includes(userMessage);
-            });
-            
-            // 评价匹配
-            const commentHit = photo.comment.includes(userMessage);
-            
-            if (tagHit || commentHit) {
-                console.log(`🎯 [老照片检索] 命中旧照片ID:${photo.id}`);
-                return true;
-            }
-            return false;
-        });
-
-        if (searchResults.length > 0) {
-            selectedPhotos.push(...searchResults.slice(0, 3));
-        } else {
-            // 只有当没有搜到老照片时才显示这个，避免误解
-            console.log("💨 未检索到*其他*老照片");
-        }
-    }
-
-    if (selectedPhotos.length === 0) return "";
-    selectedPhotos = [...new Set(selectedPhotos)];
-
-    // 构造 Prompt
-    let context = "\n========== 📸 [视觉记忆检索] ==========\n";
-    context += "系统检测到用户话题与以下照片有关（包含刚上传的或检索到的）：\n";
-    
-    selectedPhotos.forEach((p) => {
-        const dateStr = new Date(p.timestamp).toLocaleDateString();
-        context += `
-[照片档案]
-- 时间: ${dateStr}
-- 标签: ${p.tags ? p.tags.join(', ') : '无'}
-- 评价: "${p.comment}"
-`;
-    });
-    
-    context += `
----------------------------------------------------
-【回复指令】：
-请结合上述照片信息进行回复。
-1. 就像你突然想起来、或者正在看这张照片一样。
-2. 提到照片里的具体细节（标签或评价内容）。
-===================================================
-\n`;
-    
-    // 打印最终结果，让你确认发了没
-    console.log(`📦 最终打包发送 ${selectedPhotos.length} 张照片信息给 AI`);
-    
-    return context;
-}
-        // ==========================================
-// --- 🛠️ 自定义反代预设管理逻辑 (新增) ---
-// ==========================================
-
-// 1. 渲染预设菜单
-function renderCustomPresetMenu() {
-    const select = document.getElementById('presetSelect');
-    select.innerHTML = '<option value="">-- 请选择预设 --</option>';
-
-    // 确保数据结构存在
-    if (!globalConfig.customPresets) globalConfig.customPresets = [];
-
-    globalConfig.customPresets.forEach((preset, index) => {
-        const opt = document.createElement('option');
-        opt.value = index;
-        opt.innerText = preset.name;
-        select.appendChild(opt);
-    });
-}
-
-// 2. 另存为新预设
-function saveNewCustomPreset() {
-    const currentUrl = document.getElementById('apiUrl').value.trim();
-    const currentKey = document.getElementById('apiKey').value.trim();
-    const currentModel = document.getElementById('modelId').value.trim();
-
-    if (!currentUrl) return alert("API URL 不能为空！");
-    if (!currentKey) return alert("API Key 不能为空！");
-
-    const name = prompt("给这个配置起个名字吧 (例如: DeepSeek反代):");
-    if (!name) return;
-
-    if (!globalConfig.customPresets) globalConfig.customPresets = [];
-
-    // 保存 URL, Key 和 Model ID
-    globalConfig.customPresets.push({
-        name: name,
-        url: currentUrl,
-        key: currentKey,
-        model: currentModel // 顺便把模型ID也存了，方便切换
-    });
-
-    saveData(); // 保存到本地存储
-    renderCustomPresetMenu(); // 刷新菜单
-    
-    // 自动选中刚才新建的
-    document.getElementById('presetSelect').value = globalConfig.customPresets.length - 1;
-    alert(`预设 "${name}" 保存成功！`);
-}
-
-// 3. 应用预设 (点击菜单时触发)
-function applyCustomPreset() {
-    const index = document.getElementById('presetSelect').value;
-    if (index === "") return;
-
-    const preset = globalConfig.customPresets[index];
-    if (preset) {
-        document.getElementById('apiUrl').value = preset.url;
-        document.getElementById('apiKey').value = preset.key;
-        if (preset.model) {
-            document.getElementById('modelId').value = preset.model;
-        }
-        
-        // 触发一下保存，让它立即生效
-        saveGlobalConfig();
-        
-        // 视觉反馈
-        if(navigator.vibrate) navigator.vibrate(50);
-    }
-}
-
-// 4. 删除预设
-function deleteCustomPreset() {
-    const index = document.getElementById('presetSelect').value;
-    if (index === "") return alert("请先在下拉框中选择要删除的预设");
-
-    const preset = globalConfig.customPresets[index];
-    if (confirm(`确定要删除预设 "${preset.name}" 吗？`)) {
-        globalConfig.customPresets.splice(index, 1);
-        saveData();
-        renderCustomPresetMenu();
-    }
-}
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
