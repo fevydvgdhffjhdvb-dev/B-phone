@@ -2942,7 +2942,19 @@ select.x-input option {
 
             <!-- Tab 2: 预设导入 (核心) -->
             <div id="tab-presets" class="t-tab-content">
-                <div class="t-group-title">导入酒馆预设 (JSON)</div>
+                
+                <!-- ✨ 新增：预设管理区 ✨ -->
+                <div class="t-group-title">我的预设库 (规则+文风+正则)</div>
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <select id="saved-preset-select" class="t-input" style="margin-bottom:0; flex:1;" onchange="applySavedPreset()">
+                        <option value="">-- 选择预设 --</option>
+                    </select>
+                    <button onclick="doSavePreset()" style="background:#222; border:1px solid #007AFF; color:#007AFF; width:40px; border-radius:6px;">另存为</button>
+                    <button onclick="doDeletePreset()" style="background:#222; border:1px solid #ff3b30; color:#ff3b30; width:40px; border-radius:6px;">删除</button>
+                </div>
+                <hr style="border:0; border-top:1px solid #333; margin-bottom:15px;">
+
+                <div class="t-group-title">导入新文件 (JSON)</div>
                 <div class="t-upload-box" onclick="document.getElementById('theaterPresetInput').click()">
                     点击上传 .json 文件
                 </div>
@@ -2973,6 +2985,15 @@ select.x-input option {
                 </div>
             </div>
             <div id="tab-world" class="t-tab-content">
+                <div class="t-group-title">我的世界观存档</div>
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <select id="saved-world-select" class="t-input" style="margin-bottom:0; flex:1;" onchange="applySavedWorld()">
+                        <option value="">-- 选择世界书 --</option>
+                    </select>
+                    <button onclick="doSaveWorld()" style="background:#222; border:1px solid #007AFF; color:#007AFF; width:40px; border-radius:6px;">另存为</button>
+                    <button onclick="doDeleteWorld()" style="background:#222; border:1px solid #ff3b30; color:#ff3b30; width:40px; border-radius:6px;">删除</button>
+                </div>
+                <hr style="border:0; border-top:1px solid #333; margin-bottom:15px;">
                 <div class="t-group-title">世界书词条 (点击文字=强制激活)</div>
                 <div class="t-upload-box" style="margin-bottom:10px; padding:10px; font-size:12px;" onclick="document.getElementById('importWorldInput').click()">
                     📂 导入世界书 (.json)
@@ -10340,7 +10361,7 @@ let theaterState = {
     // 依然保留这个 logs 变量作为“当前运行中的缓存”，方便 API 函数调用
     logs: [] 
 };
-
+        
 // 所有的剧本数据 (从 localStorage 读取)
 // 格式: [{ id, title, charId, logs: [], lastModified: timestamp }]
 let allScripts = [];
@@ -10519,6 +10540,33 @@ function deleteScript(id) {
         renderScriptList();
     }
 }
+        // ==========================================
+// --- ✨ 新增：预设与世界书存档列表 ✨ ---
+// ==========================================
+
+// 1. 定义全局变量
+let savedTheaterPresets = []; // 存预设 (Core + Styles + Modules + Regex)
+let savedWorldSets = [];      // 存世界书 (World Info only)
+
+// 2. 定义加载函数
+function loadTheaterSavedLists() {
+    try {
+        const p = localStorage.getItem('theater_saved_presets');
+        if (p) savedTheaterPresets = JSON.parse(p);
+        
+        const w = localStorage.getItem('theater_saved_worlds');
+        if (w) savedWorldSets = JSON.parse(w);
+        
+        console.log("已加载保存的预设和世界书列表");
+    } catch (e) {
+        console.error("读取保存列表失败", e);
+    }
+}
+
+// 3. 确保页面打开时自动运行
+window.addEventListener('load', loadTheaterSavedLists);
+
+// ==========================================
 
 function loadTheaterConfig() {
     const s = localStorage.getItem('theater_config');
@@ -10532,6 +10580,8 @@ function loadTheaterConfig() {
 
 // 2. 导演台 UI 逻辑
 function openTheaterConsole() {
+     renderSavedPresetSelect();
+    renderSavedWorldSelect();
     openModal('modal-theater-console');
 }
 
@@ -10912,6 +10962,175 @@ function parseSillyTavernJSON(json, fileName) {
                 disabled: r.disabled || false
             });
         });
+    }
+}
+        // --- 渲染预设下拉框 ---
+function renderSavedPresetSelect() {
+    const select = document.getElementById('saved-preset-select');
+    if (!select) return;
+    
+    // 保留第一项
+    select.innerHTML = '<option value="">-- 选择预设 --</option>';
+    
+    savedTheaterPresets.forEach((item, index) => {
+        const opt = document.createElement('option');
+        opt.value = index;
+        opt.innerText = item.name;
+        select.appendChild(opt);
+    });
+}
+
+// --- 保存当前配置为新预设 ---
+function doSavePreset() {
+    const p = theaterState.preset;
+    // 检查是否有内容
+    if (p.core.length === 0 && p.styles.length === 0) {
+        return alert("当前没有加载任何规则，无法保存！");
+    }
+
+    const name = prompt("给当前配置起个名字 (含规则/文风/正则):", p.name || "新预设");
+    if (!name) return;
+
+    // 构造存储对象 (剔除 worldInfo)
+    const package = {
+        name: name,
+        core: p.core,
+        styles: p.styles,
+        modules: p.modules,
+        activeStyleId: p.activeStyleId,
+        activeModules: p.activeModules,
+        regexScripts: p.regexScripts // 包含正则
+    };
+
+    // 检查重名覆盖
+    const idx = savedTheaterPresets.findIndex(x => x.name === name);
+    if (idx >= 0) {
+        if (!confirm(`预设 "${name}" 已存在，要覆盖吗？`)) return;
+        savedTheaterPresets[idx] = package;
+    } else {
+        savedTheaterPresets.push(package);
+    }
+
+    localStorage.setItem('theater_saved_presets', JSON.stringify(savedTheaterPresets));
+    renderSavedPresetSelect();
+    alert("预设保存成功！");
+}
+
+// --- 应用选中的预设 ---
+function applySavedPreset() {
+    const idx = document.getElementById('saved-preset-select').value;
+    if (idx === "") return;
+
+    const data = savedTheaterPresets[idx];
+    if (!data) return;
+
+    // 覆盖当前状态 (保留 WorldInfo 不动)
+    const currentWorld = theaterState.preset.worldInfo || [];
+    
+    theaterState.preset = {
+        name: data.name,
+        core: JSON.parse(JSON.stringify(data.core || [])),     // 深拷贝防止引用修改
+        styles: JSON.parse(JSON.stringify(data.styles || [])),
+        modules: JSON.parse(JSON.stringify(data.modules || [])),
+        activeStyleId: data.activeStyleId,
+        activeModules: JSON.parse(JSON.stringify(data.activeModules || [])),
+        regexScripts: JSON.parse(JSON.stringify(data.regexScripts || [])),
+        worldInfo: currentWorld // 🔥 关键：把世界书接回去
+    };
+
+    saveTheaterState(); // 存入运行时
+    renderConsoleUI();  // 刷新界面
+    
+    // 视觉反馈
+    if(navigator.vibrate) navigator.vibrate(50);
+}
+
+// --- 删除预设 ---
+function doDeletePreset() {
+    const idx = document.getElementById('saved-preset-select').value;
+    if (idx === "") return alert("请先选择一个预设");
+
+    if (confirm("确定删除该预设吗？")) {
+        savedTheaterPresets.splice(idx, 1);
+        localStorage.setItem('theater_saved_presets', JSON.stringify(savedTheaterPresets));
+        renderSavedPresetSelect();
+    }
+}
+        // --- 渲染世界书下拉框 ---
+function renderSavedWorldSelect() {
+    const select = document.getElementById('saved-world-select');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">-- 选择世界书 --</option>';
+    
+    savedWorldSets.forEach((item, index) => {
+        const opt = document.createElement('option');
+        opt.value = index;
+        opt.innerText = `${item.name} (${item.entries.length}条)`;
+        select.appendChild(opt);
+    });
+}
+
+// --- 保存当前世界书 ---
+function doSaveWorld() {
+    const currentEntries = theaterState.preset.worldInfo;
+    if (!currentEntries || currentEntries.length === 0) {
+        return alert("当前没有任何世界书条目！");
+    }
+
+    const name = prompt("给这套世界观起个名字:", "新世界观");
+    if (!name) return;
+
+    const package = {
+        name: name,
+        entries: JSON.parse(JSON.stringify(currentEntries)) // 深拷贝
+    };
+
+    const idx = savedWorldSets.findIndex(x => x.name === name);
+    if (idx >= 0) {
+        if (!confirm(`世界书 "${name}" 已存在，要覆盖吗？`)) return;
+        savedWorldSets[idx] = package;
+    } else {
+        savedWorldSets.push(package);
+    }
+
+    localStorage.setItem('theater_saved_worlds', JSON.stringify(savedWorldSets));
+    renderSavedWorldSelect();
+    alert("世界书保存成功！");
+}
+
+// --- 应用选中的世界书 ---
+function applySavedWorld() {
+    const idx = document.getElementById('saved-world-select').value;
+    if (idx === "") return;
+
+    const data = savedWorldSets[idx];
+    if (!data) return;
+
+    if (theaterState.preset.worldInfo.length > 0) {
+        if (!confirm("加载新世界书将覆盖当前所有条目，确定吗？")) {
+            // 恢复下拉框选择
+            document.getElementById('saved-world-select').value = "";
+            return;
+        }
+    }
+
+    // 覆盖世界书
+    theaterState.preset.worldInfo = JSON.parse(JSON.stringify(data.entries));
+    
+    saveTheaterState();
+    renderConsoleUI(); // 刷新列表
+}
+
+// --- 删除世界书 ---
+function doDeleteWorld() {
+    const idx = document.getElementById('saved-world-select').value;
+    if (idx === "") return alert("请先选择一个世界书");
+
+    if (confirm("确定删除该世界书存档吗？")) {
+        savedWorldSets.splice(idx, 1);
+        localStorage.setItem('theater_saved_worlds', JSON.stringify(savedWorldSets));
+        renderSavedWorldSelect();
     }
 }
 
@@ -12111,6 +12330,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
