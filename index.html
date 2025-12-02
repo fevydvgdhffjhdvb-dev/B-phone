@@ -4949,12 +4949,62 @@ function fileToBase64(file) {
             // 清空 input 防止同名文件无法再次触发
             e.target.value = ''; 
         }
-        async function testConn() {
-            try { 
-                await fetch(normalizeUrl(globalConfig.apiUrl)+'/models', {headers:{Authorization:"Bearer "+globalConfig.apiKey}}); 
-                alert("连接成功！"); 
-            } catch(e) { alert("连接失败: "+e.message); }
+        // --- 🛠️ 升级版：真实生成测试 ---
+async function testConn() {
+    const btn = event.target;
+    const oldText = btn.innerText;
+    btn.innerText = "正在握手...";
+    btn.disabled = true;
+
+    try {
+        // 1. 获取当前填写的配置
+        const apiUrl = document.getElementById('apiUrl').value.trim();
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const model = document.getElementById('modelId').value.trim();
+
+        if(!apiKey) throw new Error("请输入 API Key");
+        
+        // 2. 只有在自定义模式且没填 URL 时才拦截
+        if (document.getElementById('apiProvider').value === 'custom' && !apiUrl) {
+            throw new Error("请输入 API URL");
         }
+
+        // 3. 如果没填模型，先尝试拉取列表（这是旧逻辑，保留作为兜底）
+        if (!model) {
+            btn.innerText = "拉取列表...";
+            await fetch(normalizeUrl(globalConfig.apiUrl)+'/models', {
+                headers:{Authorization:"Bearer "+apiKey}
+            });
+            alert("✅ 连接服务器成功！\n(但你还没填 Model ID，请从列表选择模型后再测一次)");
+            return;
+        }
+
+        // 4. 🔥 核心：发起一次真实的对话请求 (只生成1个词，极速验证)
+        // 使用 fetchWithRetry 自动适配 Google/Custom 逻辑
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: model,
+            messages: [{ role: "user", content: "Hi" }],
+            max_tokens: 5 // ⚡️ 关键：限制只生成 5 个 Token，速度极快且省钱
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(`错误 ${res.status}: ${errData.error?.message || res.statusText}`);
+        }
+
+        const data = await res.json();
+        const reply = data.choices?.[0]?.message?.content || "OK";
+
+        // 5. 成功反馈
+        alert(`🎉 测试完美通过！\n\n✅ 服务器连接正常\n✅ API Key 有效\n✅ 模型 [${model}] 可生成回复\n🤖 AI回应: "${reply}"`);
+
+    } catch(e) {
+        alert("❌ 测试失败:\n" + e.message);
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
         // --- 5. 日记本渲染逻辑 (新增) ---
     // ==========================================
 // --- 新版日记本逻辑 (交换日记系统) ---
@@ -12825,6 +12875,7 @@ function deleteCustomPreset() {
     </script>
 </body>
 </html>
+
 
 
 
