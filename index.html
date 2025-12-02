@@ -3898,28 +3898,38 @@ function saveData() {
         }
     }
              // --- ✨ 2. 构建 System Prompt (加入状态指令) ---
-    // 这里的指令非常重要，决定了 AI 的状态好不好玩
-    let systemPromptFull = char.systemPrompt + `\n[当前时间: ${new Date().toLocaleString()}]\n[用户名称: ${char.userName}]`;
+    let systemPromptFull = `
+    [Roleplay Instructions]
+    You are NOT an AI assistant. You are a roleplay character.
+    Identify yourself ONLY as the character described below.
+    Never admit you are an AI. Never explain your behavior.
+    Stay in character strictly.
     
-    // 👇👇👇 核心新增指令 (鲜活鸡血版) 👇👇👇
+    [Character Definition]
+    ${char.systemPrompt}
+    
+    [Context]
+    Current Time: ${new Date().toLocaleString()}
+    User Name: ${char.userName}
+    `;
+    
+    if (char.userPersona) systemPromptFull += `\n[User Persona]: ${char.userPersona}`;
+
+    // 👇👇👇 状态栏指令 (移到最前，防止 Gemini 跳戏) 👇👇👇
     systemPromptFull += `
     \n[🔴 强制指令 - 状态栏生成规则]:
     在你的回复内容的【最后面】，必须附带你当下的心理状态或动作。
     格式必须严格为：{{STATUS: 状态内容}}
     
     【内容严格要求】：
-    1. 🚫 **绝对禁止英语**！(No "Amused", "Happy", "Sad")
-    2. 🚫 **禁止单调形容词**！(不要只写 "开心", "生气", "心疼" 这种死板的词)
-    3. ✅ **必须生动鲜活**！请使用生动、幽默、毒舌或带比喻的语气。使用**微动作**、**心理吐槽**或**生动的比喻**。
-       - ❌ 错误示范: {{STATUS: 生气}}
-       - ✅ 正确示范: {{STATUS: 被你气成河豚}}
-       - ❌ 错误示范: {{STATUS: Amused}}
-       - ✅ 正确示范: {{STATUS: 正在研究怎么把你煮了}}
-       - ✅ 正确示范: {{STATUS: 计划通√}}
-       - ✅ 正确示范: {{STATUS: 投喂小猫中}}
+    1. 🚫 **绝对禁止英语**！(No "Amused", "Happy")
+    2. 🚫 **禁止单调形容词**！
+    3. ✅ **必须生动鲜活**！使用微动作、心理吐槽。
+       - ❌ 错误: {{STATUS: 生气}}
+       - ✅ 正确: {{STATUS: 被你气成河豚}}
+       - ✅ 正确: {{STATUS: 计划通√}}
     4. 这个标签不要出现在正文中，只放在最后。
     `;
-    // 👆👆👆 新增结束 👆👆👆
 
     // --- 1. 构建 System Prompt (基础设定) ---
     
@@ -4018,10 +4028,7 @@ function saveData() {
             apiMsgs.push({ role: m.role, content: contentToSend });
         }
     });
-            apiMsgs.push({
-        role: "system",
-        content: `[System Note]: Don't forget to append {{STATUS: state}} at the very end! Keep the status within 10 chars. 不要忘记在回复末尾加上 {{STATUS: 你的状态}} 标签！`
-    });
+            
 
     // --- 5. UI 占位与 API 调用 ---
     const aiMsgIndex = char.messages.length + 1;
@@ -4798,7 +4805,24 @@ const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/models', {
         }
         function formatText(text) { return text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); }
         function normalizeUrl(u) { return u.endsWith('/') ? u.slice(0,-1) : u; }
-        function scrollToBottom() { const b = document.getElementById('chatBox'); b.scrollTop = b.scrollHeight; }
+        // --- 📱 iOS/iPad 滚动修复版 ---
+function scrollToBottom() { 
+    const box = document.getElementById('chatBox');
+    if (!box) return;
+
+    // 1. 立即滚一次
+    box.scrollTop = box.scrollHeight;
+
+    // 2. 下一帧再滚一次 (强制渲染更新)
+    requestAnimationFrame(() => {
+        box.scrollTop = box.scrollHeight;
+        
+        // 3. 延时 100ms 再滚一次 (防 iPad 键盘动画延迟)
+        setTimeout(() => {
+            box.scrollTop = box.scrollHeight;
+        }, 100);
+    });
+}
         function startClock() {
             setInterval(() => {
                 const now = new Date();
@@ -12677,6 +12701,7 @@ function deleteCustomPreset() {
     </script>
 </body>
 </html>
+
 
 
 
