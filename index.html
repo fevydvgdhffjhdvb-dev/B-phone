@@ -3347,6 +3347,27 @@ select.x-input option {
         </div>
     </div>
 </div>
+    <!-- ============ 新增：超大编辑框弹窗 ============ -->
+<div class="modal-overlay" id="modal-big-edit">
+    <div class="modal-box" style="height: 60%;">
+        <div class="modal-header">
+            编辑内容
+            <!-- 隐藏域：存一下当前正在改哪条消息 -->
+            <input type="hidden" id="edit-target-index">
+        </div>
+        <div class="modal-body" style="padding:15px; display:flex; flex-direction:column;">
+            <div style="font-size:12px; color:#999; margin-bottom:10px;">
+                修缮文案或更正格式（修改后不会触发 AI 重答，仅修正显示）
+            </div>
+            <!-- 这里就是你要的大框框 -->
+            <textarea id="big-edit-input" style="flex:1; padding:15px; font-size:16px; line-height:1.6; border:1px solid #ddd; border-radius:10px; resize:none; outline:none; font-family:inherit;"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-big-edit')">取消</button>
+            <button class="modal-btn" onclick="saveBigEdit()" style="color:#007AFF; font-weight:bold;">保存修改</button>
+        </div>
+    </div>
+</div>
 
     <script>
         // --- 核心数据结构 ---
@@ -3597,9 +3618,14 @@ select.x-input option {
             // 处理右键/双击事件
             let extraHtml = '';
             let eventAttr = '';
-            if (role === 'user' && !isTemp) {
-                eventAttr = `ondblclick="handleUserEdit(event, ${index}); return false;"`;
-            } else if (role === 'assistant' && !isTemp) {
+            
+            // ✨ 修改点：无论是 user 还是 assistant，只要不是临时消息，都允许双击编辑
+            if (!isTemp) {
+                // 指向新的 openBigEditModal 函数
+                eventAttr = `ondblclick="openBigEditModal(${index}); return false;"`;
+            }
+            
+            if (role === 'assistant' && !isTemp) {
                 extraHtml = ``;
             }
 
@@ -5124,6 +5150,50 @@ const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/comp
             triggerAI();
         }
     }
+        // ==========================================
+// --- ✨ 新增：气泡内容修正功能 (大框编辑) ---
+// ==========================================
+
+// 1. 打开编辑弹窗
+function openBigEditModal(uiIndex) {
+    const char = getActiveChar();
+    if (!char) return;
+
+    // uiIndex 是从1开始显示的楼层号，数组索引是 uiIndex - 1
+    const arrayIndex = uiIndex - 1;
+    const msg = char.messages[arrayIndex];
+
+    if (!msg) return;
+
+    // 填入内容到大框框
+    document.getElementById('big-edit-input').value = msg.content;
+    document.getElementById('edit-target-index').value = arrayIndex;
+
+    openModal('modal-big-edit');
+}
+
+// 2. 保存修改
+function saveBigEdit() {
+    const char = getActiveChar();
+    const index = parseInt(document.getElementById('edit-target-index').value);
+    const newText = document.getElementById('big-edit-input').value;
+
+    if (char && char.messages[index]) {
+        // 直接修改内存中的数据
+        char.messages[index].content = newText;
+        
+        // 保存到本地存储
+        saveData();
+        
+        // 刷新聊天界面，让修改立即生效
+        renderChat(activeContactId);
+        
+        closeModal('modal-big-edit');
+        
+        // 给个轻微震动反馈
+        if(navigator.vibrate) navigator.vibrate(50);
+    }
+}
         // --- 番茄钟逻辑模块 ---
 
 let pomoState = {
@@ -12330,6 +12400,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
