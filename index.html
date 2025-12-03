@@ -2912,6 +2912,19 @@ select.x-input option {
             
             <!-- Tab 1: 独立连接 -->
             <div id="tab-connect" class="t-tab-content" style="display:block;">
+                <div id="theaterApiPresetManager" style="background:#2a2a2a; padding:10px; border-radius:8px; margin-bottom:15px; border:1px solid #444;">
+        <div style="font-size:12px; color:#aaa; margin-bottom:5px; display:flex; justify-content:space-between;">
+            <span>API 配置预设库</span>
+            <span style="font-size:10px; color:#666;">URL + Key + Model</span>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <select id="t-api-preset-select" class="t-input" style="margin-bottom:0; flex:1; background:#1a1a1a; border-color:#555;" onchange="applyTheaterApiPreset()">
+                <option value="">-- 选择预设 --</option>
+            </select>
+            <button onclick="saveTheaterApiPreset()" style="background:#333; border:1px solid #007AFF; color:#007AFF; width:50px; border-radius:6px; cursor:pointer;">另存</button>
+            <button onclick="deleteTheaterApiPreset()" style="background:#333; border:1px solid #ff3b30; color:#ff3b30; width:50px; border-radius:6px; cursor:pointer;">删除</button>
+        </div>
+    </div>
                 <div class="t-group-title">独立 API 设置 (仅剧场生效)</div>
                 
                 <input type="text" id="t-api-url" class="t-input" placeholder="API URL (例如: https://api.openai.com/v1)">
@@ -10769,7 +10782,122 @@ function loadTheaterConfig() {
 function openTheaterConsole() {
      renderSavedPresetSelect();
     renderSavedWorldSelect();
+    loadTheaterApiPresets();
     openModal('modal-theater-console');
+}
+        // ==========================================
+// --- 🎭 剧场模式 API 预设逻辑 (新增) ---
+// ==========================================
+
+let theaterApiPresets = [];
+
+// 1. 加载预设列表 (从 localStorage)
+function loadTheaterApiPresets() {
+    const s = localStorage.getItem('theater_api_presets');
+    if (s) {
+        try {
+            theaterApiPresets = JSON.parse(s);
+        } catch (e) {
+            theaterApiPresets = [];
+        }
+    } else {
+        theaterApiPresets = [];
+    }
+    renderTheaterApiPresetUI();
+}
+
+// 2. 渲染下拉框
+function renderTheaterApiPresetUI() {
+    const select = document.getElementById('t-api-preset-select');
+    if (!select) return;
+
+    // 清空并重置默认选项
+    select.innerHTML = '<option value="">-- 选择配置 --</option>';
+
+    theaterApiPresets.forEach((preset, index) => {
+        const opt = document.createElement('option');
+        opt.value = index;
+        opt.innerText = preset.name;
+        select.appendChild(opt);
+    });
+}
+
+// 3. 保存当前配置为新预设
+function saveTheaterApiPreset() {
+    const url = document.getElementById('t-api-url').value.trim();
+    const key = document.getElementById('t-api-key').value.trim();
+    const model = document.getElementById('t-model').value.trim();
+
+    if (!url || !key) {
+        return alert("请至少填写 API URL 和 Key 才能保存！");
+    }
+
+    const name = prompt("给这个配置起个名字 (例如: DeepSeek, 转发站A):");
+    if (!name) return;
+
+    const newPreset = {
+        name: name,
+        url: url,
+        key: key,
+        model: model
+    };
+
+    // 检查重名覆盖
+    const existingIndex = theaterApiPresets.findIndex(p => p.name === name);
+    if (existingIndex >= 0) {
+        if (!confirm(`预设 "${name}" 已存在，要覆盖吗？`)) return;
+        theaterApiPresets[existingIndex] = newPreset;
+    } else {
+        theaterApiPresets.push(newPreset);
+    }
+
+    localStorage.setItem('theater_api_presets', JSON.stringify(theaterApiPresets));
+    renderTheaterApiPresetUI();
+    
+    // 自动选中刚才保存的
+    const select = document.getElementById('t-api-preset-select');
+    select.selectedIndex = select.options.length - 1; // 选最后一个（如果是新增的话）或者对应的index
+    
+    alert(`配置 "${name}" 已保存！`);
+}
+
+// 4. 应用选中的预设
+function applyTheaterApiPreset() {
+    const select = document.getElementById('t-api-preset-select');
+    const index = select.value;
+
+    if (index === "") return; // 选了提示项，不操作
+
+    const preset = theaterApiPresets[index];
+    if (preset) {
+        document.getElementById('t-api-url').value = preset.url || "";
+        document.getElementById('t-api-key').value = preset.key || "";
+        document.getElementById('t-model').value = preset.model || "";
+        
+        // 视觉反馈
+        if(navigator.vibrate) navigator.vibrate(50);
+        
+        // 可选：应用后可以自动保存一下当前 Theater Config，防止用户忘了点最下面的保存按钮
+        // saveTheaterSettings(); 
+    }
+}
+
+// 5. 删除预设
+function deleteTheaterApiPreset() {
+    const select = document.getElementById('t-api-preset-select');
+    const index = select.value;
+
+    if (index === "") return alert("请先在下拉框中选择一个要删除的预设");
+
+    const presetName = theaterApiPresets[index].name;
+    if (confirm(`确定要删除预设 "${presetName}" 吗？`)) {
+        theaterApiPresets.splice(index, 1);
+        localStorage.setItem('theater_api_presets', JSON.stringify(theaterApiPresets));
+        renderTheaterApiPresetUI();
+        
+        // 清空输入框（可选，或者保持不变）
+        select.value = "";
+    }
 }
 
 function switchTheaterTab(tabId) {
@@ -12517,6 +12645,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
