@@ -4754,12 +4754,99 @@ const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/models', {
             // 清空 input 防止同名文件无法再次触发
             e.target.value = ''; 
         }
-        async function testConn() {
-            try { 
-                await fetch(normalizeUrl(globalConfig.apiUrl)+'/models', {headers:{Authorization:"Bearer "+globalConfig.apiKey}}); 
-                alert("连接成功！"); 
-            } catch(e) { alert("连接失败: "+e.message); }
+        // ==========================================
+// --- ✨ 升级版：全局连接测试 (实战派) ---
+// ==========================================
+async function testConn() {
+    // 1. 获取当前输入框里的值 (确保测的是你现在填的)
+    const provider = document.getElementById('apiProvider').value;
+    const urlInput = document.getElementById('apiUrl').value.trim();
+    const keyInput = document.getElementById('apiKey').value.trim();
+    const modelInput = document.getElementById('modelId').value.trim();
+
+    // 2. 基础检查
+    if (provider === 'custom' && (!urlInput || !keyInput)) return alert("请先填写 API URL 和 API Key！");
+    if (!modelInput) return alert("请务必填写 Model ID (模型名称)！\n不知道填什么可以点下面的“拉取模型列表”。");
+
+    // 3. 按钮变身
+    const btn = event.target;
+    const oldText = btn.innerText;
+    btn.innerText = "正在发送测试消息...";
+    btn.disabled = true;
+
+    try {
+        // 先保存一下配置，确保 fetchWithRetry 能读到最新的 Google Key 列表
+        saveGlobalConfig();
+
+        const cleanUrl = normalizeUrl(urlInput);
+        
+        // 构造一个极简的对话请求
+        const payload = {
+            model: modelInput,
+            messages: [{ role: "user", content: "Hi" }], // 发个 Hi 试试
+            max_tokens: 5 // 省钱，只让它回几个字
+        };
+
+        let res;
+
+        // --- 分流逻辑 ---
+        if (provider === 'google') {
+            // Google 模式：使用轮询函数 (会自动去试你的钥匙包)
+            // 注意：fetchWithRetry 内部读取的是 globalConfig，所以上面我们先 save 了一次
+            res = await fetchWithRetry(cleanUrl + '/chat/completions', payload);
+        } else {
+            // 自定义模式：直接用输入框里的 Key
+            res = await fetch(cleanUrl + '/chat/completions', {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + keyInput
+                },
+                body: JSON.stringify(payload)
+            });
         }
+
+        // 4. 结果判断
+        if (!res.ok) {
+            const errText = await res.text();
+            // 尝试解析错误信息
+            let errMsg = errText;
+            try {
+                const errJson = JSON.parse(errText);
+                errMsg = errJson.error?.message || errText;
+            } catch(e) {}
+            
+            throw new Error(`HTTP ${res.status}: ${errMsg}`);
+        }
+
+        const data = await res.json();
+        
+        // 检查是否有内容返回
+        if (!data.choices || data.choices.length === 0) {
+            throw new Error("连接通了，但模型返回了空内容 (可能是模型故障)");
+        }
+
+        const reply = data.choices[0].message?.content || "OK";
+
+        // 5. 成功提示
+        alert(`✅ 测试完美通过！\n\n模型 [${modelInput}] 工作正常。\n它回复了: "${reply}"\n\n(聊天肯定没问题！)`);
+
+    } catch (e) {
+        console.error(e);
+        // 6. 失败提示 (更详细)
+        let tip = "";
+        if (e.message.includes("401")) tip = "\n可能原因：API Key 错误或已失效。";
+        if (e.message.includes("404")) tip = "\n可能原因：模型名称(Model ID)写错了，或者 URL 写错了。";
+        if (e.message.includes("429")) tip = "\n可能原因：额度用完了 (欠费) 或请求太快。";
+        if (e.message.includes("Failed to fetch")) tip = "\n可能原因：网络不通，或者该 API 需要科学上网。";
+
+        alert(`❌ 连接失败:\n${e.message}${tip}`);
+    } finally {
+        // 恢复按钮
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
         // --- 5. 日记本渲染逻辑 (新增) ---
     // ==========================================
 // --- 新版日记本逻辑 (交换日记系统) ---
@@ -12430,6 +12517,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
