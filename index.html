@@ -3364,7 +3364,12 @@ select.x-input option {
         </div>
         <div class="modal-footer">
             <button class="modal-btn" onclick="closeModal('modal-big-edit')">取消</button>
-            <button class="modal-btn" onclick="saveBigEdit()" style="color:#007AFF; font-weight:bold;">保存修改</button>
+            
+            <!--这是原来的功能：修改并重刷 (仅用户消息显示) -->
+            <button id="btn-edit-regen" class="modal-btn" onclick="saveBigEdit(true)" style="color:#ff3b30; font-size:14px; display:none;">重写并重刷 AI</button>
+            
+            <!-- 这是新功能：仅修正文字 -->
+            <button class="modal-btn" onclick="saveBigEdit(false)" style="color:#007AFF; font-weight:bold;">仅修正文案</button>
         </div>
     </div>
 </div>
@@ -3619,10 +3624,9 @@ select.x-input option {
             let extraHtml = '';
             let eventAttr = '';
             
-            // ✨ 修改点：无论是 user 还是 assistant，只要不是临时消息，都允许双击编辑
+            // ✨ 修改点：传入 role 参数 ('user' 或 'assistant')
             if (!isTemp) {
-                // 指向新的 openBigEditModal 函数
-                eventAttr = `ondblclick="openBigEditModal(${index}); return false;"`;
+                eventAttr = `ondblclick="openBigEditModal(${index}, '${role}'); return false;"`;
             }
             
             if (role === 'assistant' && !isTemp) {
@@ -5151,47 +5155,73 @@ const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/comp
         }
     }
         // ==========================================
-// --- ✨ 新增：气泡内容修正功能 (大框编辑) ---
+// --- ✨ 终极版：气泡修正 + 时间回溯功能 ---
 // ==========================================
 
 // 1. 打开编辑弹窗
-function openBigEditModal(uiIndex) {
+function openBigEditModal(uiIndex, role) {
     const char = getActiveChar();
     if (!char) return;
 
-    // uiIndex 是从1开始显示的楼层号，数组索引是 uiIndex - 1
+    // 计算数组索引
     const arrayIndex = uiIndex - 1;
     const msg = char.messages[arrayIndex];
 
     if (!msg) return;
 
-    // 填入内容到大框框
+    // 填入内容
     document.getElementById('big-edit-input').value = msg.content;
     document.getElementById('edit-target-index').value = arrayIndex;
+
+    // ✨ 控制按钮显示逻辑：
+    // 只有当双击的是“用户(user)”的气泡时，才显示“重写并重刷”按钮
+    // 如果是 AI 的气泡，通常只是修修格式，不需要重刷
+    const regenBtn = document.getElementById('btn-edit-regen');
+    
+    if (role === 'user') {
+        regenBtn.style.display = 'block'; // 显示红色按钮
+        regenBtn.innerText = "保存并重刷后续";
+    } else {
+        regenBtn.style.display = 'none';  // 隐藏红色按钮
+    }
 
     openModal('modal-big-edit');
 }
 
-// 2. 保存修改
-function saveBigEdit() {
+// 2. 保存逻辑 (isRegen = true 代表要触发 AI 重刷)
+function saveBigEdit(isRegen) {
     const char = getActiveChar();
     const index = parseInt(document.getElementById('edit-target-index').value);
     const newText = document.getElementById('big-edit-input').value;
 
     if (char && char.messages[index]) {
-        // 直接修改内存中的数据
-        char.messages[index].content = newText;
         
-        // 保存到本地存储
-        saveData();
-        
-        // 刷新聊天界面，让修改立即生效
-        renderChat(activeContactId);
-        
-        closeModal('modal-big-edit');
-        
-        // 给个轻微震动反馈
-        if(navigator.vibrate) navigator.vibrate(50);
+        // A. 如果选择了“重刷” (对应你原来的功能)
+        if (isRegen) {
+            if (confirm("⚠️ 确定要修改这句话并【清除之后的所有消息】吗？\nTA将根据你的新内容重新回复。")) {
+                // 1. 更新当前内容
+                char.messages[index].content = newText;
+                // 2. 删除之后的所有历史
+                char.messages.splice(index + 1, 999);
+                // 3. 保存
+                saveData();
+                // 4. 刷新界面
+                renderChat(activeContactId);
+                // 5. 关闭弹窗
+                closeModal('modal-big-edit');
+                // 6. 🔥 触发 AI 重新生成
+                triggerAI();
+            }
+        } 
+        // B. 如果只是“仅修正文案” (对应修标点/修格式)
+        else {
+            // 直接静默修改，不打扰任何人
+            char.messages[index].content = newText;
+            saveData();
+            renderChat(activeContactId);
+            closeModal('modal-big-edit');
+            if(navigator.vibrate) navigator.vibrate(50); // 震动反馈
+        }
     }
 }
         // --- 番茄钟逻辑模块 ---
@@ -12400,6 +12430,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
