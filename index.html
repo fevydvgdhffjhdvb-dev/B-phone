@@ -4767,95 +4767,115 @@ const res = await fetch(normalizeUrl(globalConfig.apiUrl) + '/models', {
             // 清空 input 防止同名文件无法再次触发
             e.target.value = ''; 
         }
-        // ==========================================
-// --- ✨ 升级版：全局连接测试 (实战派) ---
-// ==========================================
+        // === 升级版：全局连接测试 (支持 Google 轮询 + 真实对话) ===
 async function testConn() {
-    // 1. 获取当前输入框里的值 (确保测的是你现在填的)
-    const provider = document.getElementById('apiProvider').value;
-    const urlInput = document.getElementById('apiUrl').value.trim();
-    const keyInput = document.getElementById('apiKey').value.trim();
-    const modelInput = document.getElementById('modelId').value.trim();
-
-    // 2. 基础检查
-    if (provider === 'custom' && (!urlInput || !keyInput)) return alert("请先填写 API URL 和 API Key！");
-    if (!modelInput) return alert("请务必填写 Model ID (模型名称)！\n不知道填什么可以点下面的“拉取模型列表”。");
-
-    // 3. 按钮变身
     const btn = event.target;
     const oldText = btn.innerText;
-    btn.innerText = "正在发送测试消息...";
+    btn.innerText = "正在测试链接...";
     btn.disabled = true;
 
-    try {
-        // 先保存一下配置，确保 fetchWithRetry 能读到最新的 Google Key 列表
-        saveGlobalConfig();
+    // 1. 获取当前设置
+    const provider = document.getElementById('apiProvider').value;
+    // 优先用输入框里的模型，如果没填，默认用 gpt-3.5-turbo 试探
+    const model = document.getElementById('modelId').value.trim() || "gpt-3.5-turbo";
+    
+    // 准备要测试的 URL 和 Key 列表
+    let apiUrl = "";
+    let keysToTest = [];
 
-        const cleanUrl = normalizeUrl(urlInput);
+    try {
+        if (provider === 'google') {
+            // --- Google 模式 ---
+            apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai";
+            
+            // 检查钥匙包
+            if (!globalConfig.googleKeys || globalConfig.googleKeys.length === 0) {
+                throw new Error("Google 钥匙包为空，请先添加 Key！");
+            }
+            
+            // 提取所有状态不是 'invalid' 的 Key (包括 checking 和 valid)
+            // 如果全是 invalid，就硬着头皮试第一个，死马当活马医
+            const validKeys = globalConfig.googleKeys.filter(k => k.status !== 'invalid');
+            if (validKeys.length > 0) {
+                keysToTest = validKeys.map(k => k.key);
+            } else {
+                keysToTest = [globalConfig.googleKeys[0].key];
+            }
+
+        } else {
+            // --- 自定义模式 ---
+            apiUrl = document.getElementById('apiUrl').value.trim();
+            const singleKey = document.getElementById('apiKey').value.trim();
+            
+            if (!apiUrl || !singleKey) throw new Error("请填写 API URL 和 Key");
+            keysToTest = [singleKey];
+        }
+
+        const cleanUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
         
-        // 构造一个极简的对话请求
+        // 构造轻量载荷
         const payload = {
-            model: modelInput,
-            messages: [{ role: "user", content: "Hi" }], // 发个 Hi 试试
-            max_tokens: 5 // 省钱，只让它回几个字
+            model: model,
+            messages: [{ role: "user", content: "Hi" }],
+            max_tokens: 5
         };
 
-        let res;
+        // 2. 循环测试 (轮询逻辑)
+        let success = false;
+        let lastError = null;
+        let successReply = "";
 
-        // --- 分流逻辑 ---
-        if (provider === 'google') {
-            // Google 模式：使用轮询函数 (会自动去试你的钥匙包)
-            // 注意：fetchWithRetry 内部读取的是 globalConfig，所以上面我们先 save 了一次
-            res = await fetchWithRetry(cleanUrl + '/chat/completions', payload);
-        } else {
-            // 自定义模式：直接用输入框里的 Key
-            res = await fetch(cleanUrl + '/chat/completions', {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + keyInput
-                },
-                body: JSON.stringify(payload)
-            });
-        }
-
-        // 4. 结果判断
-        if (!res.ok) {
-            const errText = await res.text();
-            // 尝试解析错误信息
-            let errMsg = errText;
-            try {
-                const errJson = JSON.parse(errText);
-                errMsg = errJson.error?.message || errText;
-            } catch(e) {}
+        for (let i = 0; i < keysToTest.length; i++) {
+            const currentKey = keysToTest[i];
             
-            throw new Error(`HTTP ${res.status}: ${errMsg}`);
+            // UI 反馈一下进度
+            if (keysToTest.length > 1) {
+                btn.innerText = `尝试 Key ${i + 1}/${keysToTest.length}...`;
+            }
+
+            try {
+                const res = await fetch(cleanUrl + '/chat/completions', {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + currentKey
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    successReply = data.choices?.[0]?.message?.content || "OK";
+                    success = true;
+                    
+                    // 如果是 Google 模式，顺便在控制台打印是第几个 Key 成功的
+                    if (provider === 'google') {
+                        console.log(`Google Key 测试通过: 钥匙包第 ${i+1} 个 Key 有效`);
+                    }
+                    
+                    break; // 只要有一个成功，直接跳出循环
+                } else {
+                    // 记录错误，继续下一个
+                    const errText = await res.text();
+                    let errMsg = `Code ${res.status}`;
+                    try { errMsg = JSON.parse(errText).error.message; } catch(e){}
+                    lastError = new Error(errMsg);
+                }
+            } catch (e) {
+                lastError = e;
+            }
         }
 
-        const data = await res.json();
-        
-        // 检查是否有内容返回
-        if (!data.choices || data.choices.length === 0) {
-            throw new Error("连接通了，但模型返回了空内容 (可能是模型故障)");
+        // 3. 最终判定
+        if (success) {
+            alert(`✅ 连接成功！\n\n(如果是 Google 模式，说明钥匙包里至少有一个 Key 可用)\n\n模型响应: ${successReply}`);
+        } else {
+            throw lastError || new Error("所有 Key 测试均失败");
         }
-
-        const reply = data.choices[0].message?.content || "OK";
-
-        // 5. 成功提示
-        alert(`✅ 测试完美通过！\n\n模型 [${modelInput}] 工作正常。\n它回复了: "${reply}"\n\n(聊天肯定没问题！)`);
 
     } catch (e) {
-        console.error(e);
-        // 6. 失败提示 (更详细)
-        let tip = "";
-        if (e.message.includes("401")) tip = "\n可能原因：API Key 错误或已失效。";
-        if (e.message.includes("404")) tip = "\n可能原因：模型名称(Model ID)写错了，或者 URL 写错了。";
-        if (e.message.includes("429")) tip = "\n可能原因：额度用完了 (欠费) 或请求太快。";
-        if (e.message.includes("Failed to fetch")) tip = "\n可能原因：网络不通，或者该 API 需要科学上网。";
-
-        alert(`❌ 连接失败:\n${e.message}${tip}`);
+        alert("❌ 连接失败:\n" + e.message + "\n\n(提示: 请确保 URL 正确且模型 ID 手动填写正确)");
     } finally {
-        // 恢复按钮
         btn.innerText = oldText;
         btn.disabled = false;
     }
@@ -12645,6 +12665,7 @@ async function rerollTheaterMsg() {
     </script>
 </body>
 </html>
+
 
 
 
