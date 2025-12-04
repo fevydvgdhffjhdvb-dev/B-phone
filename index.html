@@ -1632,6 +1632,102 @@ select.x-input option {
     transform: rotate(-180deg) scale(0.9); /* 点击时旋转一下 */
     background: #444;
 }
+        /* --- 相册网格 --- */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    padding: 2px;
+}
+.gallery-item {
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%; /* 正方形 */
+    background: #eee;
+    overflow: hidden;
+    cursor: pointer;
+}
+.gallery-thumb {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+.gallery-item:active .gallery-thumb { transform: scale(0.95); opacity: 0.8; }
+
+/* --- 详情页 (翻转卡片效果) --- */
+.gallery-detail-container {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    position: relative;
+    background: #000;
+}
+.gallery-close-btn {
+    position: absolute; top: 40px; right: 20px;
+    color: white; font-size: 32px; background: none; border: none; cursor: pointer; z-index: 100;
+}
+.gallery-tip {
+    position: absolute; bottom: 40px; color: rgba(255,255,255,0.5); font-size: 13px;
+}
+
+/* 3D 翻转容器 */
+.photo-card-scene {
+    width: 340px; height: 500px;
+    perspective: 1000px;
+    cursor: pointer;
+}
+.photo-card {
+    width: 100%; height: 100%;
+    position: relative;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+.photo-card.is-flipped {
+    transform: rotateY(180deg);
+}
+.photo-face {
+    position: absolute; width: 100%; height: 100%;
+    backface-visibility: hidden;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+/* 正面 */
+.photo-face.front {
+    display: flex; flex-direction: column;
+    background: #000;
+}
+.detail-img {
+    width: 100%; flex: 1; object-fit: contain; background: #000;
+}
+.detail-caption-bar {
+    padding: 15px; color: #fff; background: #111; font-size: 15px;
+    min-height: 60px;
+}
+/* 背面 (AI 评价) */
+.photo-face.back {
+    transform: rotateY(180deg);
+    background: #fdfdfd; /* 拍立得背面质感 */
+    padding: 20px;
+    display: flex; flex-direction: column;
+}
+.ai-comment-box {
+    flex: 1; display: flex; flex-direction: column;
+}
+.ai-comment-header {
+    display: flex; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;
+}
+.ai-comment-text {
+    font-size: 16px; line-height: 1.6; color: #333; font-family: 'Songti SC', serif; /* 手写风格 */
+    flex: 1; overflow-y: auto;
+}
+.ai-tags-area {
+    margin-top: 15px; display: flex; flex-wrap: wrap; gap: 5px;
+}
+.ai-tag-chip {
+    background: #f0f0f5; color: #5856d6; font-size: 11px; padding: 4px 8px; border-radius: 4px;
+}
     </style>
 </head>
 <body>
@@ -1735,6 +1831,11 @@ select.x-input option {
 <div class="app-icon-container" onclick="initTheaterMode()">
     <div class="app-icon" id="app-icon-theater" style="background: linear-gradient(to bottom, #2b2b2b, #000000); border:1px solid #444;">🎭</div>
     <div class="app-name">剧场</div>
+</div>
+                <!-- 新增：相册 (Gallery) -->
+<div class="app-icon-container" onclick="navigateTo('page-gallery'); loadGalleryImages();">
+    <div class="app-icon" id="app-icon-gallery" style="background: linear-gradient(to bottom, #ff9500, #ff5e3a);">🖼️</div>
+    <div class="app-name">相册</div>
 </div>
             </div>
         </div>
@@ -3033,6 +3134,88 @@ select.x-input option {
                 </div>
             </div>
 
+        </div>
+    </div>
+</div>
+        <!-- ============ 20. 相册主页 (Gallery) ============ -->
+<div class="page" id="page-gallery" style="background: #fff;">
+    <div class="app-header" style="background: rgba(255,255,255,0.9);">
+        <button class="btn-icon-text" onclick="goHome()">‹ 桌面</button>
+        <span class="app-title">相册</span>
+        <!-- 上传按钮 -->
+        <button class="btn-icon-only" onclick="openPhotoUploadModal()" style="font-size:24px;">+</button>
+    </div>
+    
+    <div class="content-scroll">
+        <!-- 照片瀑布流/网格 -->
+        <div id="gallery-grid" class="gallery-grid">
+            <!-- 动态生成 -->
+        </div>
+        <div style="height: 50px;"></div>
+    </div>
+</div>
+
+<!-- ============ 21. 相册详情页 (大图 + AI评价) ============ -->
+<div class="page" id="page-gallery-detail" style="background: #000; z-index: 60;">
+    <div class="gallery-detail-container">
+        <!-- 顶部返回 -->
+        <button class="gallery-close-btn" onclick="closePhotoDetail()">×</button>
+        
+        <!-- 图片区域 (点击翻转查看评价) -->
+        <div class="photo-card-scene" onclick="togglePhotoFlip()">
+            <div class="photo-card" id="photo-flip-card">
+                <!-- 正面：图 -->
+                <div class="photo-face front">
+                    <img id="detail-photo-img" src="" class="detail-img">
+                    <div class="detail-caption-bar" id="detail-caption">用户写的文案...</div>
+                </div>
+                <!-- 背面：AI 评价 -->
+                <div class="photo-face back">
+                    <div class="ai-comment-box">
+                        <div class="ai-comment-header">
+                            <img id="detail-ai-avatar" src="" style="width:30px;height:30px;border-radius:50%;">
+                            <span id="detail-ai-name" style="font-weight:bold;margin-left:8px;color:#333;">AI</span>
+                        </div>
+                        <div class="ai-comment-text" id="detail-ai-text">
+                            正在生成评价...
+                        </div>
+                        <div class="ai-tags-area" id="detail-ai-tags">
+                            <!-- 标签 -->
+                        </div>
+                        <div style="font-size:12px; color:#999; margin-top:20px; text-align:center;">
+                            (这些是 AI 记住的关键词)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="gallery-tip">点击照片查看 Ta 的想法</div>
+    </div>
+</div>
+
+<!-- ============ 22. 发布照片弹窗 ============ -->
+<div class="modal-overlay" id="modal-upload-photo">
+    <div class="modal-box" style="height:auto; top:20%;">
+        <div class="modal-header">发布动态</div>
+        <div class="modal-body" style="padding:15px;">
+            <input type="file" id="gallery-file-input" accept="image/*" hidden onchange="previewGalleryUpload(event)">
+            
+            <!-- 预览区 -->
+            <div onclick="document.getElementById('gallery-file-input').click()" 
+                 style="width:100%; height:200px; background:#f2f2f7; border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden; cursor:pointer; border:1px dashed #ccc;">
+                <img id="gallery-preview-img" style="width:100%; height:100%; object-fit:contain; display:none;">
+                <span id="gallery-upload-tip" style="color:#999;">点击选择照片</span>
+            </div>
+
+            <!-- 配文 -->
+            <textarea id="gallery-caption-input" class="ios-input" rows="3" 
+                      style="width:100%; border:1px solid #eee; margin-top:15px; border-radius:8px; padding:10px;" 
+                      placeholder="说点什么吧... "></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-upload-photo')">取消</button>
+            <button class="modal-btn" onclick="submitPhotoPost()" id="btn-submit-photo" style="color:#007AFF; font-weight:bold;">发布</button>
         </div>
     </div>
 </div>
@@ -6006,6 +6189,13 @@ function getStatusContext(char) {
     context += getScheduleContext();
     // === ✨ 插入钱包感知 ===
     context += getWalletContext();
+    // === ✨ 插入相册回忆感知 ===
+    // 我们需要获取用户最新的一条消息内容来做匹配
+    const lastUserMsg = char.messages.length > 0 ? char.messages[char.messages.length-1].content : "";
+    // 如果上一条是用户发的，就检测
+    if (char.messages.length > 0 && char.messages[char.messages.length-1].role === 'user') {
+        context += getGalleryContext(lastUserMsg);
+    }
 
     return context;
 }
@@ -7325,12 +7515,13 @@ const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/comp
 // --- A. IndexedDB 数据库工具 (存大文件) ---
 const dbName = "AIPhoneDB";
 const storeName = "books";
-        const musicStoreName = "music_files";
+const musicStoreName = "music_files";
+const galleryStoreName = "gallery";
 
 function openDB() {
     return new Promise((resolve, reject) => {
         // ✨ 修改点：把这里的数字改成 10 (或者比你之前用过的任何数字都大)
-        const request = indexedDB.open(dbName, 10);
+        const request = indexedDB.open(dbName, 11);
 
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
@@ -7348,6 +7539,12 @@ function openDB() {
             // 3. 飞行棋题库 (防止报错，一并加上)
             if (!db.objectStoreNames.contains("ludo_tasks")) {
                 db.createObjectStore("ludo_tasks", { keyPath: "id" });
+            }
+
+            if (!db.objectStoreNames.contains(galleryStoreName)) {
+                // 索引：id为主键
+                const store = db.createObjectStore(galleryStoreName, { keyPath: "id" });
+                // 我们可以建索引方便以后按时间查，这里暂不需要
             }
         };
 
@@ -12662,9 +12859,299 @@ async function rerollTheaterMsg() {
         }
     }
 }
+        // ==========================================
+// --- 🖼️ 相册系统 (Gallery) 核心逻辑 ---
+// ==========================================
+
+// 用于搜索的轻量级索引 (存 LocalStorage)
+let galleryIndex = []; 
+// 格式: [{id, caption, tags: [], summary: "", timestamp}]
+
+// 1. 初始化
+function initGallery() {
+    const saved = localStorage.getItem('ai_phone_gallery_index');
+    if (saved) galleryIndex = JSON.parse(saved);
+}
+window.addEventListener('load', initGallery);
+
+// 2. 加载相册列表
+async function loadGalleryImages() {
+    const grid = document.getElementById('gallery-grid');
+    grid.innerHTML = '';
+
+    // 倒序：最新的在前面
+    const sorted = [...galleryIndex].reverse();
+
+    // 从 IndexedDB 懒加载图片？
+    // 为了性能，我们这里只生成格子，图片 src 等遇到时再去 DB 取 (或者存 Base64 缩略图在 LocalStorage)
+    // 这里为了简单，我们假设 galleryIndex 里还没存图，每次渲染都去 DB 取 (虽然有点慢，但最稳)
+    
+    // 获取 DB 连接
+    const db = await openDB();
+    const tx = db.transaction(galleryStoreName, 'readonly');
+    const store = tx.objectStore(galleryStoreName);
+    const allReq = store.getAll();
+
+    allReq.onsuccess = () => {
+        const allPhotos = allReq.result;
+        // 排序
+        allPhotos.sort((a,b) => b.timestamp - a.timestamp);
+        
+        if (allPhotos.length === 0) {
+            grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:50px; color:#ccc;">暂无照片</div>';
+            return;
+        }
+
+        allPhotos.forEach(photo => {
+            const div = document.createElement('div');
+            div.className = 'gallery-item';
+            div.onclick = () => openPhotoDetail(photo);
+            
+            // 使用压缩后的图
+            div.innerHTML = `<img src="${photo.imageBlob}" class="gallery-thumb" loading="lazy">`;
+            grid.appendChild(div);
+        });
+    };
+}
+
+// 3. 上传流程
+function openPhotoUploadModal() {
+    document.getElementById('gallery-file-input').value = '';
+    document.getElementById('gallery-preview-img').style.display = 'none';
+    document.getElementById('gallery-upload-tip').style.display = 'block';
+    document.getElementById('gallery-caption-input').value = '';
+    openModal('modal-upload-photo');
+}
+
+// 预览 + 压缩
+let currentUploadBase64 = null;
+
+async function previewGalleryUpload(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+    
+    // 压缩图片 (限制最大宽/高 1024px, 质量 0.7)
+    currentUploadBase64 = await compressImage(file, 1024, 0.7);
+    
+    const img = document.getElementById('gallery-preview-img');
+    img.src = currentUploadBase64;
+    img.style.display = 'block';
+    document.getElementById('gallery-upload-tip').style.display = 'none';
+}
+
+// 图片压缩工具
+function compressImage(file, maxWidth, quality) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxWidth) {
+                        width *= maxWidth / height;
+                        height = maxWidth;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+        };
+    });
+}
+
+// 提交发布 (核心 AI 调用)
+async function submitPhotoPost() {
+    if (!currentUploadBase64) return alert("请先选择照片");
+    const caption = document.getElementById('gallery-caption-input').value.trim();
+    const char = getActiveChar(); 
+    
+    // 如果没选角色，就不能 AI 评价
+    if (!char) return alert("请先在【信息】列表选择一个角色，Ta 才能看到你的朋友圈！");
+    if (!globalConfig.apiKey) return alert("需要 API Key 来让 AI 看图");
+
+    const btn = document.getElementById('btn-submit-photo');
+    btn.innerText = "AI 正在看图...";
+    btn.disabled = true;
+
+    try {
+        // --- 1. 调用 Vision API 分析 ---
+        const prompt = `
+        用户在朋友圈发了一张照片。
+        【配文】：${caption || "无"}
+        
+        请你以 "${char.name}" 的身份（人设：${char.systemPrompt}）来看这张照片。
+        
+        【任务】：
+        1. 仔细看图。
+        2. 以你的口吻写一段50字以内的评论（批注）。
+        3. 提取 3-5 个关于照片内容的关键词（Tags），包含物体名 (如: 猫, 汽车)、场景 (如: 海边, 卧室)、氛围 (如: 温馨, 搞笑)、颜色等。用于日后回忆。
+        4. 用一句话客观描述这张图的内容（Visual Summary），用于辅助你日后回忆画面。
+        
+        【返回 JSON 格式】：
+        {
+            "comment": "你的评论内容",
+            "tags": ["tag1", "tag2", "tag3"],
+            "summary": "客观描述图片内容"
+        }
+        `;
+
+        // 构建 Vision 请求
+        const payload = {
+            model: globalConfig.model, // 确保这个模型支持 Vision (如 gpt-4o)
+            messages: [
+                { 
+                    role: "user", 
+                    content: [
+                        { type: "text", text: prompt },
+                        { type: "image_url", image_url: { url: currentUploadBase64 } }
+                    ] 
+                }
+            ],
+            max_tokens: 500
+        };
+
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', payload);
+        const data = await res.json();
+        
+        let jsonStr = data.choices[0].message.content;
+        // 清洗 JSON
+        jsonStr = jsonStr.replace(/```json|```/g, '').trim();
+        const result = JSON.parse(jsonStr);
+
+        // --- 2. 存入 IndexedDB (完整数据) ---
+        const photoId = 'photo_' + Date.now();
+        const photoData = {
+            id: photoId,
+            imageBlob: currentUploadBase64, // 存 Base64
+            caption: caption,
+            aiComment: result.comment,
+            aiTags: result.tags,
+            aiSummary: result.summary,
+            timestamp: Date.now()
+        };
+
+        const db = await openDB();
+        const tx = db.transaction(galleryStoreName, 'readwrite');
+        tx.objectStore(galleryStoreName).put(photoData);
+        
+        // --- 3. 存入 LocalStorage (轻量索引，用于搜索) ---
+        galleryIndex.push({
+            id: photoId,
+            tags: result.tags,
+            summary: result.summary,
+            caption: caption,
+            comment: result.comment, // 把评论也存索引里，方便回顾
+            timestamp: Date.now()
+        });
+        localStorage.setItem('ai_phone_gallery_index', JSON.stringify(galleryIndex));
+
+        // --- 4. 结束 ---
+        alert(`发布成功！\n${char.name} 说：${result.comment}`);
+        closeModal('modal-upload-photo');
+        loadGalleryImages();
+
+    } catch (e) {
+        alert("发布失败: " + e.message);
+        console.error(e);
+    } finally {
+        btn.innerText = "发布";
+        btn.disabled = false;
+    }
+}
+
+// 4. 详情页逻辑
+function openPhotoDetail(photo) {
+    const char = getActiveChar();
+    
+    document.getElementById('detail-photo-img').src = photo.imageBlob;
+    document.getElementById('detail-caption').innerText = photo.caption || "（无配文）";
+    
+    // AI 评价面
+    if (char) {
+        document.getElementById('detail-ai-avatar').src = char.avatar;
+        document.getElementById('detail-ai-name').innerText = char.name;
+    }
+    document.getElementById('detail-ai-text').innerText = photo.aiComment || "（AI 似乎没看清...）";
+    
+    const tagArea = document.getElementById('detail-ai-tags');
+    tagArea.innerHTML = '';
+    if (photo.aiTags) {
+        photo.aiTags.forEach(tag => {
+            tagArea.innerHTML += `<span class="ai-tag-chip">#${tag}</span>`;
+        });
+    }
+
+    // 重置翻转状态
+    document.getElementById('photo-flip-card').classList.remove('is-flipped');
+    
+    document.getElementById('page-gallery-detail').classList.add('active');
+}
+
+function closePhotoDetail() {
+    document.getElementById('page-gallery-detail').classList.remove('active');
+}
+
+function togglePhotoFlip() {
+    document.getElementById('photo-flip-card').classList.toggle('is-flipped');
+}
+
+// ==========================================
+// --- 🧠 核心：相册回忆植入 (RAG) ---
+// ==========================================
+
+// 这个函数需要被插入到你的 triggerAI 或 assembleSystemPrompt 流程中
+// 我会写一个独立的函数，你需要在 getStatusContext 里调用它
+
+function getGalleryContext(userMessage) {
+    if (!galleryIndex || galleryIndex.length === 0) return "";
+    
+    // 简单的关键词匹配 (Client-side RAG)
+    // 扫描所有照片的 tag 和 summary
+    const relevantPhotos = galleryIndex.filter(photo => {
+        const text = (photo.tags.join(" ") + " " + photo.summary + " " + photo.caption).toLowerCase();
+        // 简单匹配：看用户的话里有没有包含照片的 tag
+        // 这是一个简化的逻辑，更高级的可以用 TF-IDF 或 向量搜索(太重了)
+        // 我们只匹配 tag，因为 tag 是关键词
+        return photo.tags.some(tag => userMessage.toLowerCase().includes(tag.toLowerCase()));
+    });
+
+    if (relevantPhotos.length === 0) return "";
+
+    // 取最近的或相关性最强的 1-2 张
+    const hits = relevantPhotos.slice(0, 2);
+    
+    const context = hits.map(p => {
+        const dateStr = new Date(p.timestamp).toLocaleDateString();
+        return `
+        [📸 相册回忆触发]:
+        用户在 ${dateStr} 发过一张照片。
+        照片内容：${p.summary}
+        用户配文：${p.caption}
+        你当时的评价：${p.comment}
+        `;
+    }).join("\n");
+
+    return `\n${context}\n[指令]: 你的相册回忆被触发了。用户的话题让你想起了上述照片。请在回复中自然地提及这张照片（例如“这让我想起你上次发的...”），并引用你当时的评价或照片内容。`;
+}
     </script>
 </body>
 </html>
+
 
 
 
