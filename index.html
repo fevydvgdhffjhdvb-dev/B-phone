@@ -2149,6 +2149,11 @@ select.x-input option {
     <span class="ios-label">剧场图标</span>
     <input type="text" id="iconInput-theater" class="ios-input" placeholder="http://..." onchange="saveTheme()">
 </div>
+                    <!-- 在 page-theme 的 .ios-list 里添加这一行 -->
+<div class="ios-item">
+    <span class="ios-label">相册图标</span>
+    <input type="text" id="iconInput-gallery" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+</div>
                 </div>
 
                 <div class="ios-group-title">全局 CSS 代码 (高级美化)</div>
@@ -4686,6 +4691,9 @@ if(iconLudo) iconLudo.value = themeConfig.icons.ludo || "";
             const iconTheater = document.getElementById('iconInput-theater');
 if(iconTheater) iconTheater.value = themeConfig.icons.theater || "";
 
+            const iconGallery = document.getElementById('iconInput-gallery');
+if(iconGallery) iconGallery.value = themeConfig.icons.gallery || "";
+
             // 2. 恢复CSS和字体
             const cssInput = document.getElementById('customCssInput');
             if(cssInput) cssInput.value = themeConfig.customCss || "";
@@ -4722,6 +4730,7 @@ if(iconTheater) iconTheater.value = themeConfig.icons.theater || "";
         themeConfig.icons.forum = document.getElementById('iconInput-forum')?.value || "";
         themeConfig.icons.ludo = document.getElementById('iconInput-ludo')?.value || "";
         themeConfig.icons.theater = document.getElementById('iconInput-theater')?.value || "";
+        themeConfig.icons.gallery = document.getElementById('iconInput-gallery')?.value || "";
         
         themeConfig.customCss = document.getElementById('customCssInput')?.value || "";
         themeConfig.bubbleCss = document.getElementById('bubbleCssInput')?.value || ""; // 气泡美化
@@ -4751,6 +4760,7 @@ if(iconTheater) iconTheater.value = themeConfig.icons.theater || "";
         updateAppIcon('app-icon-forum', themeConfig.icons.forum);
         updateAppIcon('app-icon-ludo', themeConfig.icons.ludo);
         updateAppIcon('app-icon-theater', themeConfig.icons.theater);
+        updateAppIcon('app-icon-gallery', themeConfig.icons.gallery);
 
         // B. 应用壁纸
         const homePage = document.getElementById('page-home');
@@ -5155,7 +5165,7 @@ function renderDiaries() {
 // 2. 渲染“我的日记”列表 (显示我写给当前/所有角色的)
 function renderUserDiaryList() {
     const container = document.getElementById('diaryListContainer');
-    // 头部导航变一下
+    // 头部导航
     const headerHtml = `
         <div style="padding:10px 15px; border-bottom:1px solid #eee; display:flex; align-items:center;">
             <button onclick="renderDiaries()" style="border:none;background:none;color:#007AFF;font-size:16px;">‹ 返回</button>
@@ -5174,7 +5184,8 @@ function renderUserDiaryList() {
                     content: content,
                     charName: c.name,
                     charId: c.id,
-                    time: Date.now() // 实际项目应该存时间戳，这里简化
+                    originalIndex: idx, // ✨ 记录原始索引，用于删除
+                    time: Date.now() 
                 });
             });
         }
@@ -5186,9 +5197,12 @@ function renderUserDiaryList() {
         // 倒序显示
         allMyDiaries.reverse().forEach(item => {
             listHtml += `
-                <div class="memory-card" style="border-left: 4px solid #007AFF;">
+                <div class="memory-card" style="border-left: 4px solid #007AFF; position: relative;">
                     <div style="font-size:12px; color:#007AFF; margin-bottom:5px;">寄给: ${item.charName}</div>
-                    <div style="line-height:1.6; color:#333;">${item.content.replace(/\n/g, '<br>')}</div>
+                    <div style="line-height:1.6; color:#333; padding-right: 20px;">${item.content.replace(/\n/g, '<br>')}</div>
+                    
+                    <!-- ✨ 新增：删除按钮 -->
+                    <div class="btn-del-mem" onclick="deleteUserDiary('${item.charId}', ${item.originalIndex})">×</div>
                 </div>
             `;
         });
@@ -5282,6 +5296,23 @@ function deleteDiary(charId, index) {
         char.diaries.splice(index, 1);
         saveData();
         renderAiDiaryList(charId); // 刷新当前列表
+    }
+}
+        // 删除我的日记
+function deleteUserDiary(charId, index) {
+    const char = contacts.find(c => c.id === charId);
+    if (!char) return;
+
+    if (confirm(`确定要撕掉这篇寄给 ${char.name} 的日记吗？`)) {
+        // 从数组中移除
+        char.userDiaries.splice(index, 1);
+        saveData();
+        
+        // 刷新列表
+        renderUserDiaryList();
+        
+        // 震动反馈
+        if(navigator.vibrate) navigator.vibrate(50);
     }
 }
 
@@ -13230,6 +13261,7 @@ async function deleteCurrentPhoto() {
     </script>
 </body>
 </html>
+
 
 
 
