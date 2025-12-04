@@ -1738,6 +1738,28 @@ select.x-input option {
 .ai-tag-chip {
     background: #f0f0f5; color: #5856d6; font-size: 11px; padding: 4px 8px; border-radius: 4px;
 }
+        /* --- 相册删除按钮 --- */
+.btn-del-photo {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 59, 48, 0.1); /* 浅红色背景 */
+    color: #ff3b30;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 20; /* 保证在最上层 */
+    transition: transform 0.2s;
+}
+.btn-del-photo:active {
+    transform: scale(0.9);
+    background: rgba(255, 59, 48, 0.2);
+}
     </style>
 </head>
 <body>
@@ -3181,6 +3203,7 @@ select.x-input option {
                 </div>
                 <!-- 背面：AI 评价 -->
                 <div class="photo-face back">
+                    <div class="btn-del-photo" onclick="event.stopPropagation(); deleteCurrentPhoto()">X</div>
                     <div class="ai-comment-box">
                         <div class="ai-comment-header">
                             <img id="detail-ai-avatar" src="" style="width:30px;height:30px;border-radius:50%;">
@@ -12875,6 +12898,7 @@ async function rerollTheaterMsg() {
 
 // 用于搜索的轻量级索引 (存 LocalStorage)
 let galleryIndex = []; 
+let currentViewingPhotoId = null; // 记录当前正在看的照片ID
 // 格式: [{id, caption, tags: [], summary: "", timestamp}]
 
 // 1. 初始化
@@ -13103,6 +13127,7 @@ async function submitPhotoPost() {
 
 // 4. 详情页逻辑
 function openPhotoDetail(photo) {
+    currentViewingPhotoId = photo.id;
     const char = getActiveChar();
     
     document.getElementById('detail-photo-img').src = photo.imageBlob;
@@ -13175,9 +13200,37 @@ function getGalleryContext(userMessage) {
 
     return `\n${context}\n[指令]: 你的相册回忆被触发了。用户的话题让你想起了上述照片。请在回复中自然地提及这张照片（例如“这让我想起你上次发的...”），并引用你当时的评价或照片内容。`;
 }
+        // 删除当前照片
+async function deleteCurrentPhoto() {
+    if (!currentViewingPhotoId) return;
+
+    if (confirm("确定要撕掉这张照片吗？\n删除后 AI 也会忘掉这段回忆哦。")) {
+        try {
+            // 1. 从 IndexedDB 删除大文件
+            const db = await openDB();
+            const tx = db.transaction(galleryStoreName, 'readwrite');
+            await tx.objectStore(galleryStoreName).delete(currentViewingPhotoId);
+
+            // 2. 从 LocalStorage 索引删除 (移除记忆)
+            galleryIndex = galleryIndex.filter(p => p.id !== currentViewingPhotoId);
+            localStorage.setItem('ai_phone_gallery_index', JSON.stringify(galleryIndex));
+
+            // 3. 关闭详情页并刷新网格
+            closePhotoDetail();
+            loadGalleryImages();
+            
+            alert("照片已删除。");
+
+        } catch (e) {
+            console.error(e);
+            alert("删除失败: " + e.message);
+        }
+    }
+}
     </script>
 </body>
 </html>
+
 
 
 
