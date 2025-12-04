@@ -12974,45 +12974,43 @@ function compressImage(file, maxWidth, quality) {
     });
 }
 
-// 提交发布 (核心 AI 调用)
+// 提交发布 (分隔符版 - 更加稳定)
 async function submitPhotoPost() {
     if (!currentUploadBase64) return alert("请先选择照片");
     const caption = document.getElementById('gallery-caption-input').value.trim();
     const char = getActiveChar(); 
     
-    // 如果没选角色，就不能 AI 评价
-    if (!char) return alert("请先在【信息】列表选择一个角色，Ta 才能看到你的朋友圈！");
-    if (!globalConfig.apiKey) return alert("需要 API Key 来让 AI 看图");
+    if (!char) return alert("请先在【信息】列表选择一个角色！");
+    if (!globalConfig.apiKey) return alert("请先配置 API Key");
 
     const btn = document.getElementById('btn-submit-photo');
     btn.innerText = "AI 正在看图...";
     btn.disabled = true;
 
     try {
-        // --- 1. 调用 Vision API 分析 ---
+        // --- 1. 修改 Prompt：使用 ||| 分隔符格式 ---
         const prompt = `
         用户在朋友圈发了一张照片。
-        【配文】：${caption || "无"}
+        【用户配文】：${caption || "无"}
         
         请你以 "${char.name}" 的身份（人设：${char.systemPrompt}）来看这张照片。
         
-        【任务】：
+        请完成以下任务，并严格按照指定格式输出：
+        
         1. 仔细看图。
         2. 以你的口吻写一段50字以内的评论（批注）。
         3. 提取 3-5 个关于照片内容的关键词（Tags），包含物体名 (如: 猫, 汽车)、场景 (如: 海边, 卧室)、氛围 (如: 温馨, 搞笑)、颜色等。用于日后回忆。
         4. 用一句话客观描述这张图的内容（Visual Summary），用于辅助你日后回忆画面。
         
-        【返回 JSON 格式】：
-        {
-            "comment": "你的评论内容",
-            "tags": ["tag1", "tag2", "tag3"],
-            "summary": "客观描述图片内容"
-        }
+        【输出格式要求】：
+        评论内容 ||| 标签1, 标签2, 标签3 ||| 客观画面描述
+        
+        (注意：只输出这一行文本，中间用 ||| 隔开)
         `;
 
-        // 构建 Vision 请求
+        // 构建请求
         const payload = {
-            model: globalConfig.model, // 确保这个模型支持 Vision (如 gpt-4o)
+            model: globalConfig.model, 
             messages: [
                 { 
                     role: "user", 
@@ -13028,20 +13026,42 @@ async function submitPhotoPost() {
         const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', payload);
         const data = await res.json();
         
-        let jsonStr = data.choices[0].message.content;
-        // 清洗 JSON
-        jsonStr = jsonStr.replace(/```json|```/g, '').trim();
-        const result = JSON.parse(jsonStr);
+        // --- 2. 解析逻辑 (字符串分割) ---
+        let rawContent = data.choices[0].message.content.trim();
+        
+        // 容错处理：有时候 AI 会在开头加 "好的..." 之类的，去掉它
+        // 我们假设 AI 至少会输出两个 |||
+        
+        let parts = rawContent.split('|||');
+        
+        // 默认值 (防止 AI 格式乱了导致 undefined)
+        let aiComment = "（AI 似乎看走眼了...）";
+        let aiTags = ["照片"];
+        let aiSummary = "一张照片";
 
-        // --- 2. 存入 IndexedDB (完整数据) ---
+        if (parts.length >= 3) {
+            // 完美情况
+            aiComment = parts[0].trim();
+            aiTags = parts[1].split(/[,，]/).map(t => t.trim()).filter(t => t); // 支持中英文逗号
+            aiSummary = parts[2].trim();
+        } else if (parts.length === 2) {
+            // 缺了一部分
+            aiComment = parts[0].trim();
+            aiTags = parts[1].split(/[,，]/).map(t => t.trim());
+        } else {
+            // 格式完全崩了，直接把全文当评论
+            aiComment = rawContent;
+        }
+
+        // --- 3. 存入 IndexedDB (完整数据) ---
         const photoId = 'photo_' + Date.now();
         const photoData = {
             id: photoId,
-            imageBlob: currentUploadBase64, // 存 Base64
+            imageBlob: currentUploadBase64,
             caption: caption,
-            aiComment: result.comment,
-            aiTags: result.tags,
-            aiSummary: result.summary,
+            aiComment: aiComment,
+            aiTags: aiTags,
+            aiSummary: aiSummary,
             timestamp: Date.now()
         };
 
@@ -13049,19 +13069,19 @@ async function submitPhotoPost() {
         const tx = db.transaction(galleryStoreName, 'readwrite');
         tx.objectStore(galleryStoreName).put(photoData);
         
-        // --- 3. 存入 LocalStorage (轻量索引，用于搜索) ---
+        // --- 4. 存入 LocalStorage (轻量索引) ---
         galleryIndex.push({
             id: photoId,
-            tags: result.tags,
-            summary: result.summary,
+            tags: aiTags,
+            summary: aiSummary,
             caption: caption,
-            comment: result.comment, // 把评论也存索引里，方便回顾
+            comment: aiComment,
             timestamp: Date.now()
         });
         localStorage.setItem('ai_phone_gallery_index', JSON.stringify(galleryIndex));
 
-        // --- 4. 结束 ---
-        alert(`发布成功！\n${char.name} 说：${result.comment}`);
+        // --- 5. 结束 ---
+        alert(`发布成功！\n${char.name} 说：${aiComment}`);
         closeModal('modal-upload-photo');
         loadGalleryImages();
 
@@ -13151,6 +13171,7 @@ function getGalleryContext(userMessage) {
     </script>
 </body>
 </html>
+
 
 
 
