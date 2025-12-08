@@ -2242,6 +2242,10 @@ select.x-input option {
     <span class="ios-label">相册图标</span>
     <input type="text" id="iconInput-gallery" class="ios-input" placeholder="http://..." onchange="saveTheme()">
 </div>
+                    <div class="ios-item">
+    <span class="ios-label">放映室图标</span>
+    <input type="text" id="iconInput-cinema" class="ios-input" placeholder="http://..." onchange="saveTheme()">
+</div>
                 </div>
 
                 <div class="ios-group-title">全局 CSS 代码 (高级美化)</div>
@@ -4878,6 +4882,9 @@ if(iconTheater) iconTheater.value = themeConfig.icons.theater || "";
             const iconGallery = document.getElementById('iconInput-gallery');
 if(iconGallery) iconGallery.value = themeConfig.icons.gallery || "";
 
+            const iconCinema = document.getElementById('iconInput-cinema');
+if(iconCinema) iconCinema.value = themeConfig.icons.cinema || "";
+
             // 2. 恢复CSS和字体
             const cssInput = document.getElementById('customCssInput');
             if(cssInput) cssInput.value = themeConfig.customCss || "";
@@ -4915,6 +4922,7 @@ if(iconGallery) iconGallery.value = themeConfig.icons.gallery || "";
         themeConfig.icons.ludo = document.getElementById('iconInput-ludo')?.value || "";
         themeConfig.icons.theater = document.getElementById('iconInput-theater')?.value || "";
         themeConfig.icons.gallery = document.getElementById('iconInput-gallery')?.value || "";
+        themeConfig.icons.cinema = document.getElementById('iconInput-cinema')?.value || "";
         
         themeConfig.customCss = document.getElementById('customCssInput')?.value || "";
         themeConfig.bubbleCss = document.getElementById('bubbleCssInput')?.value || ""; // 气泡美化
@@ -4945,6 +4953,7 @@ if(iconGallery) iconGallery.value = themeConfig.icons.gallery || "";
         updateAppIcon('app-icon-ludo', themeConfig.icons.ludo);
         updateAppIcon('app-icon-theater', themeConfig.icons.theater);
         updateAppIcon('app-icon-gallery', themeConfig.icons.gallery);
+        updateAppIcon('app-icon-cinema', themeConfig.icons.cinema);
 
         // B. 应用壁纸
         const homePage = document.getElementById('page-home');
@@ -13813,6 +13822,7 @@ async function triggerCinemaAI(userText) {
     </script>
 </body>
 </html>
+
 
 
 
