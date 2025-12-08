@@ -1953,8 +1953,9 @@ select.x-input option {
     <div class="app-name">相册</div>
 </div>
                 <!-- 放映室图标 -->
+<!-- 原来的代码里可能没有 id，请加上 id="app-icon-cinema" -->
 <div class="app-icon-container" onclick="initCinemaApp()">
-    <div class="app-icon" style="background: linear-gradient(to bottom, #000000, #434343);">🎬</div>
+    <div class="app-icon" id="app-icon-cinema" style="background: linear-gradient(to bottom, #000000, #434343);">🎬</div>
     <div class="app-name">放映室</div>
 </div>
             </div>
@@ -13822,6 +13823,7 @@ async function triggerCinemaAI(userText) {
     </script>
 </body>
 </html>
+
 
 
 
