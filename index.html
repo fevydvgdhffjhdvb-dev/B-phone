@@ -1952,6 +1952,11 @@ select.x-input option {
     <div class="app-icon" id="app-icon-gallery" style="background: linear-gradient(to bottom, #ff9500, #ff5e3a);">🖼️</div>
     <div class="app-name">相册</div>
 </div>
+                <!-- 放映室图标 -->
+<div class="app-icon-container" onclick="initCinemaApp()">
+    <div class="app-icon" style="background: linear-gradient(to bottom, #000000, #434343);">🎬</div>
+    <div class="app-name">放映室</div>
+</div>
             </div>
         </div>
 
@@ -3337,6 +3342,102 @@ select.x-input option {
         <div class="modal-footer">
             <button class="modal-btn" onclick="closeModal('modal-upload-photo')">取消</button>
             <button class="modal-btn" onclick="submitPhotoPost()" id="btn-submit-photo" style="color:#007AFF; font-weight:bold;">发布</button>
+        </div>
+    </div>
+</div>
+        <!-- ============ 23. 放映室 (Cinema) 首页 ============ -->
+<div class="page" id="page-cinema" style="background: #121212; color: white;">
+    <div class="app-header" style="background: rgba(20,20,20,0.9); border-bottom: 1px solid #333;">
+        <button class="btn-icon-text" onclick="goHome()" style="color:#fff;">‹ 桌面</button>
+        <span class="app-title" style="color:#fff;">放映室</span>
+        <button class="btn-icon-only" onclick="openAddSeriesModal()" style="color:#fff; font-size:24px;">+</button>
+    </div>
+    
+    <div class="content-scroll" style="padding: 15px;">
+        <!-- 剧集海报网格 -->
+        <div id="cinema-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+            <!-- 动态生成 -->
+        </div>
+        <div style="text-align:center; color:#555; margin-top:50px; font-size:12px;">
+            支持上传 MP4 视频 + SRT 字幕<br>所有数据仅存储在本地
+        </div>
+    </div>
+</div>
+
+<!-- ============ 24. 播放详情页 (Player) ============ -->
+<div class="page" id="page-cinema-detail" style="background: #000; color: white;">
+    <!-- 顶部：剧名与返回 -->
+    <div style="position:absolute; top:0; left:0; width:100%; height:60px; z-index:10; background:linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); display:flex; align-items:center; padding:0 15px; padding-top:10px;">
+        <button onclick="exitCinemaPlayer()" style="background:none; border:none; color:#fff; font-size:18px;">‹ 返回</button>
+        <span id="player-title" style="flex:1; text-align:center; font-weight:bold; margin:0 10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
+        <!-- 剧集列表开关 -->
+        <button onclick="toggleEpDrawer()" style="background:none; border:none; color:#fff; font-size:20px;">☰</button>
+    </div>
+
+    <!-- 视频容器 -->
+    <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; position:relative;">
+        <video id="cinema-video" style="width:100%; max-height:100%;" playsinline webkit-playsinline controls>
+            <track id="cinema-track" kind="subtitles" srclang="zh" label="Chinese" default>
+        </video>
+        
+        <!-- 自定义字幕层 (为了方便抓取内容，我们可能需要自己渲染字幕，也可以用原生track，这里先用原生) -->
+    </div>
+
+    <!-- AI 陪看悬浮球 -->
+    <div id="cinema-ai-bubble" onclick="openCinemaChat()" 
+         style="position:absolute; bottom:100px; right:20px; width:50px; height:50px; border-radius:50%; background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.3); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:20;">
+        <img id="cinema-ai-avatar" src="" style="width:40px; height:40px; border-radius:50%; opacity:0.9;">
+    </div>
+
+    <!-- 剧集选集抽屉 -->
+    <div id="cinema-ep-drawer" style="position:absolute; right:0; top:0; bottom:0; width:250px; background:rgba(20,20,20,0.95); transform:translateX(100%); transition:transform 0.3s; z-index:30; padding-top:60px; display:flex; flex-direction:column;">
+        <div style="padding:15px; font-weight:bold; border-bottom:1px solid #333;">选集</div>
+        <div id="cinema-ep-list" style="flex:1; overflow-y:auto;">
+            <!-- 剧集列表 -->
+        </div>
+        <div style="padding:15px; border-top:1px solid #333;">
+            <button onclick="document.getElementById('upload-ep-input').click()" style="width:100%; padding:10px; background:#007AFF; border:none; border-radius:8px; color:#fff;">+ 添加新剧集</button>
+            <input type="file" id="upload-ep-input" hidden multiple accept=".mp4,.srt" onchange="handleEpisodeUpload(event)">
+        </div>
+    </div>
+</div>
+
+<!-- 新建剧集弹窗 -->
+<div class="modal-overlay" id="modal-add-series">
+    <div class="modal-box">
+        <div class="modal-header">新建剧集/电影</div>
+        <div class="modal-body" style="padding:15px;">
+            <div class="ios-list">
+                <div class="ios-item">
+                    <span class="ios-label">剧名</span>
+                    <input type="text" id="series-name-input" class="ios-input" placeholder="例如: 甄嬛传">
+                </div>
+                <div class="ios-item">
+                    <span class="ios-label">海报</span>
+                    <input type="text" id="series-cover-input" class="ios-input" placeholder="图片 URL">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-add-series')">取消</button>
+            <button class="modal-btn" onclick="createNewSeries()">创建</button>
+        </div>
+    </div>
+</div>
+
+<!-- 陪看聊天弹窗 -->
+<div class="modal-overlay" id="modal-cinema-chat" style="justify-content:flex-end; background:rgba(0,0,0,0);">
+    <div class="modal-box" style="width:100%; height:60%; border-bottom-left-radius:0; border-bottom-right-radius:0; background:rgba(20,20,20,0.95); color:#fff;">
+        <div class="modal-header" style="background:transparent; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
+            <span>与 <span id="cinema-chat-name">AI</span> 讨论剧情</span>
+            <button onclick="closeCinemaChat()" style="color:#fff; background:none; border:none;">↓</button>
+        </div>
+        <div id="cinema-chat-history" style="flex:1; overflow-y:auto; padding:15px;"></div>
+        <div class="input-area" style="background:transparent; border-top:1px solid #333;">
+            <div class="input-toolbar">
+                <input type="text" id="cinemaChatInput" placeholder="跟Ta说些什么吧..." style="flex:1; background:#333; color:#fff; border:none; padding:10px; border-radius:20px;">
+                <button class="btn-send" onclick="sendCinemaMsg()">⬆</button>
+            </div>
         </div>
     </div>
 </div>
@@ -7668,7 +7769,7 @@ const galleryStoreName = "gallery";
 function openDB() {
     return new Promise((resolve, reject) => {
         // ✨ 修改点：把这里的数字改成 10 (或者比你之前用过的任何数字都大)
-        const request = indexedDB.open(dbName, 11);
+        const request = indexedDB.open(dbName, 12);
 
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
@@ -7692,6 +7793,14 @@ function openDB() {
                 // 索引：id为主键
                 const store = db.createObjectStore(galleryStoreName, { keyPath: "id" });
                 // 我们可以建索引方便以后按时间查，这里暂不需要
+            }
+            if (!db.objectStoreNames.contains("cinema_series")) {
+                db.createObjectStore("cinema_series", { keyPath: "id" });
+            }
+            if (!db.objectStoreNames.contains("cinema_episodes")) {
+                // 索引：seriesId 用于快速查找某部剧的所有集
+                const epStore = db.createObjectStore("cinema_episodes", { keyPath: "id" });
+                epStore.createIndex("seriesId", "seriesId", { unique: false });
             }
         };
 
@@ -13341,9 +13450,370 @@ async function deleteCurrentPhoto() {
         }
     }
 }
+        // ==========================================
+// --- 🎬 放映室 (Cinema) 系统 ---
+// ==========================================
+
+let cinemaState = {
+    currentSeriesId: null,
+    currentEpData: null, // 包含视频 blob 和 字幕
+    parsedSubtitles: [], // [{start, end, text}]
+    summaryHistory: ""   // 之前几集的总结
+};
+
+// 1. 初始化
+async function initCinemaApp() {
+    navigateTo('page-cinema');
+    renderSeriesGrid();
+}
+
+// 渲染剧集列表
+async function renderSeriesGrid() {
+    const grid = document.getElementById('cinema-grid');
+    grid.innerHTML = '';
+    
+    const db = await openDB();
+    const tx = db.transaction("cinema_series", "readonly");
+    const store = tx.objectStore("cinema_series");
+    const req = store.getAll();
+    
+    req.onsuccess = () => {
+        const list = req.result;
+        if (list.length === 0) {
+            grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">暂无剧集<br>点击右上角 + 创建</div>';
+            return;
+        }
+        
+        list.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'gallery-item'; // 复用相册样式
+            div.onclick = () => openSeriesDetail(s.id);
+            div.innerHTML = `
+                <img src="${s.cover || 'https://via.placeholder.com/150?text=Movie'}" class="gallery-thumb" style="border-radius:10px;">
+                <div style="position:absolute; bottom:0; width:100%; background:rgba(0,0,0,0.6); color:#fff; font-size:12px; padding:5px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.title}</div>
+            `;
+            grid.appendChild(div);
+        });
+    };
+}
+
+// 创建新剧集
+function openAddSeriesModal() {
+    document.getElementById('series-name-input').value = '';
+    document.getElementById('series-cover-input').value = '';
+    openModal('modal-add-series');
+}
+
+async function createNewSeries() {
+    const title = document.getElementById('series-name-input').value.trim();
+    let cover = document.getElementById('series-cover-input').value.trim();
+    if (!title) return alert("请输入剧名");
+    
+    const newSeries = {
+        id: 'series_' + Date.now(),
+        title: title,
+        cover: cover,
+        episodeIds: [], // 暂时没用，主要靠索引查询
+        seriesSummary: ""
+    };
+    
+    const db = await openDB();
+    const tx = db.transaction("cinema_series", "readwrite");
+    tx.objectStore("cinema_series").put(newSeries);
+    
+    await new Promise(resolve => tx.oncomplete = resolve);
+    
+    closeModal('modal-add-series');
+    renderSeriesGrid();
+}
+
+// 2. 进入播放器/选集页
+async function openSeriesDetail(seriesId) {
+    cinemaState.currentSeriesId = seriesId;
+    navigateTo('page-cinema-detail');
+    
+    // 设置头像
+    const char = contacts.find(c => c.id === activeContactId) || contacts[0];
+    if(char) document.getElementById('cinema-ai-avatar').src = char.avatar;
+
+    // 打开抽屉显示剧集列表
+    loadEpisodeList();
+    document.getElementById('cinema-ep-drawer').style.transform = 'translateX(0)';
+}
+
+function exitCinemaPlayer() {
+    const video = document.getElementById('cinema-video');
+    video.pause();
+    video.src = ""; // 释放内存
+    navigateTo('page-cinema');
+}
+
+function toggleEpDrawer() {
+    const d = document.getElementById('cinema-ep-drawer');
+    const isClosed = d.style.transform === 'translateX(100%)';
+    d.style.transform = isClosed ? 'translateX(0)' : 'translateX(100%)';
+}
+
+// 加载该剧的所有集
+async function loadEpisodeList() {
+    const list = document.getElementById('cinema-ep-list');
+    list.innerHTML = '加载中...';
+    
+    const db = await openDB();
+    const tx = db.transaction("cinema_episodes", "readonly");
+    const store = tx.objectStore("cinema_episodes");
+    const index = store.index("seriesId");
+    const req = index.getAll(cinemaState.currentSeriesId);
+    
+    req.onsuccess = () => {
+        const episodes = req.result;
+        // 按 index 排序
+        episodes.sort((a,b) => a.index - b.index);
+        
+        list.innerHTML = '';
+        if (episodes.length === 0) {
+            list.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">点击下方按钮上传视频文件</div>';
+            return;
+        }
+        
+        episodes.forEach(ep => {
+            const div = document.createElement('div');
+            div.style.padding = '15px';
+            div.style.borderBottom = '1px solid #333';
+            div.style.cursor = 'pointer';
+            div.innerHTML = `
+                <div style="color:#fff;">${ep.title}</div>
+                <div style="font-size:10px; color:#888;">${ep.summary ? '✅ 已有总结' : '未观看'}</div>
+            `;
+            div.onclick = () => playEpisode(ep.id);
+            list.appendChild(div);
+        });
+    };
+}
+
+// 3. 上传视频+字幕 (自动配对)
+async function handleEpisodeUpload(e) {
+    const files = Array.from(e.target.files);
+    if(files.length === 0) return;
+    
+    // 简单逻辑：假设用户选了一个 mp4 和一个 srt
+    const videoFile = files.find(f => f.name.endsWith('.mp4'));
+    const subFile = files.find(f => f.name.endsWith('.srt') || f.name.endsWith('.vtt'));
+    
+    if(!videoFile) return alert("请至少选择一个 MP4 视频文件");
+    
+    const btn = e.target.previousElementSibling;
+    btn.innerText = "正在处理...";
+    
+    let subData = [];
+    if(subFile) {
+        const text = await subFile.text();
+        subData = parseSRT(text);
+    }
+    
+    // 自动计算是第几集
+    const db = await openDB();
+    const tx = db.transaction("cinema_episodes", "readwrite");
+    const store = tx.objectStore("cinema_episodes");
+    
+    // 简单粗暴：用时间戳做 ID
+    const newEp = {
+        id: 'ep_' + Date.now(),
+        seriesId: cinemaState.currentSeriesId,
+        index: Date.now(), // 偷懒，按时间排序即可，用户可以重命名
+        title: videoFile.name,
+        videoBlob: videoFile,
+        subtitles: subData,
+        summary: ""
+    };
+    
+    store.put(newEp);
+    
+    await new Promise(resolve => tx.oncomplete = resolve);
+    
+    btn.innerText = "+ 添加新剧集";
+    loadEpisodeList();
+    alert("上传成功！");
+}
+
+// 4. 解析 SRT 为 JSON (核心工具)
+function parseSRT(srt) {
+    const pattern = /(\d+)\n(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\n([\s\S]*?)(?=\n\n|\n$|$)/g;
+    const result = [];
+    let match;
+    
+    // 辅助：把时间戳转为秒
+    const timeToSec = (tStr) => {
+        const [h, m, s] = tStr.replace(',','.').split(':');
+        return parseFloat(h)*3600 + parseFloat(m)*60 + parseFloat(s);
+    };
+
+    while ((match = pattern.exec(srt)) !== null) {
+        result.push({
+            start: timeToSec(match[2]),
+            end: timeToSec(match[3]),
+            text: match[4].replace(/\n/g, ' ').trim()
+        });
+    }
+    return result;
+}
+
+// 5. 播放逻辑
+async function playEpisode(epId) {
+    const db = await openDB();
+    const tx = db.transaction("cinema_episodes", "readonly");
+    const store = tx.objectStore("cinema_episodes");
+    const req = store.get(epId);
+    
+    req.onsuccess = async () => {
+        const ep = req.result;
+        cinemaState.currentEpData = ep;
+        cinemaState.parsedSubtitles = ep.subtitles || [];
+        
+        // 生成以前的剧情总结 (TODO: 遍历之前的集数，把 summary 拼起来)
+        // 这里暂时留空
+        cinemaState.summaryHistory = "（暂无前情提要）";
+
+        const video = document.getElementById('cinema-video');
+        const track = document.getElementById('cinema-track');
+        
+        // 1. 设置视频源
+        const url = URL.createObjectURL(ep.videoBlob);
+        video.src = url;
+        
+        // 2. 设置字幕 (需要把 JSON 转回 VTT Blob 才能给 video 标签用)
+        // 这一步比较繁琐，为了省事，我们直接用 JS 监听 timeupdate 手动渲染字幕？
+        // 或者构建 VTT Blob
+        const vttText = "WEBVTT\n\n" + ep.subtitles.map((s, i) => {
+            const format = (sec) => new Date(sec * 1000).toISOString().substr(11, 12);
+            return `${i+1}\n${format(s.start)} --> ${format(s.end)}\n${s.text}`;
+        }).join('\n\n');
+        
+        const trackBlob = new Blob([vttText], {type: 'text/vtt'});
+        track.src = URL.createObjectURL(trackBlob);
+        
+        // UI 更新
+        document.getElementById('player-title').innerText = ep.title;
+        document.getElementById('cinema-ep-drawer').style.transform = 'translateX(100%)'; // 关抽屉
+        
+        video.play();
+    };
+}
+
+// 6. 聊天逻辑
+function openCinemaChat() {
+    const video = document.getElementById('cinema-video');
+    video.pause(); // 暂停视频
+    
+    // 加载历史
+    const box = document.getElementById('cinema-chat-history');
+    box.innerHTML = ''; 
+    // (可选：从 cinemaState.currentEpData.chatHistory 加载)
+    
+    document.getElementById('modal-cinema-chat').style.display = 'flex';
+    document.getElementById('modal-cinema-chat').classList.add('show');
+}
+
+function closeCinemaChat() {
+    const modal = document.getElementById('modal-cinema-chat');
+    modal.classList.remove('show');
+    setTimeout(() => modal.style.display = 'none', 300);
+    
+    const video = document.getElementById('cinema-video');
+    video.play(); // 继续播放
+}
+
+async function sendCinemaMsg() {
+    const input = document.getElementById('cinemaChatInput');
+    const text = input.value.trim();
+    if(!text) return;
+    
+    // UI 上屏
+    const box = document.getElementById('cinema-chat-history');
+    box.innerHTML += `<div style="text-align:right; margin:10px 0;"><span style="background:#007AFF; padding:8px 12px; border-radius:15px;">${text}</span></div>`;
+    input.value = '';
+    
+    // 触发 AI
+    await triggerCinemaAI(text);
+}
+
+// 7. 核心：AI 感知上下文
+async function triggerCinemaAI(userText) {
+    const char = contacts.find(c => c.id === activeContactId) || contacts[0];
+    if(!char || !globalConfig.apiKey) return;
+    
+    const video = document.getElementById('cinema-video');
+    const currentTime = video.currentTime;
+    
+    // --- 关键算法：获取慢节奏长上下文 ---
+    // 目标：获取当前时间点 前50句 和 后10句 字幕
+    const subs = cinemaState.parsedSubtitles;
+    
+    // 二分查找或遍历找到当前行
+    let currentIndex = subs.findIndex(s => s.start <= currentTime && s.end >= currentTime);
+    // 如果正好在空白处，找最近的上一句
+    if (currentIndex === -1) {
+        currentIndex = subs.findIndex(s => s.start > currentTime); // 下一句
+        if (currentIndex > 0) currentIndex--; 
+    }
+    if (currentIndex === -1) currentIndex = 0;
+    
+    // 截取
+    const startIdx = Math.max(0, currentIndex - 50);
+    const endIdx = Math.min(subs.length, currentIndex + 20);
+    
+    const contextSubs = subs.slice(startIdx, endIdx).map(s => {
+        const isCurrent = (s === subs[currentIndex]) ? "【当前画面】👉 " : "";
+        return `${isCurrent}${s.text}`; // 只发文本，省 Token，时间戳对 AI 意义不大
+    }).join('\n');
+    
+    const box = document.getElementById('cinema-chat-history');
+    box.innerHTML += `<div style="text-align:left; color:#888; font-size:12px;">AI 正在看剧...</div>`;
+    box.scrollTop = box.scrollHeight;
+
+    const prompt = `
+    你正在和用户一起看剧。
+    当前剧名：《${document.getElementById('player-title').innerText}》。
+    你的角色：${char.name}。人设：${char.systemPrompt}。
+    
+    【前情提要】：${cinemaState.summaryHistory}
+    
+    【屏幕上最近发生的对话/剧情 (字幕流)】：
+    ${contextSubs}
+    
+    用户暂停了视频对你说："${userText}"
+    
+    请结合剧情上下文回复用户。如果剧情很精彩，可以表现得激动；如果剧情很虐，可以求安慰。
+    `;
+    
+    try {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: [{ role: "user", content: prompt }]
+        });
+        
+        const data = await res.json();
+        const reply = data.choices[0].message.content;
+        
+        // 移除 loading
+        box.lastElementChild.remove();
+        
+        // 显示回复
+        box.innerHTML += `
+            <div style="text-align:left; margin:10px 0;">
+                <img src="${char.avatar}" style="width:30px;height:30px;border-radius:50%;vertical-align:middle;">
+                <span style="background:#333; padding:8px 12px; border-radius:15px;">${reply}</span>
+            </div>`;
+        box.scrollTop = box.scrollHeight;
+        
+    } catch(e) {
+        box.innerHTML += `<div style="color:red">Error: ${e.message}</div>`;
+    }
+}
     </script>
 </body>
 </html>
+
 
 
 
