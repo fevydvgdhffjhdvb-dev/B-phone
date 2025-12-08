@@ -73,33 +73,55 @@ body {
             position: relative; overflow: hidden; 
             transition: all 0.3s ease;
         }
-        @media (max-width: 768px) {
+        /* 请替换原来的 @media (max-width: 768px) {...} 里面的内容 */
+@media (max-width: 768px) {
+    /* 1. 强制 body 撑满，不留余地 */
     body {
-        /* 手机上取消居中，防止被刘海屏挤下去 */
-        display: block; 
+        display: block !important;
+        background: #000;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100vw;
+        height: 100dvh;
+        overflow: hidden;
     }
 
-    .phone-frame { 
-        /* 强制固定定位，死死钉在屏幕四个角 */
-        position: fixed; 
-        top: 0; 
-        left: 0; 
-        width: 100vw; 
-        height: 100vh;      /* 兼容旧浏览器 */
-        height: 100dvh;     /* 适配 iOS 动态地址栏 */
-        
-        border-radius: 0; 
-        box-shadow: none; 
-        border: none; 
-        background: #000;
-        z-index: 1;
+    /* 2. 手机外壳强制铺满，层级提高 */
+    .phone-frame {
+        position: fixed !important; /* 强制固定 */
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100dvh !important; /* 忽略浏览器栏高度 */
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        z-index: 10;
+        background: transparent !important; /* 透明，让里面的页面显示 */
     }
-    
-    /* 修复桌面背景图不完整的问题 */
+
+    /* 3. 核心修复：让页面内容钻到刘海下面 */
+    .page {
+        position: absolute !important;
+        top: 0 !important; /* 强制顶格 */
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        border-radius: 0 !important;
+        /* 关键：让背景图延伸到最顶端 */
+        padding-top: env(safe-area-inset-top); 
+    }
+
+    /* 4. 特别修复：首页背景图 */
     #page-home {
-        background-size: cover !important;
+        /* 让背景图覆盖整个屏幕，包括刘海 */
         background-position: center center !important;
-        background-attachment: fixed !important; /* 关键：防止背景随内容滚动 */
+        background-size: cover !important;
+        background-repeat: no-repeat !important;
+        /* 这一行可能导致黑条，去掉它，或者设为0 */
+        margin-top: 0 !important; 
     }
 }
 
@@ -13322,6 +13344,7 @@ async function deleteCurrentPhoto() {
     </script>
 </body>
 </html>
+
 
 
 
