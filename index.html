@@ -13596,12 +13596,33 @@ async function loadEpisodeList() {
         }
         
         episodes.forEach(ep => {
-            // 检查有没有字幕
+            // 1. 检查有没有字幕 (原逻辑)
             const hasSub = ep.subtitles && ep.subtitles.length > 0;
+            
+            // 右侧的字幕状态/上传按钮
             const subStatus = hasSub 
                 ? `<span style="color:#34c759; font-size:10px; border:1px solid #34c759; padding:1px 4px; border-radius:4px;">字幕 OK</span>` 
                 : `<button onclick="event.stopPropagation(); triggerSubUpload('${ep.id}')" style="background:#333; color:#007AFF; border:1px solid #007AFF; font-size:10px; padding:2px 6px; border-radius:4px;">+ 上传字幕</button>`;
 
+            // 2. ✨✨✨ 新增：检查有没有总结 (生成按钮逻辑) ✨✨✨
+            let summaryBtn = "";
+            if (ep.summary) {
+                // 如果已经有总结了，显示绿色文字，点击弹窗看总结
+                // (注意：这里做了一点特殊处理防止文字里的引号报错)
+                const safeSummary = ep.summary.replace(/'/g, "\\'").replace(/\n/g, ' ');
+                summaryBtn = `<span style="color:#34c759; font-size:10px; cursor:pointer; margin-left:5px;" onclick="event.stopPropagation(); alert('【本集剧情】\\n${safeSummary}')">✅ 已总结</span>`;
+            } else {
+                // 如果没总结
+                if (hasSub) {
+                    // 有字幕才能生成 -> 显示橙色按钮
+                    summaryBtn = `<span onclick="event.stopPropagation(); generateEpSummary('${ep.id}')" style="color:#FF9500; font-size:10px; border:1px solid #FF9500; padding:1px 4px; border-radius:4px; cursor:pointer; margin-left:5px;">✨ 生成总结</span>`;
+                } else {
+                    // 没字幕不能生成 -> 不显示或显示灰色
+                    summaryBtn = ``; 
+                }
+            }
+
+            // 3. 构建 UI
             const div = document.createElement('div');
             div.style.padding = '15px';
             div.style.borderBottom = '1px solid #333';
@@ -13610,12 +13631,14 @@ async function loadEpisodeList() {
             div.style.justifyContent = 'space-between';
             div.style.alignItems = 'center';
             
-            // 左边：标题
-            // 右边：字幕状态 + 删除按钮
+            // 填入内容：左边是标题和总结按钮，右边是字幕状态和删除
             div.innerHTML = `
                 <div style="flex:1; min-width:0;">
                     <div style="color:#fff; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ep.title}</div>
-                    <div style="font-size:10px; color:#666; margin-top:4px;">${hasSub ? ep.subtitles.length + '行字幕' : '无字幕'}</div>
+                    <div style="font-size:10px; color:#666; margin-top:4px;">
+                        ${hasSub ? ep.subtitles.length + '行字幕' : '无字幕'}
+                        ${summaryBtn} <!-- ✨ 把总结按钮插在这里 -->
+                    </div>
                 </div>
                 <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px; margin-left:10px;">
                     ${subStatus}
@@ -13623,7 +13646,7 @@ async function loadEpisodeList() {
                 </div>
             `;
             
-            // 点击整行播放视频
+            // 点击整行播放
             div.onclick = () => playEpisode(ep.id);
             list.appendChild(div);
         });
@@ -13825,57 +13848,106 @@ function parseSRT(srt) {
     return result;
 }
 
-// 5. 播放逻辑
+// 5. 播放逻辑 (最终完整版：加载视频 + 字幕 + 历史聊天 + 前情提要)
 async function playEpisode(epId) {
     const db = await openDB();
     const tx = db.transaction("cinema_episodes", "readonly");
     const store = tx.objectStore("cinema_episodes");
+    
+    // 1. 获取当前集
     const req = store.get(epId);
     
     req.onsuccess = async () => {
         const ep = req.result;
+        if (!ep.chatLogs) ep.chatLogs = []; // 初始化聊天
+        
         cinemaState.currentEpData = ep;
         cinemaState.parsedSubtitles = ep.subtitles || [];
+
+        // ==========================================
+        // ✨✨✨ 核心新增：加载前情提要 ✨✨✨
+        // ==========================================
+        // 1. 再开一个请求，获取该剧所有集
+        const index = store.index("seriesId");
+        const allReq = index.getAll(ep.seriesId);
         
-        // 生成以前的剧情总结 (TODO: 遍历之前的集数，把 summary 拼起来)
-        // 这里暂时留空
-        cinemaState.summaryHistory = "（暂无前情提要）";
+        allReq.onsuccess = () => {
+            const allEps = allReq.result;
+            // 2. 筛选出比当前集 index 小的集 (即前几集)
+            // 并且必须是有 summary (总结) 的
+            const prevEps = allEps
+                .filter(e => e.index < ep.index && e.summary)
+                .sort((a,b) => a.index - b.index); // 按顺序排
+
+            if (prevEps.length > 0) {
+                // 3. 拼装文本
+                cinemaState.summaryHistory = prevEps.map(e => 
+                    `[第${getEpNumber(e.title)}集剧情]: ${e.summary}`
+                ).join("\n");
+            } else {
+                cinemaState.summaryHistory = "（这是第一集，或者前几集还没有生成总结）";
+            }
+            
+            console.log("加载的前情提要:", cinemaState.summaryHistory);
+        };
+        // ==========================================
 
         const video = document.getElementById('cinema-video');
         const track = document.getElementById('cinema-track');
         
-        // 1. 设置视频源
         const url = URL.createObjectURL(ep.videoBlob);
         video.src = url;
         
-        // 2. 设置字幕 (需要把 JSON 转回 VTT Blob 才能给 video 标签用)
-        // 这一步比较繁琐，为了省事，我们直接用 JS 监听 timeupdate 手动渲染字幕？
-        // 或者构建 VTT Blob
-        const vttText = "WEBVTT\n\n" + ep.subtitles.map((s, i) => {
-            const format = (sec) => new Date(sec * 1000).toISOString().substr(11, 12);
-            return `${i+1}\n${format(s.start)} --> ${format(s.end)}\n${s.text}`;
-        }).join('\n\n');
+        if (ep.subtitles && ep.subtitles.length > 0) {
+            const vttText = "WEBVTT\n\n" + ep.subtitles.map((s, i) => {
+                const format = (sec) => new Date(sec * 1000).toISOString().substr(11, 12);
+                return `${i+1}\n${format(s.start)} --> ${format(s.end)}\n${s.text}`;
+            }).join('\n\n');
+            const trackBlob = new Blob([vttText], {type: 'text/vtt'});
+            track.src = URL.createObjectURL(trackBlob);
+        } else {
+            track.src = "";
+        }
         
-        const trackBlob = new Blob([vttText], {type: 'text/vtt'});
-        track.src = URL.createObjectURL(trackBlob);
-        
-        // UI 更新
         document.getElementById('player-title').innerText = ep.title;
-        document.getElementById('cinema-ep-drawer').style.transform = 'translateX(100%)'; // 关抽屉
+        document.getElementById('cinema-ep-drawer').style.transform = 'translateX(100%)'; 
         
         video.play();
     };
 }
 
-// 6. 聊天逻辑
+// 一个小辅助函数：尝试从标题提取集数 (比如 "甄嬛传.E01.mp4" -> "1")
+function getEpNumber(title) {
+    const match = title.match(/E(\d+)/i) || title.match(/第(\d+)集/);
+    return match ? match[1] : "?";
+}
+
+// 6. 打开聊天窗口 (更新版：渲染历史记录)
 function openCinemaChat() {
     const video = document.getElementById('cinema-video');
     video.pause(); // 暂停视频
     
-    // 加载历史
     const box = document.getElementById('cinema-chat-history');
-    box.innerHTML = ''; 
-    // (可选：从 cinemaState.currentEpData.chatHistory 加载)
+    box.innerHTML = ''; // 先清空界面
+    
+    // ✨✨✨ 核心修改：遍历并渲染历史记录 ✨✨✨
+    const logs = cinemaState.currentEpData.chatLogs || [];
+    const char = contacts.find(c => c.id === activeContactId) || contacts[0];
+    
+    logs.forEach(log => {
+        if (log.role === 'user') {
+            box.innerHTML += `<div style="text-align:right; margin:10px 0;"><span style="background:#007AFF; padding:8px 12px; border-radius:15px; display:inline-block;">${log.content}</span></div>`;
+        } else {
+            box.innerHTML += `
+                <div style="text-align:left; margin:10px 0;">
+                    <img src="${char.avatar}" style="width:30px;height:30px;border-radius:50%;vertical-align:middle;">
+                    <span style="background:#333; padding:8px 12px; border-radius:15px; display:inline-block;">${log.content}</span>
+                </div>`;
+        }
+    });
+    
+    // 滚到底部
+    setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
     
     document.getElementById('modal-cinema-chat').style.display = 'flex';
     document.getElementById('modal-cinema-chat').classList.add('show');
@@ -13890,21 +13962,30 @@ function closeCinemaChat() {
     video.play(); // 继续播放
 }
 
+// 发送消息 (更新版：保存到数据库)
 async function sendCinemaMsg() {
     const input = document.getElementById('cinemaChatInput');
     const text = input.value.trim();
     if(!text) return;
     
-    // UI 上屏
+    // 1. UI 上屏
     const box = document.getElementById('cinema-chat-history');
     box.innerHTML += `<div style="text-align:right; margin:10px 0;"><span style="background:#007AFF; padding:8px 12px; border-radius:15px;">${text}</span></div>`;
     input.value = '';
+    box.scrollTop = box.scrollHeight;
     
-    // 触发 AI
+    // ✨✨✨ 2. 存入内存数组 ✨✨✨
+    if (!cinemaState.currentEpData.chatLogs) cinemaState.currentEpData.chatLogs = [];
+    cinemaState.currentEpData.chatLogs.push({ role: 'user', content: text, time: Date.now() });
+    
+    // ✨✨✨ 3. 保存到 IndexedDB (关键) ✨✨✨
+    await saveCurrentEpisodeData();
+    
+    // 4. 触发 AI
     await triggerCinemaAI(text);
 }
 
-// 7. 核心：AI 感知上下文
+// 7. 核心：AI 感知上下文 (终极版：剧情+聊天记忆)
 async function triggerCinemaAI(userText) {
     const char = contacts.find(c => c.id === activeContactId) || contacts[0];
     if(!char || !globalConfig.apiKey) return;
@@ -13912,47 +13993,145 @@ async function triggerCinemaAI(userText) {
     const video = document.getElementById('cinema-video');
     const currentTime = video.currentTime;
     
-    // --- 关键算法：获取慢节奏长上下文 ---
-    // 目标：获取当前时间点 前50句 和 后10句 字幕
+    // --- A. 获取剧情上下文 (字幕) ---
     const subs = cinemaState.parsedSubtitles;
-    
-    // 二分查找或遍历找到当前行
     let currentIndex = subs.findIndex(s => s.start <= currentTime && s.end >= currentTime);
-    // 如果正好在空白处，找最近的上一句
     if (currentIndex === -1) {
-        currentIndex = subs.findIndex(s => s.start > currentTime); // 下一句
+        currentIndex = subs.findIndex(s => s.start > currentTime); 
         if (currentIndex > 0) currentIndex--; 
     }
     if (currentIndex === -1) currentIndex = 0;
     
-    // 截取
     const startIdx = Math.max(0, currentIndex - 50);
     const endIdx = Math.min(subs.length, currentIndex + 20);
     
     const contextSubs = subs.slice(startIdx, endIdx).map(s => {
         const isCurrent = (s === subs[currentIndex]) ? "【当前画面】👉 " : "";
-        return `${isCurrent}${s.text}`; // 只发文本，省 Token，时间戳对 AI 意义不大
+        return `${isCurrent}${s.text}`; 
     }).join('\n');
     
+    // --- B. 获取聊天历史上下文 (最近 10 条) ✨✨✨ ---
+    // 这里的 chatLogs 已经包含了刚才用户发的那一句
+    const chatHistory = cinemaState.currentEpData.chatLogs.slice(-10).map(log => {
+        return { role: log.role, content: log.content };
+    });
+
     const box = document.getElementById('cinema-chat-history');
-    box.innerHTML += `<div style="text-align:left; color:#888; font-size:12px;">与${char.name}一起看剧...</div>`;
+    // 显示“正在输入”
+    const loadingDiv = document.createElement('div');
+    loadingDiv.style.cssText = "text-align:left; color:#888; font-size:12px; margin:5px 0;";
+    loadingDiv.innerText = "${char.name} 正在看剧...";
+    box.appendChild(loadingDiv);
     box.scrollTop = box.scrollHeight;
 
-    const prompt = `
+    // --- C. 构建 Prompt ---
+    const systemPrompt = `
     你正在和用户一起看剧。
     当前剧名：《${document.getElementById('player-title').innerText}》。
     你的角色：${char.name}。人设：${char.systemPrompt}。
     
-    【前情提要】：${cinemaState.summaryHistory}
-    
     【屏幕上最近发生的对话/剧情 (字幕流)】：
     ${contextSubs}
     
-    用户暂停了视频对你说："${userText}"
-    
-    请结合剧情上下文回复用户。如果剧情很精彩，可以表现得激动；如果剧情很虐，可以求安慰。
+    【指令】：
+    请像一个坐在用户身边的朋友/恋人一样，针对用户的发言进行回复。
+    你可以评论剧情、回答疑问或者闲聊。
+    结合上面的“字幕流”知道现在演到哪了，同时参考“聊天历史”保持对话连贯性。
     `;
+
+    // 组合消息：System + History
+    const apiMessages = [
+        { role: "system", content: systemPrompt },
+        ...chatHistory 
+    ];
     
+    try {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: apiMessages
+        });
+        
+        const data = await res.json();
+        const reply = data.choices[0].message.content;
+        
+        // 移除 loading
+        loadingDiv.remove();
+        
+        // UI 显示回复
+        box.innerHTML += `
+            <div style="text-align:left; margin:10px 0;">
+                <img src="${char.avatar}" style="width:30px;height:30px;border-radius:50%;vertical-align:middle;">
+                <span style="background:#333; padding:8px 12px; border-radius:15px;">${reply}</span>
+            </div>`;
+        box.scrollTop = box.scrollHeight;
+
+        // ✨✨✨ 保存 AI 回复到数据库 ✨✨✨
+        cinemaState.currentEpData.chatLogs.push({ role: 'assistant', content: reply, time: Date.now() });
+        await saveCurrentEpisodeData();
+        
+    } catch(e) {
+        loadingDiv.innerText = "Error: " + e.message;
+        loadingDiv.style.color = "red";
+    }
+}
+        // 辅助：保存当前集的进度和聊天记录到 DB
+async function saveCurrentEpisodeData() {
+    if (!cinemaState.currentEpData) return;
+    
+    const db = await openDB();
+    const tx = db.transaction("cinema_episodes", "readwrite");
+    const store = tx.objectStore("cinema_episodes");
+    
+    // 更新数据对象
+    // 注意：videoBlob 很大，但 IndexedDB 更新必须 put 整个对象。
+    // 在本地操作中，这通常很快，不会像上传那么慢。
+    store.put(cinemaState.currentEpData);
+    
+    return new Promise(resolve => tx.oncomplete = resolve);
+}
+        // 生成单集剧情总结
+async function generateEpSummary(epId) {
+    if(!globalConfig.apiKey) return alert("请先配置 API Key");
+    
+    const db = await openDB();
+    const tx = db.transaction("cinema_episodes", "readwrite");
+    const store = tx.objectStore("cinema_episodes");
+    
+    // 1. 获取数据
+    // 这里我们用 Promise 包装一下 get，方便 await
+    const ep = await new Promise((resolve) => {
+        store.get(epId).onsuccess = (e) => resolve(e.target.result);
+    });
+
+    if (!ep || !ep.subtitles) return alert("无法读取字幕数据");
+
+    if (!confirm(`即将读取《${ep.title}》的全部字幕来生成剧情梗概。\n这可能会消耗较多 Token，确定吗？`)) return;
+
+    // 2. 准备字幕文本
+    // 为了防止 Token 爆炸，我们每隔 2 行取 1 行，或者只取前 15000 字
+    let fullText = ep.subtitles.map(s => s.text).join("\n");
+    if (fullText.length > 20000) {
+        fullText = fullText.substring(0, 20000) + "\n...(后面内容太长省略)...";
+    }
+
+    const prompt = `
+    你是一个专业的影视剧剧情记录员。
+    请阅读下面的字幕文件内容，总结这一集的**核心剧情**。
+    
+    【要求】：
+    1. 概括主要发生了什么事、人物关系有什么重大进展。
+    2. 忽略无关紧要的闲聊。
+    3. 字数控制在 200-300 字以内。
+    4. 格式必须客观，不要发表影评，因为这段文字将作为“前情提要”提供给下一集的 AI 阅读。
+    
+    【字幕内容】：
+    ${fullText}
+    `;
+
+    // UI 提示 (随便找个地方提示，比如弹窗)
+    const originalText = document.querySelector('.app-title').innerText; // 借用顶栏显示一下
+    document.querySelector('.app-title').innerText = "AI 正在看片总结...";
+
     try {
         const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             model: globalConfig.model,
@@ -13960,26 +14139,30 @@ async function triggerCinemaAI(userText) {
         });
         
         const data = await res.json();
-        const reply = data.choices[0].message.content;
+        const summary = data.choices[0].message.content;
+
+        // 3. 存入数据库
+        // 注意：因为事务可能已经关闭，我们需要重新开一个事务写入
+        const db2 = await openDB();
+        const tx2 = db2.transaction("cinema_episodes", "readwrite");
+        const store2 = tx2.objectStore("cinema_episodes");
         
-        // 移除 loading
-        box.lastElementChild.remove();
+        ep.summary = summary;
+        store2.put(ep); // 更新回去
         
-        // 显示回复
-        box.innerHTML += `
-            <div style="text-align:left; margin:10px 0;">
-                <img src="${char.avatar}" style="width:30px;height:30px;border-radius:50%;vertical-align:middle;">
-                <span style="background:#333; padding:8px 12px; border-radius:15px;">${reply}</span>
-            </div>`;
-        box.scrollTop = box.scrollHeight;
-        
+        alert("✅ 总结生成成功！\n" + summary.substring(0, 50) + "...");
+        loadEpisodeList(); // 刷新列表，按钮变绿
+
     } catch(e) {
-        box.innerHTML += `<div style="color:red">Error: ${e.message}</div>`;
+        alert("生成失败: " + e.message);
+    } finally {
+        document.querySelector('.app-title').innerText = "放映室"; // 恢复标题
     }
 }
     </script>
 </body>
 </html>
+
 
 
 
