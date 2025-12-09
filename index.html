@@ -3412,7 +3412,7 @@ select.x-input option {
         <input type="file" id="upload-video-only" hidden accept=".mp4,.mkv,.mov" onchange="handleVideoUploadOnly(event)">
         
         <!-- 2. 字幕上传通道 (隐藏，由列表里的按钮触发) -->
-        <input type="file" id="upload-sub-only" hidden accept=".srt,.vtt" onchange="handleSubtitleUploadOnly(event)">
+        <input type="file" id="upload-sub-only" hidden accept=".srt,.vtt,application/x-subrip,text/vtt,text/plain" onchange="handleSubtitleUploadOnly(event)">
     </div>
 </div>
 </div>
@@ -14353,6 +14353,7 @@ function relinkVideo(epId) {
     </script>
 </body>
 </html>
+
 
 
 
