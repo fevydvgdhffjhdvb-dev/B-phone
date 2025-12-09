@@ -13779,25 +13779,49 @@ async function handleSubtitleUploadOnly(e) {
     };
 }
 
-// 4. 解析 SRT 为 JSON (核心工具)
+// 4. 解析 SRT 为 JSON (万能增强版)
 function parseSRT(srt) {
-    const pattern = /(\d+)\n(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\n([\s\S]*?)(?=\n\n|\n$|$)/g;
+    // --- 第一步：清洗数据 ---
+    // 1. 把 Windows 的 \r\n 和旧 Mac 的 \r 全部统一度化为 \n
+    // 2. 去除文件头部的 BOM 标记 (如果有的话)
+    const text = srt.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+
+    // --- 第二步：正则匹配 ---
+    // 解释：
+    // (\d+)       -> 序号
+    // \s+         -> 序号后面可能有换行，也可能有空格，全吃掉
+    // (\d{2}:...) -> 开始时间 (兼容 逗号, 和 点. )
+    // \s+-->\s+   -> 箭头前后允许有空格
+    // (\d{2}:...) -> 结束时间
+    // ([\s\S]*?)  -> 字幕内容 (非贪婪匹配)
+    // (?=\n\n|$)  -> 遇到双换行(下一块)或者文件结束时停止
+    const pattern = /(\d+)\s+(\d{2}:\d{2}:\d{2}[,.]\d{3})\s+-->\s+(\d{2}:\d{2}:\d{2}[,.]\d{3})\s+([\s\S]*?)(?=\n\s*\n|$)/g;
+    
     const result = [];
     let match;
     
-    // 辅助：把时间戳转为秒
+    // 辅助：把时间戳转为秒 (兼容逗号和点)
     const timeToSec = (tStr) => {
-        const [h, m, s] = tStr.replace(',','.').split(':');
-        return parseFloat(h)*3600 + parseFloat(m)*60 + parseFloat(s);
+        // 统一把逗号换成点，然后分割
+        const [h, m, s] = tStr.replace(',', '.').split(':');
+        return parseFloat(h) * 3600 + parseFloat(m) * 60 + parseFloat(s);
     };
 
-    while ((match = pattern.exec(srt)) !== null) {
-        result.push({
-            start: timeToSec(match[2]),
-            end: timeToSec(match[3]),
-            text: match[4].replace(/\n/g, ' ').trim()
-        });
+    while ((match = pattern.exec(text)) !== null) {
+        // 过滤掉可能解析出的空行
+        const content = match[4].trim();
+        if (content) {
+            result.push({
+                start: timeToSec(match[2]),
+                end: timeToSec(match[3]),
+                text: content
+            });
+        }
     }
+    
+    // 调试日志：看看解析出了多少条，方便排查
+    console.log(`SRT解析结果: 成功识别 ${result.length} 条字幕`);
+    
     return result;
 }
 
@@ -13956,6 +13980,7 @@ async function triggerCinemaAI(userText) {
     </script>
 </body>
 </html>
+
 
 
 
