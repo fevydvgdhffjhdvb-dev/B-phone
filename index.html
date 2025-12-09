@@ -13922,17 +13922,24 @@ function getEpNumber(title) {
     return match ? match[1] : "?";
 }
 
-// 6. 打开聊天窗口 (更新版：渲染历史记录)
+// 6. 打开聊天窗口 (修复标题名字版)
 function openCinemaChat() {
     const video = document.getElementById('cinema-video');
     video.pause(); // 暂停视频
     
     const box = document.getElementById('cinema-chat-history');
-    box.innerHTML = ''; // 先清空界面
+    box.innerHTML = ''; 
     
-    // ✨✨✨ 核心修改：遍历并渲染历史记录 ✨✨✨
-    const logs = cinemaState.currentEpData.chatLogs || [];
+    // 获取当前角色
     const char = contacts.find(c => c.id === activeContactId) || contacts[0];
+    
+    // ✨✨✨ 核心修改：更新弹窗标题的名字 ✨✨✨
+    if (char) {
+        document.getElementById('cinema-chat-name').innerText = char.name;
+    }
+
+    // 渲染历史记录
+    const logs = cinemaState.currentEpData.chatLogs || [];
     
     logs.forEach(log => {
         if (log.role === 'user') {
@@ -13946,7 +13953,6 @@ function openCinemaChat() {
         }
     });
     
-    // 滚到底部
     setTimeout(() => { box.scrollTop = box.scrollHeight; }, 100);
     
     document.getElementById('modal-cinema-chat').style.display = 'flex';
@@ -14020,7 +14026,7 @@ async function triggerCinemaAI(userText) {
     // 显示“正在输入”
     const loadingDiv = document.createElement('div');
     loadingDiv.style.cssText = "text-align:left; color:#888; font-size:12px; margin:5px 0;";
-    loadingDiv.innerText = "${char.name} 正在看剧...";
+    loadingDiv.innerText = `${char.name} 正在看剧...`;
     box.appendChild(loadingDiv);
     box.scrollTop = box.scrollHeight;
 
@@ -14162,6 +14168,7 @@ async function generateEpSummary(epId) {
     </script>
 </body>
 </html>
+
 
 
 
