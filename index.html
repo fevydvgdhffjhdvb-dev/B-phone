@@ -3394,17 +3394,26 @@ select.x-input option {
         <img id="cinema-ai-avatar" src="" style="width:40px; height:40px; border-radius:50%; opacity:0.9;">
     </div>
 
-    <!-- 剧集选集抽屉 -->
-    <div id="cinema-ep-drawer" style="position:absolute; right:0; top:0; bottom:0; width:250px; background:rgba(20,20,20,0.95); transform:translateX(100%); transition:transform 0.3s; z-index:30; padding-top:60px; display:flex; flex-direction:column;">
-        <div style="padding:15px; font-weight:bold; border-bottom:1px solid #333;">选集</div>
-        <div id="cinema-ep-list" style="flex:1; overflow-y:auto;">
-            <!-- 剧集列表 -->
-        </div>
-        <div style="padding:15px; border-top:1px solid #333;">
-            <button onclick="document.getElementById('upload-ep-input').click()" style="width:100%; padding:10px; background:#007AFF; border:none; border-radius:8px; color:#fff;">+ 添加新剧集</button>
-            <input type="file" id="upload-ep-input" hidden multiple accept=".mp4,.srt" onchange="handleEpisodeUpload(event)">
-        </div>
+    <!-- 剧集选集抽屉 (更新版) -->
+<div id="cinema-ep-drawer" style="position:absolute; right:0; top:0; bottom:0; width:280px; background:rgba(20,20,20,0.95); transform:translateX(100%); transition:transform 0.3s; z-index:30; padding-top:60px; display:flex; flex-direction:column; box-shadow: -5px 0 20px rgba(0,0,0,0.5);">
+    <div style="padding:15px; font-weight:bold; border-bottom:1px solid #333; display:flex; justify-content:space-between; align-items:center;">
+        <span>选集列表</span>
+        <button onclick="toggleEpDrawer()" style="background:none; border:none; color:#999; font-size:20px;">×</button>
     </div>
+    
+    <div id="cinema-ep-list" style="flex:1; overflow-y:auto;">
+        <!-- 列表动态生成 -->
+    </div>
+
+    <div style="padding:15px; border-top:1px solid #333;">
+        <!-- 1. 视频上传按钮 (只传MP4) -->
+        <button onclick="document.getElementById('upload-video-only').click()" style="width:100%; padding:12px; background:#007AFF; border:none; border-radius:8px; color:#fff; font-weight:bold;">+ 上传新一集 (视频)</button>
+        <input type="file" id="upload-video-only" hidden accept=".mp4,.mkv,.mov" onchange="handleVideoUploadOnly(event)">
+        
+        <!-- 2. 字幕上传通道 (隐藏，由列表里的按钮触发) -->
+        <input type="file" id="upload-sub-only" hidden accept=".srt,.vtt" onchange="handleSubtitleUploadOnly(event)">
+    </div>
+</div>
 </div>
 
 <!-- 新建剧集弹窗 -->
@@ -13468,7 +13477,8 @@ let cinemaState = {
     currentSeriesId: null,
     currentEpData: null, // 包含视频 blob 和 字幕
     parsedSubtitles: [], // [{start, end, text}]
-    summaryHistory: ""   // 之前几集的总结
+    summaryHistory: "",
+    targetEpIdForSub: null   
 };
 
 // 1. 初始化
@@ -13564,10 +13574,10 @@ function toggleEpDrawer() {
     d.style.transform = isClosed ? 'translateX(0)' : 'translateX(100%)';
 }
 
-// 加载该剧的所有集
+// 加载剧集列表 (更新版：显示字幕状态)
 async function loadEpisodeList() {
     const list = document.getElementById('cinema-ep-list');
-    list.innerHTML = '加载中...';
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:#666">加载中...</div>';
     
     const db = await openDB();
     const tx = db.transaction("cinema_episodes", "readonly");
@@ -13577,24 +13587,43 @@ async function loadEpisodeList() {
     
     req.onsuccess = () => {
         const episodes = req.result;
-        // 按 index 排序
         episodes.sort((a,b) => a.index - b.index);
         
         list.innerHTML = '';
         if (episodes.length === 0) {
-            list.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">点击下方按钮上传视频文件</div>';
+            list.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">暂无内容，请先上传视频</div>';
             return;
         }
         
         episodes.forEach(ep => {
+            // 检查有没有字幕
+            const hasSub = ep.subtitles && ep.subtitles.length > 0;
+            const subStatus = hasSub 
+                ? `<span style="color:#34c759; font-size:10px; border:1px solid #34c759; padding:1px 4px; border-radius:4px;">字幕 OK</span>` 
+                : `<button onclick="event.stopPropagation(); triggerSubUpload('${ep.id}')" style="background:#333; color:#007AFF; border:1px solid #007AFF; font-size:10px; padding:2px 6px; border-radius:4px;">+ 上传字幕</button>`;
+
             const div = document.createElement('div');
             div.style.padding = '15px';
             div.style.borderBottom = '1px solid #333';
             div.style.cursor = 'pointer';
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.alignItems = 'center';
+            
+            // 左边：标题
+            // 右边：字幕状态 + 删除按钮
             div.innerHTML = `
-                <div style="color:#fff;">${ep.title}</div>
-                <div style="font-size:10px; color:#888;">${ep.summary ? '✅ 已有总结' : '未观看'}</div>
+                <div style="flex:1; min-width:0;">
+                    <div style="color:#fff; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ep.title}</div>
+                    <div style="font-size:10px; color:#666; margin-top:4px;">${hasSub ? ep.subtitles.length + '行字幕' : '无字幕'}</div>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px; margin-left:10px;">
+                    ${subStatus}
+                    <span onclick="event.stopPropagation(); deleteEpisode('${ep.id}')" style="color:#ff3b30; font-size:12px; margin-top:5px;">删除</span>
+                </div>
             `;
+            
+            // 点击整行播放视频
             div.onclick = () => playEpisode(ep.id);
             list.appendChild(div);
         });
@@ -13644,6 +13673,110 @@ async function handleEpisodeUpload(e) {
     btn.innerText = "+ 添加新剧集";
     loadEpisodeList();
     alert("上传成功！");
+}
+        // 上传视频 (Step 1)
+async function handleVideoUploadOnly(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+    
+    const btn = e.target.previousElementSibling;
+    const oldText = btn.innerText;
+    btn.innerText = "正在存入数据库...";
+    btn.disabled = true;
+
+    try {
+        const db = await openDB();
+        const tx = db.transaction("cinema_episodes", "readwrite");
+        const store = tx.objectStore("cinema_episodes");
+        
+        const newEp = {
+            id: 'ep_' + Date.now(),
+            seriesId: cinemaState.currentSeriesId,
+            index: Date.now(), 
+            title: file.name,
+            videoBlob: file,
+            subtitles: [], // 先给个空的
+            summary: ""
+        };
+        
+        store.put(newEp);
+        await new Promise(resolve => tx.oncomplete = resolve);
+        
+        loadEpisodeList(); // 刷新列表
+        alert("视频上传成功！\n请在列表中点击“+ 上传字幕”来添加字幕文件。");
+
+    } catch(err) {
+        alert("保存失败: " + err.message);
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+        e.target.value = ''; // 清空 input
+    }
+}
+        // 触发字幕上传 (记录要给哪一集传)
+function triggerSubUpload(epId) {
+    cinemaState.targetEpIdForSub = epId;
+    document.getElementById('upload-sub-only').click();
+}
+
+// 处理字幕文件 (Step 2)
+async function handleSubtitleUploadOnly(e) {
+    const file = e.target.files[0];
+    if(!file || !cinemaState.targetEpIdForSub) return;
+
+    try {
+        const text = await file.text();
+        const subData = parseSRT(text); // 调用之前的解析函数
+        
+        if(subData.length === 0) throw new Error("无法解析字幕，请确保是 SRT 格式");
+
+        // 存入数据库
+        const db = await openDB();
+        const tx = db.transaction("cinema_episodes", "readwrite");
+        const store = tx.objectStore("cinema_episodes");
+        
+        // 1. 先取出旧数据
+        const ep = await new Promise((resolve, reject) => {
+            const req = store.get(cinemaState.targetEpIdForSub);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = reject;
+        });
+
+        if(!ep) throw new Error("找不到该集数据");
+
+        // 2. 更新字幕字段
+        ep.subtitles = subData;
+        
+        // 3. 放回去
+        store.put(ep);
+        await new Promise(resolve => tx.oncomplete = resolve);
+
+        loadEpisodeList(); // 刷新列表
+        alert(`字幕导入成功！共 ${subData.length} 行。`);
+
+    } catch(err) {
+        alert("字幕上传失败: " + err.message);
+    } finally {
+        e.target.value = '';
+        cinemaState.targetEpIdForSub = null; // 重置目标
+    }
+}
+        async function deleteEpisode(epId) {
+    if(!confirm("确定删除这一集吗？\n(视频文件较大，删除可释放空间)")) return;
+    
+    const db = await openDB();
+    const tx = db.transaction("cinema_episodes", "readwrite");
+    const store = tx.objectStore("cinema_episodes");
+    
+    store.delete(epId);
+    
+    tx.oncomplete = () => {
+        loadEpisodeList();
+        // 如果删的是当前正在放的，退出播放器
+        if(cinemaState.currentEpData && cinemaState.currentEpData.id === epId) {
+            exitCinemaPlayer();
+        }
+    };
 }
 
 // 4. 解析 SRT 为 JSON (核心工具)
@@ -13778,7 +13911,7 @@ async function triggerCinemaAI(userText) {
     }).join('\n');
     
     const box = document.getElementById('cinema-chat-history');
-    box.innerHTML += `<div style="text-align:left; color:#888; font-size:12px;">AI 正在看剧...</div>`;
+    box.innerHTML += `<div style="text-align:left; color:#888; font-size:12px;">与${char.name}一起看剧...</div>`;
     box.scrollTop = box.scrollHeight;
 
     const prompt = `
@@ -13823,6 +13956,7 @@ async function triggerCinemaAI(userText) {
     </script>
 </body>
 </html>
+
 
 
 
