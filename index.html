@@ -8422,6 +8422,7 @@ function openReaderChat() {
     const avatar = char ? char.avatar : ''; 
 
     currentBookMeta.chatLogs.forEach(log => {
+        if (log.charId && log.charId !== activeContactId) return;
         if (log.role === 'user') {
             historyBox.innerHTML += `<div style="text-align:right; margin:10px 0;"><span style="background:#007AFF; color:white; padding:8px 12px; border-radius:15px; display:inline-block;">${log.content}</span></div>`;
         } else {
@@ -13596,7 +13597,14 @@ function syncCinemaChatToMain() {
     if (!char) return;
 
     // 2. 筛选出“本次观影期间”产生的新对话 (只同步刚才聊的，不同步以前的)
-    const newLogs = cinemaState.currentEpData.chatLogs.filter(log => log.time >= cinemaState.cinemaSessionStartTime);
+    const newLogs = cinemaState.currentEpData.chatLogs.filter(log => {
+    // 1. 时间要在本次观影之后
+    const isNew = log.time >= cinemaState.cinemaSessionStartTime;
+    // 2. 必须是当前角色的聊天记录 (或者是没有ID的老数据)
+    const isMyChar = (!log.charId || log.charId === activeContactId);
+    
+    return isNew && isMyChar;
+});
 
     // 如果刚才没聊天，就不用同步了
     if (newLogs.length === 0) return;
@@ -14064,7 +14072,7 @@ async function sendCinemaMsg() {
     
     // ✨✨✨ 2. 存入内存数组 ✨✨✨
     if (!cinemaState.currentEpData.chatLogs) cinemaState.currentEpData.chatLogs = [];
-    cinemaState.currentEpData.chatLogs.push({ role: 'user', content: text, time: Date.now() });
+    cinemaState.currentEpData.chatLogs.push({ role: 'user', content: text, time: Date.now(), charId: activeContactId });
     
     // ✨✨✨ 3. 保存到 IndexedDB (关键) ✨✨✨
     await saveCurrentEpisodeData();
@@ -14154,7 +14162,7 @@ async function triggerCinemaAI(userText) {
         box.scrollTop = box.scrollHeight;
 
         // ✨✨✨ 保存 AI 回复到数据库 ✨✨✨
-        cinemaState.currentEpData.chatLogs.push({ role: 'assistant', content: reply, time: Date.now() });
+        cinemaState.currentEpData.chatLogs.push({ role: 'assistant', content: reply, time: Date.now(), charId: activeContactId });
         await saveCurrentEpisodeData();
         
     } catch(e) {
@@ -14401,6 +14409,7 @@ function relinkVideo(epId) {
     </script>
 </body>
 </html>
+
 
 
 
