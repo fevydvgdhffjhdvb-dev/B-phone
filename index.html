@@ -13589,34 +13589,37 @@ async function openSeriesDetail(seriesId) {
     loadEpisodeList();
     document.getElementById('cinema-ep-drawer').style.transform = 'translateX(0)';
 }
-        // ✨✨✨ 新增：将放映室聊天同步到主界面 (使用真实名字) ✨✨✨
+        // ✨✨✨ 增强版：同步放映室记录 (带弹窗提示) ✨✨✨
 function syncCinemaChatToMain() {
     // 1. 基础检查
     if (!cinemaState.currentEpData || !cinemaState.currentEpData.chatLogs) return;
     const char = contacts.find(c => c.id === activeContactId);
-    if (!char) return;
-
-    // 2. 筛选出“本次观影期间”产生的新对话 (只同步刚才聊的，不同步以前的)
-    const newLogs = cinemaState.currentEpData.chatLogs.filter(log => {
-    // 1. 时间要在本次观影之后
-    const isNew = log.time >= cinemaState.cinemaSessionStartTime;
-    // 2. 必须是当前角色的聊天记录 (或者是没有ID的老数据)
-    const isMyChar = (!log.charId || log.charId === activeContactId);
     
-    return isNew && isMyChar;
-});
+    // 如果没选角色，或者数据不对，直接退出
+    if (!char) {
+        console.log("未选择角色，跳过同步");
+        return;
+    }
 
-    // 如果刚才没聊天，就不用同步了
+    // 2. 筛选：必须是“本次观影”且“属于当前角色”的记录
+    const newLogs = cinemaState.currentEpData.chatLogs.filter(log => {
+        const isNew = log.time >= cinemaState.cinemaSessionStartTime;
+        // 兼容旧数据：如果没有charId也算，如果有必须匹配
+        const isMyChar = (!log.charId || log.charId === activeContactId); 
+        return isNew && isMyChar;
+    });
+
+    // 如果没有新消息，静默退出
     if (newLogs.length === 0) return;
 
-    // 3. 格式化对话内容 (这里使用了你的昵称和角色的名字)
+    // 3. 格式化对话内容
     const transcript = newLogs.map(log => {
-        // 如果是 user，就用 char.userName (你设置的昵称)；如果是 assistant，就用 char.name (角色名)
         const displayName = log.role === 'user' ? (char.userName || "我") : char.name;
         return `${displayName}: ${log.content}`;
     }).join('\n');
 
-    // 4. 构造同步消息卡片
+    // 4. 构造卡片
+    const epTitle = document.getElementById('player-title').innerText || "未知剧集";
     const syncMessage = `
 🎬【放映室观影记录】
 ------------------
@@ -13627,24 +13630,43 @@ ${transcript}
 (系统提示：这是你们刚刚在放映室边看剧边聊的内容。请${char.name}记住这个共同经历，并在接下来的对话中自然承接。)
     `.trim();
 
-    // 5. 存入主聊天记录 (作为 user 消息，假装是系统自动同步过来的)
+    // 5. 存入记录
     char.messages.push({
         role: 'user', 
         content: syncMessage,
         timestamp: Date.now()
     });
 
-    // 6. 保存并刷新
+    // 6. 保存
     saveData();
-    console.log("放映室记录已同步到主聊天");
+    
+    // ✨✨✨ 核心：弹窗提示你同步成功 ✨✨✨
+    // 这样你就不用猜到底有没有生成了
+    if(confirm(`已将 ${newLogs.length} 条观影互动同步到聊天记录！\n要去聊天框看看吗？`)) {
+        // 如果点击“确定”，直接跳回聊天界面，不用你自己找路了
+        exitCinemaPlayer(); // 先关播放器
+        navigateTo('page-chat'); // 再跳聊天
+        return; // 阻止后续默认的退出逻辑
+    }
 }
 
 function exitCinemaPlayer() {
+    // 先执行同步（如果用户点了“去看看”，函数内部会处理跳转）
     syncCinemaChatToMain();
-    const video = document.getElementById('cinema-video');
-    video.pause();
-    video.src = ""; // 释放内存
-    navigateTo('page-cinema');
+
+    // 只有当页面还在“详情页”时，才执行默认退出
+    // (防止刚才已经跳到聊天页了，这里又跳回列表页)
+    if (document.getElementById('page-cinema-detail').classList.contains('active')) {
+        const video = document.getElementById('cinema-video');
+        video.pause();
+        video.src = "";
+        navigateTo('page-cinema'); // 回到剧集列表
+    } else {
+        // 如果已经跳走了，只要清理视频就行
+        const video = document.getElementById('cinema-video');
+        video.pause();
+        video.src = "";
+    }
 }
 
 function toggleEpDrawer() {
@@ -13939,7 +13961,7 @@ function parseSRT(srt) {
 
 // 5. 播放逻辑 (最终完整版：加载视频 + 字幕 + 历史聊天 + 前情提要)
 async function playEpisode(epId) {
-    cinemaSessionStartTime = Date.now();
+    cinemaState.cinemaSessionStartTime = Date.now();
     const db = await openDB();
     const tx = db.transaction("cinema_episodes", "readonly");
     const store = tx.objectStore("cinema_episodes");
@@ -14409,6 +14431,7 @@ function relinkVideo(epId) {
     </script>
 </body>
 </html>
+
 
 
 
