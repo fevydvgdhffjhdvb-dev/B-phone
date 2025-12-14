@@ -13504,7 +13504,9 @@ let cinemaState = {
     currentEpData: null, // 包含视频 blob 和 字幕
     parsedSubtitles: [], // [{start, end, text}]
     summaryHistory: "",
-    targetEpIdForSub: null   
+    targetEpIdForSub: null,
+    // ✨✨✨ 新增这一行：记录观影开始时间 ✨✨✨
+    cinemaSessionStartTime: 0   
 };
 
 // 1. 初始化
@@ -13586,8 +13588,51 @@ async function openSeriesDetail(seriesId) {
     loadEpisodeList();
     document.getElementById('cinema-ep-drawer').style.transform = 'translateX(0)';
 }
+        // ✨✨✨ 新增：将放映室聊天同步到主界面 (使用真实名字) ✨✨✨
+function syncCinemaChatToMain() {
+    // 1. 基础检查
+    if (!cinemaState.currentEpData || !cinemaState.currentEpData.chatLogs) return;
+    const char = contacts.find(c => c.id === activeContactId);
+    if (!char) return;
+
+    // 2. 筛选出“本次观影期间”产生的新对话 (只同步刚才聊的，不同步以前的)
+    const newLogs = cinemaState.currentEpData.chatLogs.filter(log => log.time >= cinemaState.cinemaSessionStartTime);
+
+    // 如果刚才没聊天，就不用同步了
+    if (newLogs.length === 0) return;
+
+    // 3. 格式化对话内容 (这里使用了你的昵称和角色的名字)
+    const transcript = newLogs.map(log => {
+        // 如果是 user，就用 char.userName (你设置的昵称)；如果是 assistant，就用 char.name (角色名)
+        const displayName = log.role === 'user' ? (char.userName || "我") : char.name;
+        return `${displayName}: ${log.content}`;
+    }).join('\n');
+
+    // 4. 构造同步消息卡片
+    const syncMessage = `
+🎬【放映室观影记录】
+------------------
+📺 观看内容：《${document.getElementById('player-title').innerText}》
+💬 期间讨论：
+${transcript}
+------------------
+(系统提示：这是你们刚刚在放映室边看剧边聊的内容。请${char.name}记住这个共同经历，并在接下来的对话中自然承接。)
+    `.trim();
+
+    // 5. 存入主聊天记录 (作为 user 消息，假装是系统自动同步过来的)
+    char.messages.push({
+        role: 'user', 
+        content: syncMessage,
+        timestamp: Date.now()
+    });
+
+    // 6. 保存并刷新
+    saveData();
+    console.log("放映室记录已同步到主聊天");
+}
 
 function exitCinemaPlayer() {
+    syncCinemaChatToMain();
     const video = document.getElementById('cinema-video');
     video.pause();
     video.src = ""; // 释放内存
@@ -13886,6 +13931,7 @@ function parseSRT(srt) {
 
 // 5. 播放逻辑 (最终完整版：加载视频 + 字幕 + 历史聊天 + 前情提要)
 async function playEpisode(epId) {
+    cinemaSessionStartTime = Date.now();
     const db = await openDB();
     const tx = db.transaction("cinema_episodes", "readonly");
     const store = tx.objectStore("cinema_episodes");
@@ -14355,6 +14401,7 @@ function relinkVideo(epId) {
     </script>
 </body>
 </html>
+
 
 
 
