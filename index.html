@@ -3435,6 +3435,7 @@ select.x-input option {
         <button onclick="exitCinemaPlayer()" style="background:none; border:none; color:#fff; font-size:18px;">‹ 返回</button>
         <span id="player-title" style="flex:1; text-align:center; font-weight:bold; margin:0 10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
         <!-- 剧集列表开关 -->
+        <button onclick="openCinemaShareModal()" style="background:none; border:none; color:#34c759; font-size:22px; margin-right:10px;">📤</button>
         <button onclick="toggleEpDrawer()" style="background:none; border:none; color:#fff; font-size:20px;">☰</button>
     </div>
 
@@ -3536,6 +3537,37 @@ select.x-input option {
         </div>
         <div class="modal-footer">
             <button class="modal-btn" onclick="closeModal('modal-cinema-sync')">关闭</button>
+        </div>
+    </div>
+</div>
+        <!-- ============ 放映室分享选择弹窗 ============ -->
+<div class="modal-overlay" id="modal-cinema-share">
+    <div class="modal-box">
+        <div class="modal-header">分享观影互动</div>
+        <div class="modal-body" style="padding: 20px;">
+            <p style="font-size:13px; color:#666; margin-bottom:15px;">
+                选择要同步到主聊天框的互动记录范围。<br>
+                (例如: 电脑上看的内容，导入手机后在此同步)
+            </p>
+            
+            <div class="ios-list">
+                <div class="ios-item">
+                    <span class="ios-label">开始 (#)</span>
+                    <input type="number" id="share-start-idx" class="ios-input" value="1">
+                </div>
+                <div class="ios-item">
+                    <span class="ios-label">结束 (#)</span>
+                    <input type="number" id="share-end-idx" class="ios-input" value="100">
+                </div>
+            </div>
+            
+            <div style="text-align:center; font-size:12px; color:#999; margin-top:10px;">
+                本集共有 <span id="share-total-count">0</span> 条互动
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-cinema-share')">取消</button>
+            <button class="modal-btn" onclick="confirmCinemaShare()" style="color:#007AFF; font-weight:bold;">同步到聊天</button>
         </div>
     </div>
 </div>
@@ -4361,8 +4393,9 @@ select.x-input option {
     history.forEach(m => {
         let contentToSend = m.content;
 
-        // 🔥 【同人文核心逻辑】如果包含隐藏的同人文数据，我们需要把全文注入给 AI
-        if (m.hiddenContext && m.hiddenContext.type === "share_fanfic") {
+        if (m.hiddenContext) {
+            // 如果是同人文
+            if (m.hiddenContext.type === "share_fanfic") {
             contentToSend = `
             [系统提示：用户分享了一个链接，以下是链接的完整内容]
             文章标题：《${m.hiddenContext.title}》
@@ -4374,12 +4407,13 @@ select.x-input option {
             
             (用户发送这条消息是想和你分享这篇关于你们的同人文。请阅读全文和评论，并发表你的看法。如果是甜文可以害羞或开心，如果是虐文可以安慰用户，如果是OOC或奇怪设定可以吐槽。)
             `;
-        } else {
-            // 如果是普通消息，但包含了 HTML 标签 (比如卡片/图片)，我们要清理一下 HTML 标签，只留纯文本
-            if (m.content.includes('<div class="msg-link-card"')) {
-                // 这是一个旧的分享但丢失了 hiddenContext? 做个兜底
-                contentToSend = "[用户分享了一篇同人文链接]";
+        } else if (typeof m.hiddenContext === 'string') {
+                contentToSend = m.hiddenContext;
             }
+        } 
+        // 如果没有 hiddenContext，但内容是 HTML 卡片（旧数据兼容）
+        else if (m.content.includes('<div class="msg-link-card"')) {
+            contentToSend = "[用户分享了一个链接/卡片]";
         }
 
         if (m.image) {
@@ -13828,8 +13862,7 @@ ${transcript}
 }
 
 function exitCinemaPlayer() {
-    // 1. 同步聊天记录 (保留你原有的功能)
-    syncCinemaChatToMain();
+    
 
     // 2. 清理视频资源 (🔥 核心修改 🔥)
     const video = document.getElementById('cinema-video');
@@ -14720,6 +14753,123 @@ function relinkVideo(epId) {
     input.click();
 }
         // ==========================================
+// --- 🎬 放映室：手动分享/同步逻辑 ---
+// ==========================================
+
+// 1. 打开分享弹窗
+function openCinemaShareModal() {
+    if (!cinemaState.currentEpData) return;
+    
+    // 获取当前集的聊天记录
+    const logs = cinemaState.currentEpData.chatLogs || [];
+    const total = logs.length;
+    
+    if (total === 0) return alert("这一集还没有互动记录哦");
+
+    document.getElementById('share-total-count').innerText = total;
+    
+    // 默认选中全部，或者最近的20条
+    const defaultStart = Math.max(1, total - 20);
+    document.getElementById('share-start-idx').value = defaultStart;
+    document.getElementById('share-end-idx').value = total;
+
+    openModal('modal-cinema-share');
+}
+
+// 2. 确认分享 (生成卡片推送到主聊天)
+function confirmCinemaShare() {
+    // 1. 获取范围
+    const startVal = parseInt(document.getElementById('share-start-idx').value);
+    const endVal = parseInt(document.getElementById('share-end-idx').value);
+    const logs = cinemaState.currentEpData.chatLogs || [];
+    
+    if (isNaN(startVal) || isNaN(endVal) || startVal > endVal) return alert("范围无效");
+    if (startVal < 1 || endVal > logs.length) return alert("超出记录范围");
+
+    // 2. 截取数据 (注意数组索引从0开始)
+    const selectedLogs = logs.slice(startVal - 1, endVal);
+    
+    // 3. 准备目标角色
+    const char = contacts.find(c => c.id === activeContactId);
+    if (!char) return alert("请先在信息列表选择一个角色！");
+
+    // 4. 生成显示的摘要文本 (用于卡片显示)
+    // 只取前3条作为预览，防止卡片太长
+    const previewText = selectedLogs.slice(0, 3).map(l => {
+        const name = l.role === 'user' ? '我' : char.name;
+        return `${name}: ${l.content.substring(0, 15)}...`;
+    }).join('<br>');
+    
+    const count = selectedLogs.length;
+    const epTitle = document.getElementById('player-title').innerText;
+
+    // 5. 生成完整的 Context (给 AI 看的)
+    const fullTranscript = selectedLogs.map(l => {
+        const name = l.role === 'user' ? (char.userName || "我") : char.name;
+        return `${name}: ${l.content}`;
+    }).join('\n');
+
+    // 6. 构造卡片 HTML (这是给用户看的)
+    const cardHtml = `
+        <div class="msg-link-card" style="background:#f2f2f7; pointer-events:none;">
+            <div class="link-card-cover" style="background:linear-gradient(135deg, #2c3e50, #000000); font-size:40px;">🎬</div>
+            <div class="link-card-info">
+                <div class="link-card-title">观影记录同步:《${epTitle}》</div>
+                <div class="link-card-desc" style="margin-top:5px; color:#555;">
+                    ${previewText}
+                    ${count > 3 ? '<br>......' : ''}
+                </div>
+                <div class="link-card-footer">
+                    <span>共 ${count} 条互动</span>
+                    <span>已同步 ✅</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 7. 构造发给 AI 的系统指令 (Hidden Context)
+    const hiddenContext = `
+[系统事件：跨设备数据同步]
+用户刚刚同步了你们在“放映室”观看《${epTitle}》时的互动记录。
+以下是你们当时的对话内容（请将其视为刚刚发生的共同记忆）：
+------------------
+${fullTranscript}
+------------------
+指令：
+1. 你的记忆已更新。
+2. 用户现在可能会接着这个话题聊，或者对刚才的剧情发表总结。
+3. 请根据上述对话的氛围（是开心、吐槽还是感动），自然地接话。
+    `;
+
+    // 8. 存入主聊天记录
+    // 我们把这条消息伪装成 "user" 发送的，带有隐藏上下文
+    char.messages.push({
+        role: 'user',
+        content: cardHtml, // 界面显示漂亮的卡片
+        timestamp: Date.now(),
+        hiddenContext: hiddenContext // AI 读取真正的记忆
+    });
+    
+    saveData();
+    closeModal('modal-cinema-share');
+    
+    // 9. 跳转并触发
+    if(confirm("同步成功！是否立刻跳转回聊天界面继续讨论？")) {
+        // 先退出播放器防止冲突
+        const video = document.getElementById('cinema-video');
+        if(video) video.pause();
+        
+        navigateTo('page-chat');
+        
+        // 触发 AI (为了让它读取 hiddenContext 并对同步行为做出反应)
+        setTimeout(() => {
+            // 这里我们不需要用户输入，直接让 AI 根据 context 回复一句
+            // 比如 "哈哈，刚才那段真的太搞笑了"
+            triggerAI(); 
+        }, 500);
+    }
+}
+        // ==========================================
 // --- 💖 纪念日 (Anniversary) 系统 ---
 // ==========================================
 
@@ -14859,9 +15009,11 @@ function deleteAnniversary(index) {
         renderAnniversaryList();
     }
 }
+        
     </script>
 </body>
 </html>
+
 
 
 
