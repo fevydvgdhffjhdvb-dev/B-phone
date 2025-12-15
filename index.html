@@ -14160,7 +14160,7 @@ function parseSRT(srt) {
     return result;
 }
 
-// 播放逻辑 - 支持虚空引用
+// 播放逻辑 (修复版：解决浏览器拦截问题)
 async function playEpisode(epId) {
     cinemaState.cinemaSessionStartTime = Date.now();
     const db = await openDB();
@@ -14177,7 +14177,7 @@ async function playEpisode(epId) {
         cinemaState.currentEpData = ep;
         cinemaState.parsedSubtitles = ep.subtitles || [];
 
-        // --- 加载前情提要 (保持原逻辑) ---
+        // --- 加载前情提要 ---
         const index = store.index("seriesId");
         const allReq = index.getAll(ep.seriesId);
         allReq.onsuccess = () => {
@@ -14185,38 +14185,114 @@ async function playEpisode(epId) {
             cinemaState.summaryHistory = allEps.length > 0 ? allEps.map(e => `[前情]: ${e.summary}`).join("\n") : "（无前情提要）";
         };
 
-        // ==========================================
-        // 🎞️ 核心修改：处理视频源
-        // ==========================================
+        // UI 准备
+        document.getElementById('player-title').innerText = ep.title;
+        document.getElementById('cinema-ep-drawer').style.transform = 'translateX(100%)'; 
+        
         const video = document.getElementById('cinema-video');
-        let videoUrl = "";
+        const container = video.parentElement; // 获取视频外面的容器
 
+        // 清理旧的覆盖层（如果有）
+        const oldOverlay = document.getElementById('virtual-file-overlay');
+        if(oldOverlay) oldOverlay.remove();
+
+        // ==========================================
+        // 🎞️ 核心修改：区分 实体文件 vs 虚空引用
+        // ==========================================
+        
         // 情况 A: 数据库里真的存了文件 (小视频)
         if (ep.videoBlob && !ep.isVirtual) {
-            videoUrl = URL.createObjectURL(ep.videoBlob);
+            const videoUrl = URL.createObjectURL(ep.videoBlob);
             startPlaying(videoUrl, ep);
         } 
         // 情况 B: 这是一个虚空引用 (大视频)
         else {
-            // 创建一个临时的文件选择器
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = ".mp4,.mkv,.mov";
+            // 1. 先把视频源清空，防止显示上一集的画面
+            video.src = "";
             
-            // 提示用户
-            alert(`🎬 即将播放：《${ep.title}》\n\n这是一个大文件，未存储在浏览器中。\n请在弹出的窗口中，再次选择该视频文件以开始播放。`);
+            // 2. 创建一个覆盖在视频上的“加载按钮”
+            const overlay = document.createElement('div');
+            overlay.id = 'virtual-file-overlay';
+            overlay.style.cssText = `
+                position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.8); z-index: 5;
+                display: flex; flex-direction: column;
+                align-items: center; justify-content: center;
+                color: #fff; text-align: center;
+            `;
             
-            input.onchange = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    // 直接播放本地文件，不存库，速度极快
-                    videoUrl = URL.createObjectURL(file);
-                    startPlaying(videoUrl, ep);
-                }
+            overlay.innerHTML = `
+                <div style="font-size: 40px; margin-bottom: 20px;">📂</div>
+                <div style="font-size: 16px; margin-bottom: 10px;">${ep.title}</div>
+                <button id="btn-load-virtual" style="
+                    padding: 10px 20px; font-size: 16px; font-weight: bold;
+                    background: #007AFF; color: white; border: none; border-radius: 20px;
+                    cursor: pointer; box-shadow: 0 4px 12px rgba(0,122,255,0.4);
+                ">点击选择本地视频文件</button>
+                <div style="font-size: 12px; color: #999; margin-top: 15px;">
+                    (这是大文件，未存储在浏览器中，需手动加载)
+                </div>
+            `;
+            
+            // 把覆盖层加到视频上面
+            container.appendChild(overlay);
+
+            // 3. 绑定点击事件 (这是用户直接点击，浏览器允许弹窗)
+            document.getElementById('btn-load-virtual').onclick = () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = ".mp4,.mkv,.mov";
+                
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        // 移除覆盖层
+                        overlay.remove();
+                        // 直接播放
+                        const videoUrl = URL.createObjectURL(file);
+                        startPlaying(videoUrl, ep);
+                    }
+                };
+                input.click(); // 这一步现在能成功了！
             };
-            input.click();
         }
     };
+}
+
+// 辅助：开始播放的统一动作 (确保字幕也会被加载)
+function startPlaying(url, ep) {
+    const video = document.getElementById('cinema-video');
+    const track = document.getElementById('cinema-track');
+    
+    video.src = url;
+    
+    // 加载字幕 (Subtitles)
+    if (ep.subtitles && ep.subtitles.length > 0) {
+        // 构建 VTT 格式字幕
+        const vttText = "WEBVTT\n\n" + ep.subtitles.map((s, i) => {
+            // 格式化时间函数
+            const format = (sec) => {
+                const date = new Date(sec * 1000);
+                return date.toISOString().substr(11, 12);
+            };
+            return `${i+1}\n${format(s.start)} --> ${format(s.end)}\n${s.text}`;
+        }).join('\n\n');
+        
+        const trackBlob = new Blob([vttText], {type: 'text/vtt'});
+        track.src = URL.createObjectURL(trackBlob);
+        
+        // 尝试显示字幕
+        track.default = true; 
+        // 有些浏览器需要手动切换模式
+        if(video.textTracks && video.textTracks.length > 0) {
+            video.textTracks[0].mode = 'showing';
+        }
+        
+    } else {
+        track.src = "";
+    }
+    
+    video.play();
 }
 
 // 辅助：开始播放的统一动作
@@ -14786,6 +14862,7 @@ function deleteAnniversary(index) {
     </script>
 </body>
 </html>
+
 
 
 
