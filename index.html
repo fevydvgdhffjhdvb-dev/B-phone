@@ -1843,6 +1843,60 @@ select.x-input option {
     transform: scale(0.9);
     background: rgba(255, 59, 48, 0.2);
 }
+        /* --- 💖 纪念日/倒计时小组件样式 --- */
+.anni-grid {
+    display: flex; flex-direction: column; gap: 15px; padding: 10px;
+}
+
+/* 卡片容器 */
+.anni-card {
+    background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%); /* 恋爱粉 */
+    border-radius: 20px;
+    padding: 20px;
+    color: #fff;
+    position: relative;
+    box-shadow: 0 8px 20px rgba(255, 154, 158, 0.4);
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+.anni-card:active { transform: scale(0.98); }
+
+/* 如果是未来的日子（倒计时），换个颜色比如蓝色或紫色 */
+.anni-card.future {
+    background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+}
+
+/* 顶部：双头像 + 波浪线 */
+.anni-header-row {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+.anni-avatar {
+    width: 50px; height: 50px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.6);
+    object-fit: cover; background: #fff; cursor: pointer;
+}
+
+/* 波浪连接线 (复用音乐那边的逻辑，但调慢一点) */
+.anni-wave-line {
+    flex: 1; height: 4px; margin: 0 15px;
+    background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCA0IiBwcmVzZXJ2ZUFzcGVjdHJhdGlvPSJub25lIj48cGF0aCBkPSJNMCAyIEMgNSAwLCA1IDQsIDEwIDIgUyAxNSA0LCAyMCAyIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC42KSIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9zdmc+');
+    background-size: 20px 100%;
+    animation: waveMove 4s linear infinite;
+}
+@keyframes waveMove { from { background-position: 0 0; } to { background-position: 40px 0; } }
+
+/* 文字区域 */
+.anni-info { text-align: center; z-index: 2; position: relative; }
+.anni-title { font-size: 14px; opacity: 0.9; margin-bottom: 5px; font-weight: 500; letter-spacing: 1px; }
+.anni-days-box { display: flex; align-items: baseline; justify-content: center; gap: 5px; }
+.anni-num { font-size: 48px; font-weight: 800; line-height: 1; text-shadow: 0 2px 10px rgba(0,0,0,0.2); font-variant-numeric: tabular-nums; }
+.anni-label { font-size: 14px; font-weight: bold; opacity: 0.8; }
+.anni-date { font-size: 12px; opacity: 0.6; margin-top: 5px; }
+
+/* 删除按钮 */
+.btn-del-anni {
+    position: absolute; top: 10px; right: 10px;
+    color: rgba(255,255,255,0.6); font-size: 20px; cursor: pointer;
+}
     </style>
 </head>
 <body>
@@ -2003,6 +2057,10 @@ select.x-input option {
     <button class="toolbar-btn" onclick="openSummaryModal()" title="总结">
         ✨
     </button>
+                    <!-- 在 .chat-toolbar 里加入这个按钮 -->
+<button class="toolbar-btn" onclick="openAnniversaryModal()" title="纪念日">
+    💝
+</button>
 </div>
            
                 <div id="uploadPreview">
@@ -3478,6 +3536,56 @@ select.x-input option {
         </div>
         <div class="modal-footer">
             <button class="modal-btn" onclick="closeModal('modal-cinema-sync')">关闭</button>
+        </div>
+    </div>
+</div>
+        <!-- ============ 💖 纪念日/倒计时弹窗 ============ -->
+<div class="modal-overlay" id="modal-anniversary-list">
+    <div class="modal-box" style="height: 70%; background: #f2f2f7;">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #fff;">
+            <button onclick="closeModal('modal-anniversary-list')" style="border:none; background:none; color:#007AFF;">关闭</button>
+            <span style="font-weight:bold;">纪念日 & 倒计时</span>
+            <button onclick="openEditAnniversary(-1)" style="border:none; background:none; color:#007AFF; font-size:24px;">+</button>
+        </div>
+        
+        <div class="modal-body" style="padding: 15px;">
+            <!-- 列表容器 -->
+            <div id="anni-list-container" class="anni-grid">
+                <!-- 动态生成小组件 -->
+            </div>
+            <div style="text-align:center; color:#999; font-size:12px; margin-top:20px;">
+                AI 会自动感知这里的日期<br>并在聊天中给你惊喜
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加/编辑 纪念日 弹窗 -->
+<div class="modal-overlay" id="modal-edit-anni" style="z-index: 600;">
+    <div class="modal-box" style="height: auto; top: 20%;">
+        <div class="modal-header">添加纪念日</div>
+        <div class="modal-body" style="padding: 20px;">
+            <input type="hidden" id="anni-edit-index">
+            
+            <div class="ios-list">
+                <div class="ios-item">
+                    <span class="ios-label">标题</span>
+                    <input type="text" id="anni-title-input" class="ios-input" placeholder="例如: 我们在一起, 你的生日">
+                </div>
+                <div class="ios-item">
+                    <span class="ios-label">日期</span>
+                    <input type="date" id="anni-date-input" class="ios-input" style="direction:ltr;">
+                </div>
+            </div>
+            
+            <div style="font-size:12px; color:#999; margin-top:10px; padding:0 10px;">
+                * 如果日期在过去，显示“已经xx天”<br>
+                * 如果日期在未来，显示“还有xx天”
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-edit-anni')">取消</button>
+            <button class="modal-btn" onclick="saveAnniversary()" style="color:#ff2d55; font-weight:bold;">保存</button>
         </div>
     </div>
 </div>
@@ -6452,6 +6560,75 @@ function getStatusContext(char) {
             [行为指令]: 她可能情绪不太稳定、易怒或焦虑。请无条件包容她的小脾气，不要回嘴，多哄哄她。\n`;
         }
     }
+    // ==========================================
+    // ✨✨✨ 3. 纪念日系统 (Pro版) ✨✨✨
+    // ==========================================
+    if (char.anniversaries && char.anniversaries.length > 0) {
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        let memoryDataList = []; // 存所有数据 (作为背景知识)
+        let alertTriggerList = []; // 存特殊节点 (作为行为指令)
+
+        char.anniversaries.forEach(anni => {
+            const targetDate = new Date(anni.date);
+            const diffTime = targetDate - today;
+            // 计算天数 (向上取整)
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            // --- A. 倒计时 (未来) ---
+            if (diffDays > 0) {
+                // 1. 基础记忆：存入列表，方便用户问询
+                memoryDataList.push(`- 距离 "${anni.title}" 还有 ${diffDays} 天`);
+
+                // 2. 触发机制：扩大到 7 天内都有感知
+                if (diffDays <= 7) {
+                    let urgency = "即将到来";
+                    if (diffDays === 1) urgency = "明天就是了！";
+                    else if (diffDays <= 3) urgency = "非常临近";
+                    
+                    alertTriggerList.push(`[⏳倒计时提醒]: 距离 "${anni.title}" 仅剩 ${diffDays} 天 (${urgency})。请在聊天中表现出期待感，或者讨论当天的计划。`);
+                }
+            } 
+            
+            // --- B. 正计时 (过去/纪念日) ---
+            else {
+                const days = Math.abs(diffDays); // 绝对值，即“已经过去多少天”
+                
+                // 1. 基础记忆：存入列表
+                memoryDataList.push(`- 关于 "${anni.title}" 已经过去了 ${days} 天`);
+
+                // 2. 触发机制：当天
+                if (days === 0) {
+                    alertTriggerList.push(`[🎉今日大事件]: 今天就是 "${anni.title}" 的正日子！请务必表现得非常惊喜、感动，这是今天的核心话题！`);
+                } 
+                // 3. 触发机制：特殊数字感知 (算法升级)
+                else {
+                    // (a) 周年判定 (365的倍数)
+                    if (days % 365 === 0) {
+                        const years = days / 365;
+                        alertTriggerList.push(`[🎂周年纪念]: 今天是 "${anni.title}" 的 ${years} 周年纪念日！(整整 ${days} 天)。这是一个超级重要的里程碑！`);
+                    }
+                    // (b) 整百天判定 (100的倍数)
+                    else if (days % 100 === 0) {
+                        alertTriggerList.push(`[💯百日纪念]: 今天是 "${anni.title}" 的第 ${days} 天纪念日！值得庆祝一下。`);
+                    }
+                    // (c) 特殊恋爱数字
+                    else if ([520, 521, 1314, 666, 888, 999].includes(days)) {
+                        alertTriggerList.push(`[💖特殊数字]: 今天是 "${anni.title}" 的第 ${days} 天！这个数字很有意义，快去撩一下用户。`);
+                    }
+                }
+            }
+        });
+
+        // 将整理好的数据注入 Context
+        if (memoryDataList.length > 0) {
+            context += `\n[📂 纪念日数据面板 (记忆库)]:\n${memoryDataList.join('\n')}\n(如果用户问起相关时间，请参考以上数据)\n`;
+        }
+        if (alertTriggerList.length > 0) {
+            context += `\n${alertTriggerList.join('\n')}\n`;
+        }
+    }
+    // ==========================================
     // === ✨ 这里是新插入的天气感知模块 ✨ ===
     if (weatherState.lastUpdate > 0) {
         context += `\n[实时环境数据]: 天气 ${weatherState.desc}, 气温 ${weatherState.temp}°C, 风速 ${weatherState.wind}km/h。`;
@@ -14428,9 +14605,150 @@ function relinkVideo(epId) {
     
     input.click();
 }
+        // ==========================================
+// --- 💖 纪念日 (Anniversary) 系统 ---
+// ==========================================
+
+// 打开列表
+function openAnniversaryModal() {
+    const char = getActiveChar();
+    if(!char) return alert("请先选择一个角色！");
+    
+    renderAnniversaryList();
+    openModal('modal-anniversary-list');
+}
+
+// 渲染列表 (核心：计算天数)
+function renderAnniversaryList() {
+    const char = getActiveChar();
+    const container = document.getElementById('anni-list-container');
+    container.innerHTML = '';
+
+    // 兼容旧数据
+    if(!char.anniversaries) char.anniversaries = [];
+
+    if(char.anniversaries.length === 0) {
+        container.innerHTML = `<div style="text-align:center; color:#999; margin-top:50px;">点击右上角 + 添加第一个纪念日</div>`;
+        return;
+    }
+
+    // 排序：优先显示最近的（绝对值小的排前面）
+    const now = new Date();
+    // 简单的日清空，只比较日期
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    char.anniversaries.forEach((item, index) => {
+        const targetDate = new Date(item.date);
+        // 计算差值 (毫秒)
+        const diffTime = targetDate - today; 
+        // 转换为天数 (向上取整)
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        let numDisplay = 0;
+        let labelDisplay = "";
+        let classExtra = ""; // 用于控制背景色
+
+        if (diffDays > 0) {
+            // 未来 -> 倒计时
+            numDisplay = diffDays;
+            labelDisplay = "还有 / 天";
+            classExtra = "future"; // 蓝色系
+        } else if (diffDays < 0) {
+            // 过去 -> 正计时
+            numDisplay = Math.abs(diffDays); // 取绝对值
+            labelDisplay = "已经 / 天";
+            classExtra = ""; // 默认粉色系
+        } else {
+            // 今天！
+            numDisplay = "今天";
+            labelDisplay = "就是！";
+            classExtra = "today"; 
+        }
+
+        // 头像处理 (如果没有自定义，就用当前的)
+        // 支持点击更换逻辑太复杂，这里简化为：
+        // 左边显示当前用户头像，右边显示当前角色头像
+        const userAva = char.userAvatar;
+        const aiAva = char.avatar;
+
+        const div = document.createElement('div');
+        div.className = `anni-card ${classExtra}`;
+        div.innerHTML = `
+            <div class="btn-del-anni" onclick="deleteAnniversary(${index})">×</div>
+            
+            <div class="anni-header-row">
+                <img src="${userAva}" class="anni-avatar">
+                <div class="anni-wave-line"></div>
+                <img src="${aiAva}" class="anni-avatar">
+            </div>
+            
+            <div class="anni-info">
+                <div class="anni-title">${item.title}</div>
+                <div class="anni-days-box">
+                    ${diffDays < 0 ? `<span class="anni-label">已经</span>` : ''}
+                    <span class="anni-num">${numDisplay}</span>
+                    <span class="anni-label">${diffDays > 0 ? '天' : (diffDays===0 ? '' : '天')}</span>
+                </div>
+                <div class="anni-date">${item.date}</div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// 打开编辑/新建
+function openEditAnniversary(index) {
+    document.getElementById('anni-edit-index').value = index;
+    // 默认今天
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    if (index === -1) {
+        document.getElementById('anni-title-input').value = "";
+        document.getElementById('anni-date-input').value = todayStr;
+    } else {
+        // 这里暂时没做点击编辑，只做了点击删除。如果需要编辑可以加。
+        // 为了简单，目前只支持新建。
+    }
+    openModal('modal-edit-anni');
+}
+
+// 保存
+function saveAnniversary() {
+    const char = getActiveChar();
+    const title = document.getElementById('anni-title-input').value.trim();
+    const date = document.getElementById('anni-date-input').value;
+
+    if(!title || !date) return alert("请填写完整");
+
+    if(!char.anniversaries) char.anniversaries = [];
+
+    char.anniversaries.push({
+        id: Date.now(),
+        title: title,
+        date: date
+    });
+
+    saveData();
+    closeModal('modal-edit-anni');
+    renderAnniversaryList();
+    
+    // 告知用户
+    alert("纪念日已添加！AI 会在聊天中感知到它。");
+}
+
+// 删除
+function deleteAnniversary(index) {
+    if(confirm("确定删除这个纪念日吗？")) {
+        const char = getActiveChar();
+        char.anniversaries.splice(index, 1);
+        saveData();
+        renderAnniversaryList();
+    }
+}
     </script>
 </body>
 </html>
+
 
 
 
