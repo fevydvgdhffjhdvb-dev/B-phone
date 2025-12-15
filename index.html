@@ -13828,21 +13828,28 @@ ${transcript}
 }
 
 function exitCinemaPlayer() {
-    // 先执行同步（如果用户点了“去看看”，函数内部会处理跳转）
+    // 1. 同步聊天记录 (保留你原有的功能)
     syncCinemaChatToMain();
 
-    // 只有当页面还在“详情页”时，才执行默认退出
-    // (防止刚才已经跳到聊天页了，这里又跳回列表页)
+    // 2. 清理视频资源 (🔥 核心修改 🔥)
+    const video = document.getElementById('cinema-video');
+    if (video) {
+        video.pause();
+        
+        // 如果当前有播放链接 (blob:xxxxx)，必须手动释放！
+        // 否则看几个大电影后浏览器内存就爆了
+        if (video.src && video.src.startsWith('blob:')) {
+            URL.revokeObjectURL(video.src);
+            console.log("已释放视频内存引用");
+        }
+        
+        video.removeAttribute('src'); // 彻底移除 src 属性
+        video.load(); // 强制重置播放器状态
+    }
+
+    // 3. 导航逻辑 (回到列表)
     if (document.getElementById('page-cinema-detail').classList.contains('active')) {
-        const video = document.getElementById('cinema-video');
-        video.pause();
-        video.src = "";
-        navigateTo('page-cinema'); // 回到剧集列表
-    } else {
-        // 如果已经跳走了，只要清理视频就行
-        const video = document.getElementById('cinema-video');
-        video.pause();
-        video.src = "";
+        navigateTo('page-cinema'); 
     }
 }
 
@@ -13985,14 +13992,30 @@ async function handleEpisodeUpload(e) {
     loadEpisodeList();
     alert("上传成功！");
 }
-        // 上传视频 (Step 1)
+        // 上传视频 (Step 1) - 智能防爆版
 async function handleVideoUploadOnly(e) {
     const file = e.target.files[0];
     if(!file) return;
     
+    // 🛑 核心逻辑：超过 100MB 就不存了，只存个“引用”
+    // 这样 100GB 的电影也能导入，实际上只存了文件名，毫秒级完成
+    const isLargeFile = file.size > 100 * 1024 * 1024; // 100MB
+    let videoDataToStore = file;
+    let isVirtual = false;
+
+    if (isLargeFile) {
+        if(confirm(`🎬 这个视频较大 (${(file.size/1024/1024/1024).toFixed(2)} GB)。\n\n为了防止卡顿，我们将只保存“引用”。\n下次播放时，需要您手动再次选择这个文件。\n\n是否继续？`)) {
+            videoDataToStore = null; // 关键：不存文件实体！
+            isVirtual = true;
+        } else {
+            e.target.value = '';
+            return;
+        }
+    }
+
     const btn = e.target.previousElementSibling;
     const oldText = btn.innerText;
-    btn.innerText = "正在存入数据库...";
+    btn.innerText = "正在创建记录...";
     btn.disabled = true;
 
     try {
@@ -14005,23 +14028,24 @@ async function handleVideoUploadOnly(e) {
             seriesId: cinemaState.currentSeriesId,
             index: Date.now(), 
             title: file.name,
-            videoBlob: file,
-            subtitles: [], // 先给个空的
+            videoBlob: videoDataToStore, // 如果是大文件，这里是 null
+            isVirtual: isVirtual,        // 标记：这是一个虚空引用
+            subtitles: [], 
             summary: ""
         };
         
         store.put(newEp);
         await new Promise(resolve => tx.oncomplete = resolve);
         
-        loadEpisodeList(); // 刷新列表
-        alert("视频上传成功！\n请在列表中点击“+ 上传字幕”来添加字幕文件。");
+        loadEpisodeList(); 
+        alert("导入成功！\n（如果是大文件，看的时候记得选一下源文件哦）");
 
     } catch(err) {
         alert("保存失败: " + err.message);
     } finally {
         btn.innerText = oldText;
         btn.disabled = false;
-        e.target.value = ''; // 清空 input
+        e.target.value = ''; 
     }
 }
         // 触发字幕上传 (记录要给哪一集传)
@@ -14136,73 +14160,87 @@ function parseSRT(srt) {
     return result;
 }
 
-// 5. 播放逻辑 (最终完整版：加载视频 + 字幕 + 历史聊天 + 前情提要)
+// 播放逻辑 - 支持虚空引用
 async function playEpisode(epId) {
     cinemaState.cinemaSessionStartTime = Date.now();
     const db = await openDB();
     const tx = db.transaction("cinema_episodes", "readonly");
     const store = tx.objectStore("cinema_episodes");
     
-    // 1. 获取当前集
     const req = store.get(epId);
     
     req.onsuccess = async () => {
         const ep = req.result;
-        if (!ep.chatLogs) ep.chatLogs = []; // 初始化聊天
+        if (!ep) return alert("集数不存在");
+        if (!ep.chatLogs) ep.chatLogs = [];
         
         cinemaState.currentEpData = ep;
         cinemaState.parsedSubtitles = ep.subtitles || [];
 
-        // ==========================================
-        // ✨✨✨ 核心新增：加载前情提要 ✨✨✨
-        // ==========================================
-        // 1. 再开一个请求，获取该剧所有集
+        // --- 加载前情提要 (保持原逻辑) ---
         const index = store.index("seriesId");
         const allReq = index.getAll(ep.seriesId);
-        
         allReq.onsuccess = () => {
-            const allEps = allReq.result;
-            // 2. 筛选出比当前集 index 小的集 (即前几集)
-            // 并且必须是有 summary (总结) 的
-            const prevEps = allEps
-                .filter(e => e.index < ep.index && e.summary)
-                .sort((a,b) => a.index - b.index); // 按顺序排
-
-            if (prevEps.length > 0) {
-                // 3. 拼装文本
-                cinemaState.summaryHistory = prevEps.map(e => 
-                    `[第${getEpNumber(e.title)}集剧情]: ${e.summary}`
-                ).join("\n");
-            } else {
-                cinemaState.summaryHistory = "（这是第一集，或者前几集还没有生成总结）";
-            }
-            
-            console.log("加载的前情提要:", cinemaState.summaryHistory);
+            const allEps = allReq.result.filter(e => e.index < ep.index && e.summary).sort((a,b)=>a.index-b.index);
+            cinemaState.summaryHistory = allEps.length > 0 ? allEps.map(e => `[前情]: ${e.summary}`).join("\n") : "（无前情提要）";
         };
-        // ==========================================
 
+        // ==========================================
+        // 🎞️ 核心修改：处理视频源
+        // ==========================================
         const video = document.getElementById('cinema-video');
-        const track = document.getElementById('cinema-track');
-        
-        const url = URL.createObjectURL(ep.videoBlob);
-        video.src = url;
-        
-        if (ep.subtitles && ep.subtitles.length > 0) {
-            const vttText = "WEBVTT\n\n" + ep.subtitles.map((s, i) => {
-                const format = (sec) => new Date(sec * 1000).toISOString().substr(11, 12);
-                return `${i+1}\n${format(s.start)} --> ${format(s.end)}\n${s.text}`;
-            }).join('\n\n');
-            const trackBlob = new Blob([vttText], {type: 'text/vtt'});
-            track.src = URL.createObjectURL(trackBlob);
-        } else {
-            track.src = "";
+        let videoUrl = "";
+
+        // 情况 A: 数据库里真的存了文件 (小视频)
+        if (ep.videoBlob && !ep.isVirtual) {
+            videoUrl = URL.createObjectURL(ep.videoBlob);
+            startPlaying(videoUrl, ep);
+        } 
+        // 情况 B: 这是一个虚空引用 (大视频)
+        else {
+            // 创建一个临时的文件选择器
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = ".mp4,.mkv,.mov";
+            
+            // 提示用户
+            alert(`🎬 即将播放：《${ep.title}》\n\n这是一个大文件，未存储在浏览器中。\n请在弹出的窗口中，再次选择该视频文件以开始播放。`);
+            
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    // 直接播放本地文件，不存库，速度极快
+                    videoUrl = URL.createObjectURL(file);
+                    startPlaying(videoUrl, ep);
+                }
+            };
+            input.click();
         }
-        
-        document.getElementById('player-title').innerText = ep.title;
-        document.getElementById('cinema-ep-drawer').style.transform = 'translateX(100%)'; 
-        
-        video.play();
     };
+}
+
+// 辅助：开始播放的统一动作
+function startPlaying(url, ep) {
+    const video = document.getElementById('cinema-video');
+    const track = document.getElementById('cinema-track');
+    
+    video.src = url;
+    
+    // 加载字幕
+    if (ep.subtitles && ep.subtitles.length > 0) {
+        const vttText = "WEBVTT\n\n" + ep.subtitles.map((s, i) => {
+            const format = (sec) => new Date(sec * 1000).toISOString().substr(11, 12);
+            return `${i+1}\n${format(s.start)} --> ${format(s.end)}\n${s.text}`;
+        }).join('\n\n');
+        track.src = URL.createObjectURL(new Blob([vttText], {type: 'text/vtt'}));
+    } else {
+        track.src = "";
+    }
+    
+    document.getElementById('player-title').innerText = ep.title;
+    document.getElementById('cinema-ep-drawer').style.transform = 'translateX(100%)'; 
+    
+    video.play();
 }
 
 // 一个小辅助函数：尝试从标题提取集数 (比如 "甄嬛传.E01.mp4" -> "1")
@@ -14748,6 +14786,7 @@ function deleteAnniversary(index) {
     </script>
 </body>
 </html>
+
 
 
 
