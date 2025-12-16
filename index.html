@@ -1897,6 +1897,41 @@ select.x-input option {
     position: absolute; top: 10px; right: 10px;
     color: rgba(255,255,255,0.6); font-size: 20px; cursor: pointer;
 }
+        /* --- 放映室卡片操作按钮 --- */
+.cinema-card-actions {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    display: flex;
+    gap: 5px;
+    z-index: 10;
+}
+
+.btn-cinema-action {
+    width: 28px; 
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+/* 编辑按钮 (笔) - 蓝色 */
+.btn-cinema-edit {
+    background: rgba(255, 255, 255, 0.9);
+    color: #007AFF;
+}
+
+/* 删除按钮 (叉) - 红色 */
+.btn-cinema-del {
+    background: rgba(255, 59, 48, 0.9);
+    color: #fff;
+}
     </style>
 </head>
 <body>
@@ -3476,11 +3511,14 @@ select.x-input option {
 </div>
 </div>
 
-<!-- 新建剧集弹窗 -->
+<!-- 新建/编辑 剧集弹窗 -->
 <div class="modal-overlay" id="modal-add-series">
     <div class="modal-box">
-        <div class="modal-header">新建剧集/电影</div>
+        <div class="modal-header">剧集管理</div>
         <div class="modal-body" style="padding:15px;">
+            <!-- ✨ 新增：隐藏域，用于存储当前编辑的剧集ID -->
+            <input type="hidden" id="series-edit-id">
+            
             <div class="ios-list">
                 <div class="ios-item">
                     <span class="ios-label">剧名</span>
@@ -3494,7 +3532,8 @@ select.x-input option {
         </div>
         <div class="modal-footer">
             <button class="modal-btn" onclick="closeModal('modal-add-series')">取消</button>
-            <button class="modal-btn" onclick="createNewSeries()">创建</button>
+            <!-- ✨ 修改：点击调用 saveSeriesData 而不是 createNewSeries -->
+            <button class="modal-btn" onclick="saveSeriesData()">保存</button>
         </div>
     </div>
 </div>
@@ -13727,7 +13766,7 @@ async function initCinemaApp() {
     renderSeriesGrid();
 }
 
-// 渲染剧集列表
+// 渲染剧集列表 (带编辑/删除按钮版)
 async function renderSeriesGrid() {
     const grid = document.getElementById('cinema-grid');
     grid.innerHTML = '';
@@ -13739,29 +13778,141 @@ async function renderSeriesGrid() {
     
     req.onsuccess = () => {
         const list = req.result;
+        // 按时间倒序，新创建的在前面
+        list.reverse();
+
         if (list.length === 0) {
-            grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">暂无剧集<br>点击右上角 + 创建</div>';
+            grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; margin-top:50px;">暂无剧集<br>点击右上角 + 创建</div>';
             return;
         }
         
         list.forEach(s => {
             const div = document.createElement('div');
             div.className = 'gallery-item'; // 复用相册样式
+            div.style.position = 'relative';
+            
+            // 点击卡片本体：进入播放页
             div.onclick = () => openSeriesDetail(s.id);
+            
             div.innerHTML = `
-                <img src="${s.cover || 'https://via.placeholder.com/150?text=Movie'}" class="gallery-thumb" style="border-radius:10px;">
-                <div style="position:absolute; bottom:0; width:100%; background:rgba(0,0,0,0.6); color:#fff; font-size:12px; padding:5px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.title}</div>
+                <img src="${s.cover || 'https://via.placeholder.com/150?text=Movie'}" class="gallery-thumb" style="border-radius:10px; object-fit:cover;">
+                
+                <!-- ✨ 新增：操作按钮区 (阻止冒泡防止点进详情页) -->
+                <div class="cinema-card-actions" onclick="event.stopPropagation()">
+                    <button class="btn-cinema-action btn-cinema-edit" onclick="openEditSeriesModal('${s.id}')">✎</button>
+                    <button class="btn-cinema-action btn-cinema-del" onclick="deleteSeries('${s.id}', '${s.title}')">×</button>
+                </div>
+
+                <div style="position:absolute; bottom:0; width:100%; background:linear-gradient(to top, rgba(0,0,0,0.9), transparent); color:#fff; font-size:12px; padding:8px 5px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-bottom-left-radius:10px; border-bottom-right-radius:10px;">
+                    ${s.title}
+                </div>
             `;
             grid.appendChild(div);
         });
     };
 }
 
-// 创建新剧集
+// 打开新建窗口
 function openAddSeriesModal() {
+    document.getElementById('series-edit-id').value = ""; // 清空ID，表示新建
     document.getElementById('series-name-input').value = '';
     document.getElementById('series-cover-input').value = '';
+    
+    // 修改标题提示
+    document.querySelector('#modal-add-series .modal-header').innerText = "新建剧集";
     openModal('modal-add-series');
+}
+
+// 打开编辑窗口
+async function openEditSeriesModal(id) {
+    const db = await openDB();
+    const tx = db.transaction("cinema_series", "readonly");
+    const store = tx.objectStore("cinema_series");
+    
+    store.get(id).onsuccess = (e) => {
+        const s = e.target.result;
+        if(s) {
+            document.getElementById('series-edit-id').value = s.id; // 填入ID
+            document.getElementById('series-name-input').value = s.title;
+            document.getElementById('series-cover-input').value = s.cover;
+            
+            // 修改标题提示
+            document.querySelector('#modal-add-series .modal-header').innerText = "编辑信息";
+            openModal('modal-add-series');
+        }
+    };
+}
+        // 保存剧集 (合并了新建和修改逻辑)
+async function saveSeriesData() {
+    const id = document.getElementById('series-edit-id').value;
+    const title = document.getElementById('series-name-input').value.trim();
+    const cover = document.getElementById('series-cover-input').value.trim();
+    
+    if (!title) return alert("请输入剧名");
+
+    const db = await openDB();
+    const tx = db.transaction("cinema_series", "readwrite");
+    const store = tx.objectStore("cinema_series");
+
+    if (id) {
+        // === 编辑模式 ===
+        // 先取出旧数据，只更新 title 和 cover，保持其他字段不变
+        store.get(id).onsuccess = (e) => {
+            const data = e.target.result;
+            data.title = title;
+            data.cover = cover;
+            store.put(data);
+        };
+    } else {
+        // === 新建模式 ===
+        const newSeries = {
+            id: 'series_' + Date.now(),
+            title: title,
+            cover: cover,
+            seriesSummary: ""
+        };
+        store.put(newSeries);
+    }
+
+    // 等待保存完成
+    await new Promise(resolve => tx.oncomplete = resolve);
+    
+    closeModal('modal-add-series');
+    renderSeriesGrid(); // 刷新列表
+}
+        // 删除剧集 (连带删除旗下所有分集)
+async function deleteSeries(seriesId, seriesTitle) {
+    if (!confirm(`⚠️ 警告：确定要删除《${seriesTitle}》吗？\n\n这将永久删除该剧下的所有：\n- 视频文件\n- 字幕\n- 聊天记录\n\n此操作不可恢复！`)) {
+        return;
+    }
+
+    const db = await openDB();
+    
+    // 1. 删除剧集索引
+    const tx1 = db.transaction("cinema_series", "readwrite");
+    tx1.objectStore("cinema_series").delete(seriesId);
+    await new Promise(resolve => tx1.oncomplete = resolve);
+
+    // 2. 级联删除：找到所有属于该剧集的 Episode 并删除
+    // 这一步很重要，特别是对于存了视频Blob的情况，要释放空间
+    const tx2 = db.transaction("cinema_episodes", "readwrite");
+    const epStore = tx2.objectStore("cinema_episodes");
+    const index = epStore.index("seriesId");
+    
+    const req = index.getAllKeys(seriesId); // 获取所有分集的 ID
+    
+    req.onsuccess = () => {
+        const epIds = req.result;
+        epIds.forEach(eid => {
+            epStore.delete(eid);
+        });
+        
+        // 只有当所有删除指令都下达后，才刷新界面
+        tx2.oncomplete = () => {
+            renderSeriesGrid();
+            alert(`《${seriesTitle}》及其所有数据已删除。`);
+        };
+    };
 }
 
 async function createNewSeries() {
@@ -15013,6 +15164,7 @@ function deleteAnniversary(index) {
     </script>
 </body>
 </html>
+
 
 
 
