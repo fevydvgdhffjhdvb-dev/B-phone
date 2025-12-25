@@ -190,13 +190,13 @@ body {
     align-items: center;
 }
 
-/* --- 第一页：混合布局行 --- */
+/* --- 第一页：混合布局行 (调整高度，使其更像正方形) --- */
 .mixed-row {
     width: 100%;
     display: flex;
     justify-content: space-between;
-    margin-bottom: 20px;
-    height: 155px; /* 固定高度确保整齐 */
+    margin-bottom: 25px; /* 增加行间距，更透气 */
+    height: 150px; /* 稍微调小高度，让它看起来更方正 */
 }
 
 /* 占一半宽度的容器 */
@@ -206,47 +206,60 @@ body {
     position: relative;
 }
 
-/* 2x2 小应用网格 */
+/* 2x2 小应用网格 (带名字版) */
 .mini-app-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 15px; /* 图标间距 */
+    gap: 8px 10px; /* 调整间距 */
     justify-items: center;
     align-items: center;
     height: 100%;
+    /* 去掉之前的居中对齐，改为稍微分散一点 */
+    align-content: space-around; 
 }
 
-/* 复用原本的图标样式，但稍微缩小一点适配 2x2 */
+/* 缩小图标以容纳文字 */
 .mini-app-grid .app-icon {
-    width: 54px; 
-    height: 54px; 
-    font-size: 24px;
+    width: 48px; 
+    height: 48px; 
+    font-size: 22px;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15);
 }
+/* 恢复显示名字 */
 .mini-app-grid .app-name {
-    display: none; /* 空间太小，建议在混合布局中隐藏名字，或者字体极小 */
+    display: block !important; 
+    font-size: 10px;
+    margin-top: 3px;
+    transform: scale(0.9); /* 稍微缩小字体防止换行 */
+    white-space: nowrap;
 }
 
-/* --- 组件：待办事项 (To-Do) --- */
+/* --- 组件：待办事项 (To-Do) 优化版 --- */
 .widget-todo {
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.2); /* 半透明白 */
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.9); /* 更白的背景，像便签 */
+    border-radius: 24px; /* 更圆润的角 */
     padding: 15px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    color: #fff;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    color: #333; /* 深色文字 */
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.05);
 }
 .widget-title {
-    font-size: 14px; 
-    font-weight: bold; 
-    margin-bottom: 8px; 
+    font-size: 13px; 
+    font-weight: 800; 
+    margin-bottom: 10px; 
+    color: #000;
     display: flex; 
     justify-content: space-between;
+    align-items: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 .todo-list-scroll {
     flex: 1;
@@ -256,65 +269,151 @@ body {
 .todo-item {
     display: flex;
     align-items: center;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
     cursor: pointer;
+    background: #f2f2f7;
+    padding: 6px 8px;
+    border-radius: 8px;
 }
 .todo-check {
-    width: 12px; height: 12px; 
-    border: 1px solid #fff; 
-    border-radius: 3px; 
-    margin-right: 6px;
+    width: 14px; height: 14px; 
+    border: 2px solid #ccc; 
+    border-radius: 4px; 
+    margin-right: 8px;
     flex-shrink: 0;
 }
+.todo-check.done {
+    background: #34c759;
+    border-color: #34c759;
+}
 .todo-text {
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    color: #333;
+    font-weight: 500;
 }
 
-/* --- 组件：CD 播放器 --- */
+/* --- 组件：复古 CD 机 (仿图样式) --- */
 .widget-cd {
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    /* 银灰色磨砂外壳 */
+    background: linear-gradient(135deg, #e3e3e3 0%, #d4d4d4 100%);
+    border-radius: 24px;
     position: relative;
     overflow: hidden;
     cursor: pointer;
-}
-.cd-disc {
-    width: 110px;
-    height: 110px;
-    border-radius: 50%;
-    background: #000;
-    background-size: cover;
-    background-position: center;
-    border: 3px solid rgba(255,255,255,0.2);
-    animation: spin 10s linear infinite;
-    animation-play-state: paused; /* 默认暂停，有音乐时可以跑 */
-}
-.widget-cd.active .cd-disc {
-    animation-play-state: running;
-}
-.cd-center-hole {
-    width: 20px; height: 20px; background: rgba(255,255,255,0.2); 
-    border-radius: 50%; position: absolute;
-    top: 50%; left: 50%; transform: translate(-50%, -50%);
-    backdrop-filter: blur(5px);
+    box-shadow: 
+        inset 0 1px 0 rgba(255,255,255,0.8),
+        0 10px 25px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* --- 第二页：普通网格 --- */
-.page2-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 30px 15px;
-    width: 100%;
-    padding-top: 10px;
+/* 装饰：左下角的开关 */
+.cd-decor-switch {
+    position: absolute;
+    bottom: 15px; left: 15px;
+    width: 8px; height: 20px;
+    background: #333;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(255,255,255,0.5);
+}
+
+/* 装饰：右下角的音量推杆 */
+.cd-decor-slider {
+    position: absolute;
+    bottom: 15px; right: 15px;
+    width: 20px; height: 30px;
+    background: #ccc;
+    border-radius: 4px;
+    border: 1px solid #bbb;
+}
+.cd-decor-slider::after {
+    content:''; position: absolute; bottom: 5px; left: 2px;
+    width: 14px; height: 10px; background: #333; border-radius: 2px;
+}
+
+/* 黑胶/光盘主体 */
+.cd-disc-container {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: #1a1a1a; /* 黑胶底色 */
+    /* 模拟黑胶纹路 */
+    background-image: repeating-radial-gradient(
+      #1a1a1a 0, 
+      #1a1a1a 2px, 
+      #2a2a2a 3px, 
+      #2a2a2a 4px
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    animation: spin 8s linear infinite;
+    animation-play-state: paused;
+    position: relative;
+    z-index: 1;
+}
+
+/* 封面图 (贴在黑胶中间) */
+.cd-cover-art {
+    width: 55px; height: 55px;
+    border-radius: 50%;
+    background-color: #eee;
+    background-size: cover;
+    background-position: center;
+    border: 2px solid #fff;
+    position: relative;
+}
+/* 封面中间的小孔 */
+.cd-cover-art::after {
+    content: ''; position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 8px; height: 8px; background: #e3e3e3; border-radius: 50%;
+    border: 1px solid #ccc;
+}
+
+/* 唱臂 (Tone Arm) */
+.cd-arm {
+    position: absolute;
+    top: -10px; right: 15px;
+    width: 10px; height: 90px;
+    z-index: 10;
+    transform-origin: top center;
+    transform: rotate(0deg); /* 默认没播放时的角度 */
+    transition: transform 0.5s ease;
+    pointer-events: none; /* 让点击穿透给底下的 div */
+}
+/* 唱臂的轴承 */
+.cd-arm::before {
+    content: ''; position: absolute; top: 5px; left: -5px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #ccc; border: 2px solid #999;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+/* 唱臂杆子 */
+.cd-arm-rod {
+    width: 6px; height: 100%; background: #silver;
+    background: linear-gradient(90deg, #bbb, #eee, #bbb);
+    margin: 0 auto;
+    border-radius: 3px;
+    position: relative;
+}
+/* 唱头 */
+.cd-arm-head {
+    position: absolute; bottom: -5px; left: -4px;
+    width: 14px; height: 20px; background: #333;
+    border-radius: 2px;
+    transform: rotate(15deg);
+}
+
+/* 激活状态 */
+.widget-cd.active .cd-disc-container {
+    animation-play-state: running;
+}
+.widget-cd.active .cd-arm {
+    transform: rotate(25deg); /* 移到唱片上 */
 }
 
 /* --- 底部翻页点 --- */
@@ -2203,57 +2302,79 @@ select.x-input option {
                 
                 <!-- 第一行：左待办，右App -->
                 <div class="mixed-row">
-                    <!-- 左：待办事项小组件 -->
+                    <!-- 左：待办事项小组件 (样式更新) -->
                     <div class="half-block widget-todo" onclick="addTodoItem()">
                         <div class="widget-title">
-                            <span>📝 待办事项</span>
-                            <span style="font-size:12px; opacity:0.7;">+</span>
+                            <span>TO-DO</span>
+                            <span style="font-size:16px; color:#007AFF;">+</span>
                         </div>
                         <div class="todo-list-scroll" id="todo-widget-list">
                             <!-- JS 动态生成 -->
-                            <div style="opacity:0.6; margin-top:10px;">暂无事项</div>
+                            <div style="opacity:0.6; margin-top:20px; text-align:center; font-size:12px;">点击添加<br>待办事项</div>
                         </div>
                     </div>
 
-                    <!-- 右：2x2 APP -->
+                    <!-- 右：2x2 APP (带名字) -->
                     <div class="half-block mini-app-grid">
                         <div class="app-icon-container" onclick="navigateTo('page-msg-list')">
                             <div class="app-icon icon-msg" id="app-icon-msg">💬</div>
+                            <div class="app-name">信息</div>
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-memory')">
                             <div class="app-icon icon-note" id="app-icon-mem">📝</div>
+                            <div class="app-name">记忆库</div>
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-settings')">
                             <div class="app-icon icon-settings" id="app-icon-set">⚙️</div>
+                            <div class="app-name">设置</div>
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-theme')">
                             <div class="app-icon" id="app-icon-theme" style="background: linear-gradient(to bottom, #ff2d55, #ff375f);">🎨</div>
+                            <div class="app-name">美化</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- 第二行：左App，右CD -->
                 <div class="mixed-row">
-                    <!-- 左：2x2 APP -->
+                    <!-- 左：2x2 APP (带名字) -->
                     <div class="half-block mini-app-grid">
                         <div class="app-icon-container" onclick="navigateTo('page-diary')">
                             <div class="app-icon" id="app-icon-diary" style="background: linear-gradient(to bottom, #d4a373, #a98467);">📖</div>
+                            <div class="app-name">日记</div>
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-pomodoro'); initPomoPage();">
                             <div class="app-icon" id="app-icon-pomo" style="background: linear-gradient(to bottom, #ff6b6b, #ee5253);">🍅</div>
+                            <div class="app-name">专注</div>
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-calendar'); initCalendarPage();">
                             <div class="app-icon" id="app-icon-cal" style="background: #fff; color: #333;">📅</div>
+                            <div class="app-name">日历</div>
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-schedule'); renderScheduleList();">
                             <div class="app-icon" id="app-icon-sched" style="background: linear-gradient(to bottom, #5856d6, #af52de);">📅</div>
+                            <div class="app-name">日程</div>
                         </div>
                     </div>
 
-                    <!-- 右：CD 小组件 -->
-                    <div class="half-block widget-cd" onclick="changeCdCover()">
-                        <div class="cd-disc" id="cd-disc-img" style="background-image: url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300');"></div>
-                        <div class="cd-center-hole"></div>
+                    <!-- 右：复古 CD 播放器 -->
+                    <div class="half-block widget-cd" id="widget-cd-player" onclick="toggleCdPlay()">
+                        <!-- 装饰开关 -->
+                        <div class="cd-decor-switch"></div>
+                        <!-- 装饰推子 -->
+                        <div class="cd-decor-slider"></div>
+                        
+                        <!-- 黑胶唱片 (旋转部分) -->
+                        <div class="cd-disc-container">
+                            <div class="cd-cover-art" id="cd-cover-art" style="background-image: url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300');"></div>
+                        </div>
+
+                        <!-- 唱臂 -->
+                        <div class="cd-arm">
+                            <div class="cd-arm-rod">
+                                <div class="cd-arm-head"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -16104,12 +16225,48 @@ function getTodoContext() {
 // (我会在最后一步提示你)
 
 
-// 3. 💿 CD 组件逻辑
+// 3. 💿 升级版 CD 组件逻辑
+let isCdPlaying = false;
+
+// 点击切换播放状态 (带动效)
+function toggleCdPlay() {
+    const widget = document.getElementById('widget-cd-player');
+    isCdPlaying = !isCdPlaying;
+    
+    if (isCdPlaying) {
+        widget.classList.add('active');
+        // 如果有音乐系统，这里可以联动播放
+        // if(audioPlayer.src) audioPlayer.play();
+    } else {
+        widget.classList.remove('active');
+        // if(audioPlayer.src) audioPlayer.pause();
+    }
+}
+
+// 长按更换封面 (模拟)
+let cdPressTimer;
+const cdWidget = document.getElementById('widget-cd-player');
+
+if (cdWidget) {
+    cdWidget.addEventListener('mousedown', () => {
+        cdPressTimer = setTimeout(changeCdCover, 800); // 长按800ms触发换图
+    });
+    cdWidget.addEventListener('touchstart', () => {
+        cdPressTimer = setTimeout(changeCdCover, 800);
+    });
+    cdWidget.addEventListener('mouseup', () => clearTimeout(cdPressTimer));
+    cdWidget.addEventListener('touchend', () => clearTimeout(cdPressTimer));
+    // 移动则取消
+    cdWidget.addEventListener('mousemove', () => clearTimeout(cdPressTimer));
+}
+
 function changeCdCover() {
-    const url = prompt("请输入图片链接作为 CD 封面:", "");
+    // 只有非播放状态才允许换封面，防止误触
+    if(isCdPlaying) return; 
+    
+    const url = prompt("请输入图片链接作为专辑封面:", "");
     if(url) {
-        document.getElementById('cd-disc-img').style.backgroundImage = `url('${url}')`;
-        // 保存到 localStorage 避免刷新丢失
+        document.getElementById('cd-cover-art').style.backgroundImage = `url('${url}')`;
         localStorage.setItem('ai_phone_cd_cover', url);
     }
 }
@@ -16118,13 +16275,14 @@ function changeCdCover() {
 window.addEventListener('load', () => {
     const savedCover = localStorage.getItem('ai_phone_cd_cover');
     if(savedCover) {
-        document.getElementById('cd-disc-img').style.backgroundImage = `url('${savedCover}')`;
+        document.getElementById('cd-cover-art').style.backgroundImage = `url('${savedCover}')`;
     }
 });
         
     </script>
 </body>
 </html>
+
 
 
 
