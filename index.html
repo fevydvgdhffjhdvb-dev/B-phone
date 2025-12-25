@@ -164,24 +164,176 @@ body {
         .clock-time { font-size: 72px; font-weight: 200; letter-spacing: -2px; line-height: 1; }
         .clock-date { font-size: 18px; margin-top: 5px; font-weight: 500; }
 
-        /* 修改 .app-grid (原第69-75行) */
-        .app-grid {
-            margin-top: 0;       /* 去掉 auto，让它不再沉底，改为靠上 */
-            margin-bottom: auto; /* 底部留空 */
-            
-            display: grid; 
-            grid-template-columns: repeat(4, 1fr); 
-            gap: 30px 15px;      /* 调整图标间距，行距大一点 */
-            padding: 20px;
-            
-            /* 关键：去掉背景色、磨砂和边框 */
-            background: none;    
-            backdrop-filter: none;
-            border-radius: 0;
-            
-            margin-left: 10px; 
-            margin-right: 10px;
-        }
+        /* --- 首页滑动容器 --- */
+.home-swiper-container {
+    flex: 1;
+    width: 100%;
+    overflow: hidden; /* 隐藏溢出部分 */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.home-swiper-wrapper {
+    display: flex;
+    width: 200%; /* 两页宽度 */
+    height: 100%;
+    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.home-slide {
+    width: 50%; /* 每一页占总宽的一半 */
+    height: 100%;
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* --- 第一页：混合布局行 --- */
+.mixed-row {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    height: 155px; /* 固定高度确保整齐 */
+}
+
+/* 占一半宽度的容器 */
+.half-block {
+    width: 48%;
+    height: 100%;
+    position: relative;
+}
+
+/* 2x2 小应用网格 */
+.mini-app-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 15px; /* 图标间距 */
+    justify-items: center;
+    align-items: center;
+    height: 100%;
+}
+
+/* 复用原本的图标样式，但稍微缩小一点适配 2x2 */
+.mini-app-grid .app-icon {
+    width: 54px; 
+    height: 54px; 
+    font-size: 24px;
+}
+.mini-app-grid .app-name {
+    display: none; /* 空间太小，建议在混合布局中隐藏名字，或者字体极小 */
+}
+
+/* --- 组件：待办事项 (To-Do) --- */
+.widget-todo {
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2); /* 半透明白 */
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+.widget-title {
+    font-size: 14px; 
+    font-weight: bold; 
+    margin-bottom: 8px; 
+    display: flex; 
+    justify-content: space-between;
+}
+.todo-list-scroll {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 12px;
+}
+.todo-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    cursor: pointer;
+}
+.todo-check {
+    width: 12px; height: 12px; 
+    border: 1px solid #fff; 
+    border-radius: 3px; 
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+.todo-text {
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* --- 组件：CD 播放器 --- */
+.widget-cd {
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+.cd-disc {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: #000;
+    background-size: cover;
+    background-position: center;
+    border: 3px solid rgba(255,255,255,0.2);
+    animation: spin 10s linear infinite;
+    animation-play-state: paused; /* 默认暂停，有音乐时可以跑 */
+}
+.widget-cd.active .cd-disc {
+    animation-play-state: running;
+}
+.cd-center-hole {
+    width: 20px; height: 20px; background: rgba(255,255,255,0.2); 
+    border-radius: 50%; position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    backdrop-filter: blur(5px);
+}
+
+/* --- 第二页：普通网格 --- */
+.page2-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 30px 15px;
+    width: 100%;
+    padding-top: 10px;
+}
+
+/* --- 底部翻页点 --- */
+.pagination-dots {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 30px; /* 在 Home Indicator 上方 */
+    justify-content: center;
+    width: 100%;
+}
+.page-dot {
+    width: 8px; height: 8px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 50%;
+    transition: 0.3s;
+}
+.page-dot.active {
+    background: #fff;
+}
         .app-icon-container { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; transition: 0.2s; }
         .app-icon-container:active { transform: scale(0.9); }
         .app-icon {
@@ -2022,110 +2174,155 @@ select.x-input option {
 
         <!-- ============ 1. 桌面 (Home) ============ -->
         <div class="page active" id="page-home">
-            <div class="home-clock-widget">
-                <div class="clock-time" id="clockTime">12:00</div>
-                <div class="clock-date" id="clockDate">1月1日 星期一</div>
-            </div>
-            <!-- ✨ 新增：天气组件 (点击可以刷新) -->
-            <div class="weather-widget" onclick="getWeather()">
-                <div class="weather-bg-deco">🌤</div>
-                <div class="weather-left">
-                    <div class="weather-temp" id="w-temp">--°</div>
-                    <div class="weather-desc" id="w-desc">点击获取天气</div>
-                    <div class="weather-range" id="w-wind">无需安装App</div>
-                </div>
-                <div class="weather-right">
-                    <div class="weather-icon" id="w-icon">📍</div>
-                    <div class="weather-loc" id="w-city">未定位</div>
-                </div>
-            </div>
-            <!-- ✨ 新增结束 -->
-            <div class="app-grid">
-                <!-- 1. 信息 (加了 id="app-icon-msg") -->
-                <div class="app-icon-container" onclick="navigateTo('page-msg-list')">
-                    <div class="app-icon icon-msg" id="app-icon-msg">💬</div>
-                    <div class="app-name">信息</div>
-                </div>
-                <!-- 2. 记忆库 (加了 id="app-icon-mem") -->
-                <div class="app-icon-container" onclick="navigateTo('page-memory')">
-                    <div class="app-icon icon-note" id="app-icon-mem">📝</div>
-                    <div class="app-name">记忆库</div>
-                </div>
-                <!-- 3. 设置 (加了 id="app-icon-set") -->
-                <div class="app-icon-container" onclick="navigateTo('page-settings')">
-                    <div class="app-icon icon-settings" id="app-icon-set">⚙️</div>
-                    <div class="app-name">设置</div>
-                </div>
-                <!-- 4. 原相机 -> 改成 美化 (加了 id="app-icon-theme") -->
-                <div class="app-icon-container" onclick="navigateTo('page-theme')">
-                    <div class="app-icon" id="app-icon-theme" style="background: linear-gradient(to bottom, #ff2d55, #ff375f);">🎨</div>
-                    <div class="app-name">美化</div>
-                </div>
-                <!-- 5. 日记本 -->
-                <div class="app-icon-container" onclick="navigateTo('page-diary')">
-                    <div class="app-icon" id="app-icon-diary" style="background: linear-gradient(to bottom, #d4a373, #a98467);">📖</div>
-                    <div class="app-name">日记本</div>
-                </div>
-                <!-- 6. 番茄钟 (新增) -->
-                <div class="app-icon-container" onclick="navigateTo('page-pomodoro'); initPomoPage();">
-                    <div class="app-icon" id="app-icon-pomo" style="background: linear-gradient(to bottom, #ff6b6b, #ee5253);">🍅</div>
-                    <div class="app-name">番茄钟</div>
-                </div>
-                <!-- 7. 日历 (新增) -->
-<div class="app-icon-container" onclick="navigateTo('page-calendar'); initCalendarPage();">
-    <div class="app-icon" id="app-icon-cal" style="background: #fff; color: #333;">📅</div>
-    <div class="app-name">日历</div>
-</div>
-                <!-- 8. 日程表 (通用版) -->
-                <div class="app-icon-container" onclick="navigateTo('page-schedule'); renderScheduleList();">
-                    <!-- 换个更有商务感的颜色，比如紫色渐变，或者保持蓝色 -->
-                    <div class="app-icon" id="app-icon-sched" style="background: linear-gradient(to bottom, #5856d6, #af52de);">📅</div>
-                    <div class="app-name">日程</div>
-                </div>
-                <!-- 9. X (Twitter) -->
-<div class="app-icon-container" onclick="navigateTo('page-x'); initXApp();">
-    <div class="app-icon" id="app-icon-x" style="background: #000; color: white; font-family: sans-serif; font-weight: 900; font-size: 32px;">𝕏</div>
-    <div class="app-name">X</div>
-</div>
-                <!-- 12. 共读 (Co-Reading) -->
-<div class="app-icon-container" onclick="navigateTo('page-bookshelf'); loadLibrary();">
-    <!-- 给它一个书本风格的颜色，比如橙棕色渐变 -->
-    <div class="app-icon" id="app-icon-book" style="background: linear-gradient(to bottom, #a0522d, #cd853f);">📚</div>
-    <div class="app-name">共读</div>
-</div>
-                <!-- 13. 记账本 (Wallet) -->
-<div class="app-icon-container" onclick="navigateTo('page-wallet'); initWalletPage();">
-    <div class="app-icon" id="app-icon-wallet" style="background: linear-gradient(to bottom, #34c759, #28a745);">💸</div>
-    <div class="app-name">记账本</div>
-</div>
-                <!-- 14. 同人论坛 (Fanfic) -->
-<div class="app-icon-container" onclick="navigateTo('page-forum'); renderForumFeed();">
-    <div class="app-icon" id="app-icon-forum" style="background: linear-gradient(to bottom, #ff2d55, #ff5e3a);">✒️</div>
-    <div class="app-name">粮仓</div>
-</div>
-                <!-- 15. 情侣飞行棋 (Ludo) -->
-<div class="app-icon-container" onclick="openLudoSelectChar()">
-    <div class="app-icon" id="app-icon-ludo" style="background: linear-gradient(to bottom, #ff9a9e, #fad0c4);">🎲</div>
-    <div class="app-name">飞行棋</div>
-</div>
-                <!-- 16. 剧场模式 (Theater / 异世界) -->
-<div class="app-icon-container" onclick="initTheaterMode()">
-    <div class="app-icon" id="app-icon-theater" style="background: linear-gradient(to bottom, #2b2b2b, #000000); border:1px solid #444;">🎭</div>
-    <div class="app-name">剧场</div>
-</div>
-                <!-- 新增：相册 (Gallery) -->
-<div class="app-icon-container" onclick="navigateTo('page-gallery'); loadGalleryImages();">
-    <div class="app-icon" id="app-icon-gallery" style="background: linear-gradient(to bottom, #ff9500, #ff5e3a);">🖼️</div>
-    <div class="app-name">相册</div>
-</div>
-                <!-- 放映室图标 -->
-<!-- 原来的代码里可能没有 id，请加上 id="app-icon-cinema" -->
-<div class="app-icon-container" onclick="initCinemaApp()">
-    <div class="app-icon" id="app-icon-cinema" style="background: linear-gradient(to bottom, #000000, #434343);">🎬</div>
-    <div class="app-name">放映室</div>
-</div>
-            </div>
+    <!-- 顶部：时钟 (保持不变) -->
+    <div class="home-clock-widget">
+        <div class="clock-time" id="clockTime">12:00</div>
+        <div class="clock-date" id="clockDate">1月1日 星期一</div>
+    </div>
+    
+    <!-- 顶部：天气 (保持不变) -->
+    <div class="weather-widget" onclick="getWeather()">
+        <div class="weather-bg-deco">🌤</div>
+        <div class="weather-left">
+            <div class="weather-temp" id="w-temp">--°</div>
+            <div class="weather-desc" id="w-desc">点击获取天气</div>
+            <div class="weather-range" id="w-wind">无需安装App</div>
         </div>
+        <div class="weather-right">
+            <div class="weather-icon" id="w-icon">📍</div>
+            <div class="weather-loc" id="w-city">未定位</div>
+        </div>
+    </div>
+
+    <!-- 滑动容器 (新结构) -->
+    <div class="home-swiper-container" id="homeSwiper">
+        <div class="home-swiper-wrapper" id="homeWrapper">
+            
+            <!-- === 第一页 === -->
+            <div class="home-slide">
+                
+                <!-- 第一行：左待办，右App -->
+                <div class="mixed-row">
+                    <!-- 左：待办事项小组件 -->
+                    <div class="half-block widget-todo" onclick="addTodoItem()">
+                        <div class="widget-title">
+                            <span>📝 待办事项</span>
+                            <span style="font-size:12px; opacity:0.7;">+</span>
+                        </div>
+                        <div class="todo-list-scroll" id="todo-widget-list">
+                            <!-- JS 动态生成 -->
+                            <div style="opacity:0.6; margin-top:10px;">暂无事项</div>
+                        </div>
+                    </div>
+
+                    <!-- 右：2x2 APP -->
+                    <div class="half-block mini-app-grid">
+                        <div class="app-icon-container" onclick="navigateTo('page-msg-list')">
+                            <div class="app-icon icon-msg" id="app-icon-msg">💬</div>
+                        </div>
+                        <div class="app-icon-container" onclick="navigateTo('page-memory')">
+                            <div class="app-icon icon-note" id="app-icon-mem">📝</div>
+                        </div>
+                        <div class="app-icon-container" onclick="navigateTo('page-settings')">
+                            <div class="app-icon icon-settings" id="app-icon-set">⚙️</div>
+                        </div>
+                        <div class="app-icon-container" onclick="navigateTo('page-theme')">
+                            <div class="app-icon" id="app-icon-theme" style="background: linear-gradient(to bottom, #ff2d55, #ff375f);">🎨</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第二行：左App，右CD -->
+                <div class="mixed-row">
+                    <!-- 左：2x2 APP -->
+                    <div class="half-block mini-app-grid">
+                        <div class="app-icon-container" onclick="navigateTo('page-diary')">
+                            <div class="app-icon" id="app-icon-diary" style="background: linear-gradient(to bottom, #d4a373, #a98467);">📖</div>
+                        </div>
+                        <div class="app-icon-container" onclick="navigateTo('page-pomodoro'); initPomoPage();">
+                            <div class="app-icon" id="app-icon-pomo" style="background: linear-gradient(to bottom, #ff6b6b, #ee5253);">🍅</div>
+                        </div>
+                        <div class="app-icon-container" onclick="navigateTo('page-calendar'); initCalendarPage();">
+                            <div class="app-icon" id="app-icon-cal" style="background: #fff; color: #333;">📅</div>
+                        </div>
+                        <div class="app-icon-container" onclick="navigateTo('page-schedule'); renderScheduleList();">
+                            <div class="app-icon" id="app-icon-sched" style="background: linear-gradient(to bottom, #5856d6, #af52de);">📅</div>
+                        </div>
+                    </div>
+
+                    <!-- 右：CD 小组件 -->
+                    <div class="half-block widget-cd" onclick="changeCdCover()">
+                        <div class="cd-disc" id="cd-disc-img" style="background-image: url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300');"></div>
+                        <div class="cd-center-hole"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- === 第二页 === -->
+            <div class="home-slide">
+                <div class="page2-grid app-grid"> <!-- 复用 app-grid 样式保持一致 -->
+                    
+                    <!-- X -->
+                    <div class="app-icon-container" onclick="navigateTo('page-x'); initXApp();">
+                        <div class="app-icon" id="app-icon-x" style="background: #000; color: white;">𝕏</div>
+                        <div class="app-name">X</div>
+                    </div>
+                    
+                    <!-- 共读 -->
+                    <div class="app-icon-container" onclick="navigateTo('page-bookshelf'); loadLibrary();">
+                        <div class="app-icon" id="app-icon-book" style="background: linear-gradient(to bottom, #a0522d, #cd853f);">📚</div>
+                        <div class="app-name">共读</div>
+                    </div>
+
+                    <!-- 记账 -->
+                    <div class="app-icon-container" onclick="navigateTo('page-wallet'); initWalletPage();">
+                        <div class="app-icon" id="app-icon-wallet" style="background: linear-gradient(to bottom, #34c759, #28a745);">💸</div>
+                        <div class="app-name">记账本</div>
+                    </div>
+
+                    <!-- 粮仓 -->
+                    <div class="app-icon-container" onclick="navigateTo('page-forum'); renderForumFeed();">
+                        <div class="app-icon" id="app-icon-forum" style="background: linear-gradient(to bottom, #ff2d55, #ff5e3a);">✒️</div>
+                        <div class="app-name">粮仓</div>
+                    </div>
+
+                    <!-- 飞行棋 -->
+                    <div class="app-icon-container" onclick="openLudoSelectChar()">
+                        <div class="app-icon" id="app-icon-ludo" style="background: linear-gradient(to bottom, #ff9a9e, #fad0c4);">🎲</div>
+                        <div class="app-name">飞行棋</div>
+                    </div>
+
+                    <!-- 剧场 -->
+                    <div class="app-icon-container" onclick="initTheaterMode()">
+                        <div class="app-icon" id="app-icon-theater" style="background: linear-gradient(to bottom, #2b2b2b, #000000);">🎭</div>
+                        <div class="app-name">剧场</div>
+                    </div>
+
+                    <!-- 相册 -->
+                    <div class="app-icon-container" onclick="navigateTo('page-gallery'); loadGalleryImages();">
+                        <div class="app-icon" id="app-icon-gallery" style="background: linear-gradient(to bottom, #ff9500, #ff5e3a);">🖼️</div>
+                        <div class="app-name">相册</div>
+                    </div>
+
+                    <!-- 放映室 -->
+                    <div class="app-icon-container" onclick="initCinemaApp()">
+                        <div class="app-icon" id="app-icon-cinema" style="background: linear-gradient(to bottom, #000000, #434343);">🎬</div>
+                        <div class="app-name">放映室</div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 底部翻页点 -->
+    <div class="pagination-dots">
+        <div class="page-dot active" id="dot-0"></div>
+        <div class="page-dot" id="dot-1"></div>
+    </div>
+</div>
 
         <!-- ============ 2. 消息列表 (联系人) ============ -->
         <div class="page" id="page-msg-list">
@@ -6963,6 +7160,8 @@ function getStatusContext(char) {
     context += getScheduleContext();
     // === ✨ 插入钱包感知 ===
     context += getWalletContext();
+    // === ✨ 插入待办事项感知 ===
+    context += getTodoContext();
     // === ✨ 插入相册回忆感知 ===
     // 我们需要获取用户最新的一条消息内容来做匹配
     const lastUserMsg = char.messages.length > 0 ? char.messages[char.messages.length-1].content : "";
@@ -15752,10 +15951,181 @@ async function generateFullChartReport() {
     // 触发 AI
     triggerAI();
 }
+        // ==========================================
+// --- 📱 首页滑动与新组件逻辑 ---
+// ==========================================
+
+// 1. 滑动翻页 (Swipe)
+let homeSwipe = {
+    startX: 0,
+    currentPage: 0, // 0 或 1
+    container: null,
+    wrapper: null
+};
+
+function initHomeSwiper() {
+    homeSwipe.container = document.getElementById('homeSwiper');
+    homeSwipe.wrapper = document.getElementById('homeWrapper');
+    
+    if(!homeSwipe.container) return;
+
+    homeSwipe.container.addEventListener('touchstart', (e) => {
+        homeSwipe.startX = e.touches[0].clientX;
+    }, {passive: true});
+
+    homeSwipe.container.addEventListener('touchend', (e) => {
+        const endX = e.changedTouches[0].clientX;
+        const diff = homeSwipe.startX - endX;
+        
+        // 滑动阈值 50px
+        if (diff > 50) {
+            // 左滑 -> 去第二页
+            setHomePage(1);
+        } else if (diff < -50) {
+            // 右滑 -> 回第一页
+            setHomePage(0);
+        }
+    }, {passive: true});
+}
+
+function setHomePage(index) {
+    if (index < 0 || index > 1) return;
+    homeSwipe.currentPage = index;
+    
+    // 移动 wrapper
+    homeSwipe.wrapper.style.transform = `translateX(-${index * 50}%)`;
+    
+    // 更新圆点
+    document.querySelectorAll('.page-dot').forEach((d, i) => {
+        if(i === index) d.classList.add('active');
+        else d.classList.remove('active');
+    });
+}
+
+// 页面加载后初始化
+window.addEventListener('load', initHomeSwiper);
+
+
+// 2. 📝 待办事项 (To-Do) 逻辑
+let todoData = [];
+
+function loadTodos() {
+    const s = localStorage.getItem('ai_phone_todos');
+    if(s) todoData = JSON.parse(s);
+    renderTodoList();
+}
+window.addEventListener('load', loadTodos);
+
+function saveTodos() {
+    localStorage.setItem('ai_phone_todos', JSON.stringify(todoData));
+}
+
+function addTodoItem() {
+    // 简单 prompt 输入
+    const input = prompt("添加待办事项 (格式: 事项名 [DDL: 2025-12-25])", "");
+    if(!input) return;
+    
+    // 简单解析 DDL (如果用户写了 [DDL: xxx])
+    let ddl = null;
+    let content = input;
+    const match = input.match(/\[DDL:\s*(.*?)\]/i);
+    if(match) {
+        ddl = match[1];
+        content = input.replace(match[0], '').trim();
+    }
+
+    todoData.push({
+        id: Date.now(),
+        content: content,
+        ddl: ddl,
+        done: false
+    });
+    
+    saveTodos();
+    renderTodoList();
+}
+
+function deleteTodo(index, e) {
+    e.stopPropagation(); // 防止触发添加
+    if(confirm("确定删除这条事项吗？")) {
+        todoData.splice(index, 1);
+        saveTodos();
+        renderTodoList();
+    }
+}
+
+function renderTodoList() {
+    const list = document.getElementById('todo-widget-list');
+    if(!list) return;
+    list.innerHTML = '';
+    
+    if(todoData.length === 0) {
+        list.innerHTML = '<div style="opacity:0.6; margin-top:10px; font-size:12px;">点击此处添加事项...</div>';
+        return;
+    }
+
+    todoData.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'todo-item';
+        // 阻止冒泡，点击文字删除
+        div.onclick = (e) => deleteTodo(index, e);
+        
+        let ddlHtml = item.ddl ? `<span style="font-size:10px; color:#ffcc00; margin-left:5px;">${item.ddl}</span>` : '';
+        
+        div.innerHTML = `
+            <div class="todo-check"></div>
+            <div class="todo-text">${item.content} ${ddlHtml}</div>
+        `;
+        list.appendChild(div);
+    });
+}
+
+// ✨ AI 感知接口：将待办事项注入 System Prompt
+function getTodoContext() {
+    if(todoData.length === 0) return "";
+    
+    const now = new Date();
+    const todoListText = todoData.map(t => {
+        let status = "";
+        if(t.ddl) {
+            const ddlDate = new Date(t.ddl);
+            const diffDays = Math.ceil((ddlDate - now) / (1000 * 60 * 60 * 24));
+            if(diffDays < 0) status = "(已逾期!)";
+            else if(diffDays <= 3) status = `(紧急! 剩${diffDays}天)`;
+            else status = `(截止: ${t.ddl})`;
+        }
+        return `- ${t.content} ${status}`;
+    }).join('\n');
+
+    return `\n[📋 待办事项清单 (To-Do List)]:\n${todoListText}\n【指令】: 如果有标记为“紧急”或“逾期”的事项，请在聊天中主动提醒或催促用户去完成。`;
+}
+
+// ⚠️ 重要：请找到原本的 `getStatusContext(char)` 函数，把 `context += getTodoContext();` 加进去！
+// (我会在最后一步提示你)
+
+
+// 3. 💿 CD 组件逻辑
+function changeCdCover() {
+    const url = prompt("请输入图片链接作为 CD 封面:", "");
+    if(url) {
+        document.getElementById('cd-disc-img').style.backgroundImage = `url('${url}')`;
+        // 保存到 localStorage 避免刷新丢失
+        localStorage.setItem('ai_phone_cd_cover', url);
+    }
+}
+
+// 加载 CD 封面
+window.addEventListener('load', () => {
+    const savedCover = localStorage.getItem('ai_phone_cd_cover');
+    if(savedCover) {
+        document.getElementById('cd-disc-img').style.backgroundImage = `url('${savedCover}')`;
+    }
+});
         
     </script>
 </body>
 </html>
+
 
 
 
