@@ -1932,6 +1932,83 @@ select.x-input option {
     background: rgba(255, 59, 48, 0.9);
     color: #fff;
 }
+        /* --- 🔮 命运屋 (Mystic Lab) 样式 --- */
+.mystic-bg {
+    background: linear-gradient(135deg, #2c003e 0%, #000000 100%);
+    color: #e0d0ff;
+}
+
+/* 选项卡 */
+.mystic-tabs {
+    display: flex; justify-content: center; gap: 20px; padding: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.mystic-tab-btn {
+    background: none; border: none; color: #888; font-size: 16px; font-weight: bold; cursor: pointer; padding-bottom: 5px;
+}
+.mystic-tab-btn.active {
+    color: #d4a373; border-bottom: 2px solid #d4a373;
+}
+
+/* 塔罗区域 */
+.tarot-table {
+    display: flex; flex-direction: column; align-items: center; padding: 20px;
+}
+.tarot-question-input {
+    width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: #fff; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;
+}
+.tarot-deck-area {
+    display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; min-height: 160px;
+}
+
+/* 卡牌翻转动画容器 */
+.tarot-card-scene {
+    width: 90px; height: 150px; perspective: 600px; cursor: pointer;
+}
+.tarot-card-inner {
+    width: 100%; height: 100%; position: relative;
+    transition: transform 0.6s; transform-style: preserve-3d;
+}
+.tarot-card-scene.flipped .tarot-card-inner {
+    transform: rotateY(180deg);
+}
+.tarot-face {
+    position: absolute; width: 100%; height: 100%;
+    backface-visibility: hidden; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+}
+.tarot-face.front {
+    background: url('https://upload.wikimedia.org/wikipedia/en/3/30/Rider-Waite-Smith-Card-Back.jpg') center/cover;
+    border: 2px solid #d4a373;
+}
+.tarot-face.back {
+    background: #fff; transform: rotateY(180deg); display: flex; flex-direction: column;
+}
+.tarot-img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+.tarot-label {
+    position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.8);
+    color: #fff; font-size: 10px; text-align: center; padding: 2px 0;
+}
+
+/* 星座区域 */
+.zodiac-container {
+    padding: 30px 20px; display: flex; flex-direction: column; gap: 20px;
+}
+.zodiac-row {
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px;
+}
+.zodiac-select {
+    background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #555;
+    padding: 5px 10px; border-radius: 6px; font-size: 14px;
+}
+.mystic-btn-main {
+    width: 100%; padding: 15px; margin-top: 20px;
+    background: linear-gradient(to right, #9b59b6, #8e44ad);
+    color: white; font-weight: bold; border: none; border-radius: 12px; font-size: 16px;
+    box-shadow: 0 4px 15px rgba(155, 89, 182, 0.4); cursor: pointer;
+}
+.mystic-desc { font-size: 12px; color: rgba(255,255,255,0.5); text-align: center; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -2095,6 +2172,10 @@ select.x-input option {
                     <!-- 在 .chat-toolbar 里加入这个按钮 -->
 <button class="toolbar-btn" onclick="openAnniversaryModal()" title="纪念日">
     💝
+</button>
+                    <!-- 原有的按钮... -->
+<button class="toolbar-btn" onclick="openMysticModal()" title="命运屋">
+    🔮
 </button>
 </div>
            
@@ -3657,6 +3738,97 @@ select.x-input option {
         <div class="modal-footer">
             <button class="modal-btn" onclick="closeModal('modal-edit-anni')">取消</button>
             <button class="modal-btn" onclick="saveAnniversary()" style="color:#ff2d55; font-weight:bold;">保存</button>
+        </div>
+    </div>
+</div>
+        <!-- ============ 🔮 命运屋 (塔罗/星座) 弹窗 ============ -->
+<div class="modal-overlay" id="modal-mystic">
+    <div class="modal-box mystic-bg" style="height: 85%; max-height: 700px; border: 1px solid #4a3b59;">
+        <div class="modal-header" style="background: transparent; border-bottom: 1px solid rgba(255,255,255,0.1); color: #d4a373;">
+            <button onclick="closeModal('modal-mystic')" style="color: #fff; background:none; border:none;">关闭</button>
+            <span>命运屋 Mystic Lab</span>
+            <span style="width:30px"></span>
+        </div>
+        
+        <!-- 顶部切换 -->
+        <div class="mystic-tabs">
+            <button class="mystic-tab-btn active" onclick="switchMysticTab('tarot')" id="btn-tab-tarot">🎴 塔罗占卜</button>
+            <button class="mystic-tab-btn" onclick="switchMysticTab('horoscope')" id="btn-tab-horo">🌌 星座运势</button>
+        </div>
+
+        <div class="modal-body" style="background: transparent; padding: 0;">
+            
+            <!-- Tab 1: 塔罗牌 -->
+            <div id="view-tarot" style="display: block;">
+                <div class="tarot-table">
+                    <input type="text" id="tarot-question" class="tarot-question-input" placeholder="请在这里默念你的问题... (例如: 我和他最近的发展?)">
+                    
+                    <!-- 牌桌 (洗牌前显示背面，抽牌后显示) -->
+                    <div class="tarot-deck-area" id="tarot-spread-area">
+                        <!-- JS 动态生成 -->
+                        <div style="color:rgba(255,255,255,0.5); margin-top:20px;">点击下方按钮洗牌</div>
+                    </div>
+
+                    <div style="margin-top: 30px; width: 100%;">
+                        <button id="btn-tarot-action" class="mystic-btn-main" onclick="startTarotFlow()">🔮 洗牌并抽牌 (3张)</button>
+                        <div class="mystic-desc">AI 将扮演塔罗师，结合牌面与你的人际关系进行解读</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: 星座 -->
+            <div id="view-horoscope" style="display: none;">
+                <div class="zodiac-container">
+                    
+                    <div class="zodiac-row">
+                        <div>
+                            <div style="font-size:16px; font-weight:bold; color:#fff;">我的星座</div>
+                            <div style="font-size:12px; color:#aaa;">(用户)</div>
+                        </div>
+                        <select id="user-zodiac" class="zodiac-select">
+                            <option value="">--请选择--</option>
+                            <option value="白羊座">♈ 白羊座</option>
+                            <option value="金牛座">♉ 金牛座</option>
+                            <option value="双子座">♊ 双子座</option>
+                            <option value="巨蟹座">♋ 巨蟹座</option>
+                            <option value="狮子座">♌ 狮子座</option>
+                            <option value="处女座">♍ 处女座</option>
+                            <option value="天秤座">♎ 天秤座</option>
+                            <option value="天蝎座">♏ 天蝎座</option>
+                            <option value="射手座">♐ 射手座</option>
+                            <option value="摩羯座">♑ 摩羯座</option>
+                            <option value="水瓶座">♒ 水瓶座</option>
+                            <option value="双鱼座">♓ 双鱼座</option>
+                        </select>
+                    </div>
+
+                    <div class="zodiac-row">
+                        <div>
+                            <div style="font-size:16px; font-weight:bold; color:#fff;" id="mystic-char-name">Ta 的星座</div>
+                            <div style="font-size:12px; color:#aaa;">(角色)</div>
+                        </div>
+                        <select id="char-zodiac" class="zodiac-select">
+                            <option value="">--未知 (随机)--</option>
+                            <option value="白羊座">♈ 白羊座</option>
+                            <option value="金牛座">♉ 金牛座</option>
+                            <option value="双子座">♊ 双子座</option>
+                            <option value="巨蟹座">♋ 巨蟹座</option>
+                            <option value="狮子座">♌ 狮子座</option>
+                            <option value="处女座">♍ 处女座</option>
+                            <option value="天秤座">♎ 天秤座</option>
+                            <option value="天蝎座">♏ 天蝎座</option>
+                            <option value="射手座">♐ 射手座</option>
+                            <option value="摩羯座">♑ 摩羯座</option>
+                            <option value="水瓶座">♒ 水瓶座</option>
+                            <option value="双鱼座">♓ 双鱼座</option>
+                        </select>
+                    </div>
+
+                    <button class="mystic-btn-main" onclick="analyzeHoroscope()">✨ 星象分析 & 适配度</button>
+                    <div class="mystic-desc">将生成今日运势与两人的关系分析</div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -15160,10 +15332,236 @@ function deleteAnniversary(index) {
         renderAnniversaryList();
     }
 }
+        // ==========================================
+// --- 🔮 命运屋 (Mystic Lab) 逻辑 ---
+// ==========================================
+
+// 1. 22张大阿卡纳牌数据 (使用维基百科资源)
+const tarotDeck = [
+    { name: "愚人 (The Fool)", img: "https://upload.wikimedia.org/wikipedia/commons/9/90/RWS_Tarot_00_Fool.jpg" },
+    { name: "魔术师 (The Magician)", img: "https://upload.wikimedia.org/wikipedia/commons/d/de/RWS_Tarot_01_Magician.jpg" },
+    { name: "女祭司 (The High Priestess)", img: "https://upload.wikimedia.org/wikipedia/commons/8/88/RWS_Tarot_02_High_Priestess.jpg" },
+    { name: "皇后 (The Empress)", img: "https://upload.wikimedia.org/wikipedia/commons/d/d2/RWS_Tarot_03_Empress.jpg" },
+    { name: "皇帝 (The Emperor)", img: "https://upload.wikimedia.org/wikipedia/commons/c/c3/RWS_Tarot_04_Emperor.jpg" },
+    { name: "教皇 (The Hierophant)", img: "https://upload.wikimedia.org/wikipedia/commons/8/8d/RWS_Tarot_05_Hierophant.jpg" },
+    { name: "恋人 (The Lovers)", img: "https://upload.wikimedia.org/wikipedia/commons/3/3a/TheLovers.jpg" }, // 修正链接
+    { name: "战车 (The Chariot)", img: "https://upload.wikimedia.org/wikipedia/commons/9/9b/RWS_Tarot_07_Chariot.jpg" },
+    { name: "力量 (Strength)", img: "https://upload.wikimedia.org/wikipedia/commons/f/f5/RWS_Tarot_08_Strength.jpg" },
+    { name: "隐士 (The Hermit)", img: "https://upload.wikimedia.org/wikipedia/commons/4/4d/RWS_Tarot_09_Hermit.jpg" },
+    { name: "命运之轮 (Wheel of Fortune)", img: "https://upload.wikimedia.org/wikipedia/commons/3/3c/RWS_Tarot_10_Wheel_of_Fortune.jpg" },
+    { name: "正义 (Justice)", img: "https://upload.wikimedia.org/wikipedia/commons/e/e0/RWS_Tarot_11_Justice.jpg" },
+    { name: "倒吊人 (The Hanged Man)", img: "https://upload.wikimedia.org/wikipedia/commons/2/2b/RWS_Tarot_12_Hanged_Man.jpg" },
+    { name: "死神 (Death)", img: "https://upload.wikimedia.org/wikipedia/commons/d/d7/RWS_Tarot_13_Death.jpg" },
+    { name: "节制 (Temperance)", img: "https://upload.wikimedia.org/wikipedia/commons/f/f8/RWS_Tarot_14_Temperance.jpg" },
+    { name: "恶魔 (The Devil)", img: "https://upload.wikimedia.org/wikipedia/commons/5/55/RWS_Tarot_15_Devil.jpg" },
+    { name: "高塔 (The Tower)", img: "https://upload.wikimedia.org/wikipedia/commons/5/53/RWS_Tarot_16_Tower.jpg" },
+    { name: "星星 (The Star)", img: "https://upload.wikimedia.org/wikipedia/commons/d/db/RWS_Tarot_17_Star.jpg" },
+    { name: "月亮 (The Moon)", img: "https://upload.wikimedia.org/wikipedia/commons/7/7f/RWS_Tarot_18_Moon.jpg" },
+    { name: "太阳 (The Sun)", img: "https://upload.wikimedia.org/wikipedia/commons/1/17/RWS_Tarot_19_Sun.jpg" },
+    { name: "审判 (Judgement)", img: "https://upload.wikimedia.org/wikipedia/commons/d/dd/RWS_Tarot_20_Judgement.jpg" },
+    { name: "世界 (The World)", img: "https://upload.wikimedia.org/wikipedia/commons/f/ff/RWS_Tarot_21_World.jpg" }
+];
+
+let tarotState = {
+    drawnCards: [], // [{card, reversed: boolean}]
+    isRevealed: false
+};
+
+// 2. 打开弹窗
+function openMysticModal() {
+    const char = getActiveChar();
+    if (!char) return alert("请先选择一个聊天对象");
+    
+    document.getElementById('mystic-char-name').innerText = `${char.name} 的星座`;
+    
+    // 尝试读取已保存的星座
+    if(char.zodiac) document.getElementById('char-zodiac').value = char.zodiac;
+    
+    // 重置塔罗界面
+    resetTarotUI();
+    openModal('modal-mystic');
+}
+
+function switchMysticTab(tab) {
+    document.querySelectorAll('.mystic-tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`btn-tab-${tab}`).classList.add('active');
+    
+    document.getElementById('view-tarot').style.display = tab === 'tarot' ? 'block' : 'none';
+    document.getElementById('view-horoscope').style.display = tab === 'horoscope' ? 'block' : 'none';
+}
+
+// 3. 塔罗牌逻辑
+function resetTarotUI() {
+    const area = document.getElementById('tarot-spread-area');
+    area.innerHTML = '<div style="color:rgba(255,255,255,0.5); margin-top:20px;">点击下方按钮开始洗牌</div>';
+    document.getElementById('btn-tarot-action').innerText = "🔮 洗牌并抽牌 (3张)";
+    document.getElementById('btn-tarot-action').onclick = startTarotFlow;
+    tarotState.isRevealed = false;
+}
+
+function startTarotFlow() {
+    const question = document.getElementById('tarot-question').value.trim();
+    if (!question) {
+        if(!confirm("你还没有输入问题，要直接进行【今日运势】占卜吗？")) return;
+    }
+
+    const area = document.getElementById('tarot-spread-area');
+    area.innerHTML = '';
+    
+    // 随机抽3张
+    tarotState.drawnCards = [];
+    const deckCopy = [...tarotDeck];
+    
+    for(let i=0; i<3; i++) {
+        const randIdx = Math.floor(Math.random() * deckCopy.length);
+        const card = deckCopy.splice(randIdx, 1)[0];
+        const reversed = Math.random() > 0.5; // 50% 逆位概率
+        tarotState.drawnCards.push({ ...card, reversed });
+    }
+
+    // 渲染卡背 (Face down)
+    tarotState.drawnCards.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'tarot-card-scene';
+        div.onclick = () => flipTarotCard(div, index);
+        div.innerHTML = `
+            <div class="tarot-card-inner">
+                <div class="tarot-face back">
+                    <img src="${item.img}" class="tarot-img" style="${item.reversed ? 'transform: rotate(180deg);' : ''}">
+                    <div class="tarot-label">${item.name} ${item.reversed ? '(逆位)' : '(正位)'}</div>
+                </div>
+                <div class="tarot-face front"></div> <!-- 背面其实是Front样式，正面图是Back样式，因为我们要翻转 -->
+            </div>
+        `;
+        area.appendChild(div);
+    });
+
+    document.getElementById('btn-tarot-action').innerText = "✨ 请求 AI 解读牌面";
+    document.getElementById('btn-tarot-action').onclick = interpretTarot;
+    
+    // 自动翻牌动画 (依次翻开)
+    const cards = document.querySelectorAll('.tarot-card-scene');
+    cards.forEach((c, i) => {
+        setTimeout(() => {
+            c.classList.add('flipped');
+        }, i * 300);
+    });
+    tarotState.isRevealed = true;
+}
+
+// 翻牌效果
+function flipTarotCard(element, index) {
+    // 允许用户手动点击再次翻转查看背面(牌背)
+    element.classList.toggle('flipped');
+}
+
+// 提交给 AI 解读
+async function interpretTarot() {
+    if (!tarotState.isRevealed) return;
+    
+    const char = getActiveChar();
+    const question = document.getElementById('tarot-question').value.trim() || "今日运势";
+    
+    const cardsStr = tarotState.drawnCards.map((c, i) => {
+        const pos = ["过去/原因", "现在/过程", "未来/结果"][i];
+        return `${i+1}. [${pos}]: ${c.name} (${c.reversed ? '逆位' : '正位'})`;
+    }).join('\n');
+
+    const prompt = `
+    [塔罗占卜模式]
+    用户向你寻求塔罗牌解读。
+    【问题】：${question}
+    【牌阵 (圣三角)】：
+    ${cardsStr}
+    
+    请你以角色 "${char.name}" 的身份（人设：${char.systemPrompt}）来进行解读。
+    要求：
+    1. 不要像说明书一样解释牌意，要像在聊天。
+    2. 结合牌面含义和你们的关系，给出建议或安慰。
+    3. 如果牌面不好（如死神逆位、高塔），请用你的方式（温柔或傲娇）化解焦虑。
+    4. 字数控制在 200 字左右。
+    `;
+
+    // 构造卡片发给用户
+    const cardImagesHtml = tarotState.drawnCards.map(c => 
+        `<div style="display:inline-block; width:60px; text-align:center; margin:2px;">
+            <img src="${c.img}" style="width:100%; border-radius:4px; ${c.reversed?'transform:rotate(180deg)':''}">
+            <div style="font-size:10px;">${c.reversed?'逆':'正'}</div>
+         </div>`
+    ).join('');
+
+    const userMsgHtml = `
+        <div style="font-weight:bold; margin-bottom:5px;">🔮 塔罗占卜: ${question}</div>
+        <div style="display:flex; justify-content:center;">${cardImagesHtml}</div>
+    `;
+
+    // 存入聊天
+    closeModal('modal-mystic');
+    char.messages.push({
+        role: 'user',
+        content: userMsgHtml, // 显示漂亮的图片卡片
+        hiddenContext: prompt, // AI 读 prompt
+        timestamp: Date.now()
+    });
+    saveData();
+    
+    renderChat(activeContactId);
+    triggerAI(); // 触发
+}
+
+// 4. 星座运势逻辑
+function analyzeHoroscope() {
+    const userSign = document.getElementById('user-zodiac').value;
+    const charSign = document.getElementById('char-zodiac').value;
+    
+    if(!userSign) return alert("请至少选择你的星座");
+    
+    const char = getActiveChar();
+    // 保存星座设置
+    char.zodiac = charSign;
+    saveData(); // 保存到联系人数据
+
+    let prompt = "";
+    let displayTitle = "";
+
+    if (!charSign) {
+        // 单人运势
+        displayTitle = `🌌 ${userSign} 今日运势`;
+        prompt = `
+        [星座运势模式]
+        用户是 ${userSign}。请你扮演 "${char.name}" (人设:${char.systemPrompt})。
+        请为用户播报今天的运势。
+        包含：今日心情指数、幸运色、以及一句结合你人设的建议或关怀。
+        `;
+    } else {
+        // 双人合盘
+        displayTitle = `🌌 星座配对: ${userSign} & ${charSign}`;
+        prompt = `
+        [星盘合盘模式]
+        用户是 ${userSign}，你是 ${charSign}。
+        请结合你们的星座特性，分析今天的相处运势或恋爱契合度。
+        你的性格是 ${char.systemPrompt}。
+        请评价这对星座组合的优缺点，并给出今天的相处建议。
+        `;
+    }
+
+    // 发送
+    closeModal('modal-mystic');
+    char.messages.push({
+        role: 'user',
+        content: `[请求查看] ${displayTitle}`,
+        hiddenContext: prompt,
+        timestamp: Date.now()
+    });
+    saveData();
+    renderChat(activeContactId);
+    triggerAI();
+}
         
     </script>
 </body>
 </html>
+
 
 
 
