@@ -190,29 +190,42 @@ body {
     align-items: center;
 }
 
-/* --- 第一页：混合布局行 (比例调整版) --- */
+/* --- 第一页：混合布局行 (调整版) --- */
 .mixed-row {
     width: 100%;
     display: flex;
     justify-content: space-between;
     margin-bottom: 25px;
-    height: 150px; /* 保持高度 */
+    /* 关键点：为了让38%宽度的组件看起来是正方形，高度需要相应减小 */
+    /* 假设手机宽375px，38%大约是125px左右，加上间距，设定130px比较接近正方形 */
+    height: 130px; 
 }
 
-/* 组件列：变窄 (42%) */
+/* 组件列：改为 38% */
 .col-widget {
-    width: 42%; 
+    width: 38%; 
     height: 100%;
     position: relative;
-    /* 这一行是为了确保组件内元素居中 */
     display: flex; 
     flex-direction: column;
 }
 
-/* APP 列：变宽 (55%) */
+/* APP 列：改为 58% (填补剩余空间) */
 .col-apps {
-    width: 55%; 
+    width: 58%; 
     height: 100%;
+}
+
+/* 2x2 小应用网格 (适配新宽度) */
+.mini-app-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 10px 15px; /* 稍微调整间距 */
+    justify-items: center;
+    align-items: center;
+    height: 100%;
+    padding: 2px 0;
 }
 
 /* 2x2 小应用网格 (大图标版) */
@@ -276,7 +289,7 @@ body {
     font-size: 11px;
 }
 
-/* --- 组件：复古 CD 机 (窄版适配) --- */
+/* --- 组件：复古 CD 机 (圆形修复版) --- */
 .widget-cd {
     width: 100%;
     height: 100%;
@@ -291,10 +304,11 @@ body {
     justify-content: center;
 }
 
-/* 适配窄容器：稍微调小唱片 */
+/* 唱片容器 */
 .cd-disc-container {
-    width: 105px; /* 从 120 缩小到 105 */
-    height: 105px;
+    /* 适配 38% 宽度：尺寸必须缩小，否则放不下 */
+    width: 90px; 
+    height: 90px;
     border-radius: 50%;
     background: #1a1a1a;
     background-image: repeating-radial-gradient(#1a1a1a 0, #1a1a1a 2px, #2a2a2a 3px, #2a2a2a 4px);
@@ -306,6 +320,19 @@ body {
     animation-play-state: paused;
     position: relative;
     z-index: 1;
+    
+    /* 🔥 核心修复：禁止被父容器挤压变形，强制保持圆形 */
+    flex-shrink: 0; 
+}
+
+.cd-cover-art {
+    width: 40px; height: 40px; /* 封面也顺便调小 */
+    border-radius: 50%;
+    background-color: #eee;
+    background-size: cover;
+    background-position: center;
+    border: 2px solid #fff;
+    position: relative;
 }
 .cd-cover-art {
     width: 45px; height: 45px; /* 封面也顺便调小 */
@@ -2198,6 +2225,34 @@ select.x-input option {
     display: block !important;
     font-size: 11px;
     margin-top: 5px;
+}
+        /* --- 修复第二页图标排列问题 --- */
+.page2-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important; /* 强制分为4列 */
+    /* 稍微调整间距，太大会导致换行显示不全 */
+    gap: 20px 10px; 
+    width: 100%;
+    height: 100%; /* 确保占满高度 */
+    padding: 20px 10px;
+    align-content: start; /* 内容靠上对齐 */
+    justify-items: center;
+}
+
+/* 确保图标大小合适 */
+.page2-grid .app-icon {
+    width: 58px; 
+    height: 58px;
+    font-size: 28px;
+}
+
+/* 确保名字显示 */
+.page2-grid .app-name {
+    display: block !important;
+    font-size: 11px;
+    margin-top: 5px;
+    color: white; /* 确保文字是白色的，否则黑背景下看不见 */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8); /* 加阴影防看不清 */
 }
     </style>
 </head>
@@ -16221,6 +16276,7 @@ window.addEventListener('load', () => {
     </script>
 </body>
 </html>
+
 
 
 
