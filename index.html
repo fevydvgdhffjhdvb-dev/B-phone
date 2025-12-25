@@ -190,62 +190,56 @@ body {
     align-items: center;
 }
 
+/* --- 第一页：混合布局行 --- */
 .mixed-row {
     width: 100%;
     display: flex;
-    justify-content: space-between; /* 左右两端对齐，中间留空 */
-    padding: 0 15px; /* 防止贴边 */
-    margin-bottom: 25px; /* 增加行距 */
-    height: 155px; /* 高度定死为正方形 */
+    justify-content: space-between;
+    margin-bottom: 20px;
+    height: 155px; /* 固定高度确保整齐 */
 }
 
-/* 占位块 (正方形小组件容器) */
+/* 占一半宽度的容器 */
 .half-block {
-    width: 155px; /* 宽度定死 */
-    height: 155px; /* 高度定死 */
+    width: 48%;
+    height: 100%;
     position: relative;
 }
 
-/* 2x2 小应用网格 (图标变大，显示名字) */
+/* 2x2 小应用网格 */
 .mini-app-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 5px 10px; /* 调整间距 */
+    gap: 15px; /* 图标间距 */
     justify-items: center;
     align-items: center;
     height: 100%;
-    width: 100%;
 }
 
+/* 复用原本的图标样式，但稍微缩小一点适配 2x2 */
 .mini-app-grid .app-icon {
-    width: 58px;  /* 图标改大 */
-    height: 58px; 
-    font-size: 28px;
-    margin-bottom: 2px;
+    width: 54px; 
+    height: 54px; 
+    font-size: 24px;
 }
-
 .mini-app-grid .app-name {
-    display: block !important; /* 强制显示名字 */
-    font-size: 11px;
-    font-weight: 500;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.8); /* 加阴影，防止壁纸太花看不清 */
+    display: none; /* 空间太小，建议在混合布局中隐藏名字，或者字体极小 */
 }
 
 /* --- 组件：待办事项 (To-Do) --- */
 .widget-todo {
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.25); /* 稍微亮一点 */
-    backdrop-filter: blur(20px);
-    border-radius: 25px; /* iOS 风格大圆角 */
+    background: rgba(255, 255, 255, 0.2); /* 半透明白 */
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
     padding: 15px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     color: #fff;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    border: 1px solid rgba(255,255,255,0.15);
 }
 .widget-title {
     font-size: 14px; 
@@ -283,58 +277,26 @@ body {
 .widget-cd {
     width: 100%;
     height: 100%;
-    background: transparent !important; /* 去掉灰色背景 */
-    backdrop-filter: none;
-    box-shadow: none;
-    border-radius: 0;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    overflow: visible; /* 允许唱臂伸出去 */
+    overflow: hidden;
     cursor: pointer;
 }
 .cd-disc {
-    width: 135px; /* CD 变大 */
-    height: 135px;
+    width: 110px;
+    height: 110px;
     border-radius: 50%;
-    background: #111;
+    background: #000;
     background-size: cover;
     background-position: center;
-    border: 1px solid rgba(255,255,255,0.2);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.5); /* 加强投影 */
+    border: 3px solid rgba(255,255,255,0.2);
     animation: spin 10s linear infinite;
-    animation-play-state: paused;
-}
-        .cd-tone-arm {
-    position: absolute;
-    top: -10px;
-    right: -5px;
-    width: 20px;
-    height: 80px;
-    z-index: 5;
-    transform-origin: top right;
-    transform: rotate(0deg);
-    transition: transform 0.5s;
-    pointer-events: none;
-}
-        .widget-cd.active .cd-tone-arm { transform: rotate(-25deg); } /* 播放时移过去 */
-
-.cd-tone-arm::before { /* 轴承 */
-    content: ''; position: absolute; top: 0; right: 0;
-    width: 12px; height: 12px; background: #ddd; border-radius: 50%;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-}
-.cd-tone-arm::after { /* 臂杆 */
-    content: ''; position: absolute; top: 5px; right: 5px;
-    width: 4px; height: 70px; background: #ccc;
-    border-radius: 2px; transform: rotate(15deg);
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-}
-        .cd-head { /* 唱头 */
-    position: absolute; bottom: 0; left: -5px;
-    width: 12px; height: 20px; background: #333;
-    border-radius: 2px; transform: rotate(15deg);
+    animation-play-state: paused; /* 默认暂停，有音乐时可以跑 */
 }
 .widget-cd.active .cd-disc {
     animation-play-state: running;
@@ -2237,76 +2199,65 @@ select.x-input option {
         <div class="home-swiper-wrapper" id="homeWrapper">
             
             <!-- === 第一页 === -->
-<div class="home-slide">
-    
-    <!-- 第一行：左待办，右App -->
-    <div class="mixed-row">
-        <!-- 左：待办事项小组件 (正方形) -->
-        <div class="half-block widget-todo" onclick="addTodoItem()">
-            <div class="widget-title">
-                <span>📝 待办</span>
-                <span style="font-size:16px;">+</span>
-            </div>
-            <div class="todo-list-scroll" id="todo-widget-list">
-                <div style="opacity:0.6; margin-top:10px; font-size:12px;">暂无事项</div>
-            </div>
-        </div>
+            <div class="home-slide">
+                
+                <!-- 第一行：左待办，右App -->
+                <div class="mixed-row">
+                    <!-- 左：待办事项小组件 -->
+                    <div class="half-block widget-todo" onclick="addTodoItem()">
+                        <div class="widget-title">
+                            <span>📝 待办事项</span>
+                            <span style="font-size:12px; opacity:0.7;">+</span>
+                        </div>
+                        <div class="todo-list-scroll" id="todo-widget-list">
+                            <!-- JS 动态生成 -->
+                            <div style="opacity:0.6; margin-top:10px;">暂无事项</div>
+                        </div>
+                    </div>
 
-        <!-- 右：2x2 APP (图标变大，显示名字) -->
-        <div class="half-block mini-app-grid">
-            <div class="app-icon-container" onclick="navigateTo('page-msg-list')">
-                <div class="app-icon icon-msg" id="app-icon-msg">💬</div>
-                <div class="app-name">信息</div>
-            </div>
-            <div class="app-icon-container" onclick="navigateTo('page-memory')">
-                <div class="app-icon icon-note" id="app-icon-mem">📝</div>
-                <div class="app-name">记忆库</div>
-            </div>
-            <div class="app-icon-container" onclick="navigateTo('page-settings')">
-                <div class="app-icon icon-settings" id="app-icon-set">⚙️</div>
-                <div class="app-name">设置</div>
-            </div>
-            <div class="app-icon-container" onclick="navigateTo('page-theme')">
-                <div class="app-icon" id="app-icon-theme" style="background: linear-gradient(to bottom, #ff2d55, #ff375f);">🎨</div>
-                <div class="app-name">美化</div>
-            </div>
-        </div>
-    </div>
+                    <!-- 右：2x2 APP -->
+                    <div class="half-block mini-app-grid">
+                        <div class="app-icon-container" onclick="navigateTo('page-msg-list')">
+                            <div class="app-icon icon-msg" id="app-icon-msg">💬</div>
+                        </div>
+                        <div class="app-icon-container" onclick="navigateTo('page-memory')">
+                            <div class="app-icon icon-note" id="app-icon-mem">📝</div>
+                        </div>
+                        <div class="app-icon-container" onclick="navigateTo('page-settings')">
+                            <div class="app-icon icon-settings" id="app-icon-set">⚙️</div>
+                        </div>
+                        <div class="app-icon-container" onclick="navigateTo('page-theme')">
+                            <div class="app-icon" id="app-icon-theme" style="background: linear-gradient(to bottom, #ff2d55, #ff375f);">🎨</div>
+                        </div>
+                    </div>
+                </div>
 
-    <!-- 第二行：左App，右CD -->
-    <div class="mixed-row">
-        <!-- 左：2x2 APP -->
-        <div class="half-block mini-app-grid">
-            <div class="app-icon-container" onclick="navigateTo('page-diary')">
-                <div class="app-icon" id="app-icon-diary" style="background: linear-gradient(to bottom, #d4a373, #a98467);">📖</div>
-                <div class="app-name">日记</div>
-            </div>
-            <div class="app-icon-container" onclick="navigateTo('page-pomodoro'); initPomoPage();">
-                <div class="app-icon" id="app-icon-pomo" style="background: linear-gradient(to bottom, #ff6b6b, #ee5253);">🍅</div>
-                <div class="app-name">番茄钟>fan'q
-            </div>
-            <div class="app-icon-container" onclick="navigateTo('page-calendar'); initCalendarPage();">
-                <div class="app-icon" id="app-icon-cal" style="background: #fff; color: #333;">📅</div>
-                <div class="app-name">日历</div>
-            </div>
-            <div class="app-icon-container" onclick="navigateTo('page-schedule'); renderScheduleList();">
-                <div class="app-icon" id="app-icon-sched" style="background: linear-gradient(to bottom, #5856d6, #af52de);">📅</div>
-                <div class="app-name">日程</div>
-            </div>
-        </div>
+                <!-- 第二行：左App，右CD -->
+                <div class="mixed-row">
+                    <!-- 左：2x2 APP -->
+                    <div class="half-block mini-app-grid">
+                        <div class="app-icon-container" onclick="navigateTo('page-diary')">
+                            <div class="app-icon" id="app-icon-diary" style="background: linear-gradient(to bottom, #d4a373, #a98467);">📖</div>
+                        </div>
+                        <div class="app-icon-container" onclick="navigateTo('page-pomodoro'); initPomoPage();">
+                            <div class="app-icon" id="app-icon-pomo" style="background: linear-gradient(to bottom, #ff6b6b, #ee5253);">🍅</div>
+                        </div>
+                        <div class="app-icon-container" onclick="navigateTo('page-calendar'); initCalendarPage();">
+                            <div class="app-icon" id="app-icon-cal" style="background: #fff; color: #333;">📅</div>
+                        </div>
+                        <div class="app-icon-container" onclick="navigateTo('page-schedule'); renderScheduleList();">
+                            <div class="app-icon" id="app-icon-sched" style="background: linear-gradient(to bottom, #5856d6, #af52de);">📅</div>
+                        </div>
+                    </div>
 
-        <!-- 右：CD 小组件 (拟物化) -->
-        <div class="half-block widget-cd" onclick="changeCdCover()">
-            <!-- 唱片 -->
-            <div class="cd-disc" id="cd-disc-img" style="background-image: url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300');"></div>
-            <!-- 中间孔/贴纸 -->
-            <div class="cd-center-hole"></div>
-            <!-- 唱臂 -->
-            <div class="cd-tone-arm"><div class="cd-head"></div></div>
-        </div>
-    </div>
+                    <!-- 右：CD 小组件 -->
+                    <div class="half-block widget-cd" onclick="changeCdCover()">
+                        <div class="cd-disc" id="cd-disc-img" style="background-image: url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300');"></div>
+                        <div class="cd-center-hole"></div>
+                    </div>
+                </div>
 
-</div>
+            </div>
 
             <!-- === 第二页 === -->
             <div class="home-slide">
@@ -16174,8 +16125,6 @@ window.addEventListener('load', () => {
     </script>
 </body>
 </html>
-
-
 
 
 
