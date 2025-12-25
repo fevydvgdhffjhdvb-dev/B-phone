@@ -211,19 +211,20 @@ body {
 }
 /* 2x2 小应用网格 */
 .mini-app-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
+    display: flex;              /* 🔴 改成 Flex 布局，更容易控制紧凑度 */
+    flex-wrap: wrap;            /* 允许换行，这样就变成 2x2 了 */
+    justify-content: center;    /* 让整体在黑框里居中 */
+    align-content: center;
     /* 
        水平间距 15px (和第二页一致) 
        垂直间距 12px (紧凑一点，让名字和图标贴合)
     */
     gap: 12px 15px; 
-    justify-items: center;
-    align-items: start; /* 顶部对齐，防止名字把图标顶上去 */
-    padding-top: 10px; /* 稍微给一点顶部空间 */
     width: 100%;
     height: 100%;
+    
+    /* 稍微给点顶部偏移，防止名字顶到黑框边缘 */
+    padding-top: 5px; 
 }
 
 /* 复用原本的图标样式，但稍微缩小一点适配 2x2 */
@@ -2294,15 +2295,19 @@ select.x-input option {
                     <div class="half-block mini-app-grid">
                         <div class="app-icon-container" onclick="navigateTo('page-msg-list')">
                             <div class="app-icon icon-msg" id="app-icon-msg">💬</div>
+                            <div class="app-name">微信</div>
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-memory')">
                             <div class="app-icon icon-note" id="app-icon-mem">📝</div>
+                            <div class="app-name">记忆库</div>
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-settings')">
                             <div class="app-icon icon-settings" id="app-icon-set">⚙️</div>
+                            <div class="app-name">设置>she'z
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-theme')">
                             <div class="app-icon" id="app-icon-theme" style="background: linear-gradient(to bottom, #ff2d55, #ff375f);">🎨</div>
+                            <div class="app-name">美化>mei'h
                         </div>
                     </div>
                 </div>
@@ -2313,15 +2318,19 @@ select.x-input option {
                     <div class="half-block mini-app-grid">
                         <div class="app-icon-container" onclick="navigateTo('page-diary')">
                             <div class="app-icon" id="app-icon-diary" style="background: linear-gradient(to bottom, #d4a373, #a98467);">📖</div>
+                            <div class="app-name">日记</div>
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-pomodoro'); initPomoPage();">
                             <div class="app-icon" id="app-icon-pomo" style="background: linear-gradient(to bottom, #ff6b6b, #ee5253);">🍅</div>
+                            <div class="app-name">番茄钟</div>
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-calendar'); initCalendarPage();">
                             <div class="app-icon" id="app-icon-cal" style="background: #fff; color: #333;">📅</div>
+                            <div class="app-name">日历</div>
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-schedule'); renderScheduleList();">
                             <div class="app-icon" id="app-icon-sched" style="background: linear-gradient(to bottom, #5856d6, #af52de);">📅</div>
+                            <div class="app-name">日程</div>
                         </div>
                     </div>
 
@@ -16200,6 +16209,7 @@ window.addEventListener('load', () => {
     </script>
 </body>
 </html>
+
 
 
 
