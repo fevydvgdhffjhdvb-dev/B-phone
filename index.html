@@ -3349,7 +3349,7 @@ select.x-input option {
     <div id="reader-content" style="position:absolute; top:90px; bottom:70px; left:0; right:0; padding:20px 25px; overflow-y:auto; font-size:19px; line-height:1.8; color:#333; font-family:'Songti SC', serif; text-align:justify; scroll-behavior: smooth;">
         <!-- 章节正文 -->
     </div>
-    <!-- 新增：AI 小说专用互动栏 (修复版：按钮防挤压) -->
+    <!-- 新增：AI 小说专用互动栏 (带总结按钮版) -->
 <div id="reader-interactive-bar" style="
     position: absolute; 
     bottom: 0; 
@@ -3365,25 +3365,24 @@ select.x-input option {
     padding: 12px 15px max(20px, env(safe-area-inset-bottom)) 15px;
     box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
 ">
-    <!-- 第一行：修文操作 -->
+    <!-- 第一行：修文与总结操作 -->
     <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; padding:0 5px;">
-        <div style="display:flex; gap:15px;">
+        <div style="display:flex; gap:15px; align-items:center;">
             <span onclick="deleteLastChapter()" style="color:#ff3b30; cursor:pointer;">撤回</span>
             <span onclick="regenerateLastChapter()" style="color:#FF9500; cursor:pointer;">重写</span>
+            <!-- ✨✨✨ 新增：总结按钮 ✨✨✨ -->
+            <span onclick="summarizeAiNovelChapter()" style="color:#34c759; cursor:pointer; font-weight:500;">总结</span>
         </div>
         <span onclick="toggleEditMode()" style="color:#007AFF; cursor:pointer;">手动修文</span>
     </div>
 
-    <!-- 第二行：输入剧情走向 (修复布局) -->
+    <!-- 第二行：输入剧情走向 -->
     <div style="display:flex; gap:10px; align-items:center;">
-        <!-- 闪电按钮：禁止压缩 -->
         <button onclick="insertRandomEvent()" style="font-size:24px; background:none; border:none; padding:0; flex-shrink: 0;" title="随机事件">⚡</button>
         
-        <!-- 输入框：自动伸缩，最小宽度设为0防止撑开 -->
         <input type="text" id="ai-novel-prompt" placeholder="接下来..." 
                style="flex:1; min-width:0; height:40px; padding:0 12px; border-radius:20px; border:1px solid #ddd; outline:none; font-size:15px; background:#fff;">
         
-        <!-- 生成按钮：禁止压缩 (flex-shrink: 0) -->
         <button onclick="generateNextChapterAI()" 
                 style="background:#007AFF; color:white; border:none; height:36px; padding:0 15px; border-radius:18px; font-weight:bold; font-size:14px; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,122,255,0.3);">
             生成
@@ -16606,7 +16605,7 @@ async function generateNextChapterAI() {
     // 准备上下文
     const outline = currentBookMeta.aiOutline;
     const currentChapIdx = currentBookMeta.progressIndex;
-    const prevSummary = (currentBookMeta.summaries || []).slice(-3).join('\n'); // 最近3章总结
+    const prevSummary = (currentBookMeta.summaries || []).slice(-5).join('\n'); // 最近3章总结
     
     // 获取上一章的结尾 (作为衔接)
     const prevBody = currentBookData.chapters[currentChapIdx].body;
@@ -16910,10 +16909,87 @@ function initReaderDrag() {
 // 为了保险，我们也可以直接监听 click，但那样每次进页面都要绑一次可能会重复
 // 简单的办法：直接现在运行一次，因为 DOM 已经在那里了
 setTimeout(initReaderDrag, 1000);
+        // ==========================================
+// --- 📝 AI 小说专用：手动总结本章 ---
+// ==========================================
+async function summarizeAiNovelChapter() {
+    if (!globalConfig.apiKey) return alert("请先配置 API Key");
+    if (!currentBookData || !currentBookMeta) return;
+
+    const idx = currentBookMeta.progressIndex;
+    const chapter = currentBookData.chapters[idx];
+    const char = contacts.find(c => c.id === currentBookMeta.aiCharId); // 获取绑定的角色
+
+    // UI 提示
+    const btn = event.target;
+    const oldText = btn.innerText;
+    btn.innerText = "生成中...";
+    btn.style.opacity = "0.5";
+
+    try {
+        const prompt = `
+        你是一个网文编辑。请阅读这本小说（《${currentBookMeta.title}》）的【第 ${idx+1} 章】内容。
+        
+        【任务】：
+        生成一段 100-200 字的剧情摘要。
+        要求：
+        1. 概括本章发生的核心事件、男女主(或主角)的情感进展、重要伏笔。
+        2. 忽略无关紧要的细节。
+        3. 这个摘要将作为“长期记忆”提供给 AI 作者，用于续写下一章，所以请务必准确。
+        
+        【章节正文】：
+        ${chapter.body.substring(0, 15000)}
+        `;
+
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.5
+        });
+
+        const data = await res.json();
+        const summary = data.choices[0].message.content;
+
+        // 1. 存入书籍元数据
+        if (!currentBookMeta.summaries) currentBookMeta.summaries = [];
+        currentBookMeta.summaries[idx] = summary;
+        localStorage.setItem('ai_phone_library', JSON.stringify(libraryMeta));
+
+        // 2. 同步到聊天界面 (让角色记住)
+        if (char) {
+            const report = `
+📖【共创小说·剧情存档】
+------------------
+书名：《${currentBookMeta.title}》
+章节：${chapter.title}
+📝 剧情摘要：
+${summary}
+------------------
+(系统提示：这是你们刚刚共同创作/阅读的剧情。请${char.name}记住这个情节，在接下来的创作中保持连贯。)
+            `.trim();
+
+            char.messages.push({
+                role: 'user', // 伪装成系统推送
+                content: report,
+                timestamp: Date.now()
+            });
+            saveData();
+        }
+
+        alert("✅ 总结已生成并存入记忆库！\n\nAI 在生成下一章时将会参考这段摘要。");
+
+    } catch (e) {
+        alert("总结失败: " + e.message);
+    } finally {
+        btn.innerText = oldText;
+        btn.style.opacity = "1";
+    }
+}
         
     </script>
 </body>
 </html>
+
 
 
 
