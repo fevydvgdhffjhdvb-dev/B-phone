@@ -3349,7 +3349,7 @@ select.x-input option {
     <div id="reader-content" style="position:absolute; top:90px; bottom:70px; left:0; right:0; padding:20px 25px; overflow-y:auto; font-size:19px; line-height:1.8; color:#333; font-family:'Songti SC', serif; text-align:justify; scroll-behavior: smooth;">
         <!-- 章节正文 -->
     </div>
-    <!-- 新增：AI 小说专用互动栏 (带总结按钮版) -->
+    <!-- 新增：AI 小说专用互动栏 (翻页增强版) -->
 <div id="reader-interactive-bar" style="
     position: absolute; 
     bottom: 0; 
@@ -3362,18 +3362,27 @@ select.x-input option {
     flex-direction: column; 
     gap: 12px; 
     z-index: 200; 
-    padding: 12px 15px max(20px, env(safe-area-inset-bottom)) 15px;
+    padding: 10px 15px max(20px, env(safe-area-inset-bottom)) 15px;
     box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
 ">
-    <!-- 第一行：修文与总结操作 -->
-    <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; padding:0 5px;">
-        <div style="display:flex; gap:15px; align-items:center;">
+    <!-- 第一行：导航与操作 (新布局) -->
+    <div style="display:flex; align-items:center; justify-content:space-between; color:#007AFF; font-size:14px;">
+        <!-- 左侧：上一章 -->
+        <div onclick="prevChapter()" style="cursor:pointer; padding:5px; font-weight:bold; display:flex; align-items:center;">
+            <span style="font-size:18px;">‹</span> 上章
+        </div>
+
+        <!-- 中间：操作区 (撤回/重写/总结) -->
+        <div style="display:flex; gap:15px; font-size:12px; color:#666;">
             <span onclick="deleteLastChapter()" style="color:#ff3b30; cursor:pointer;">撤回</span>
             <span onclick="regenerateLastChapter()" style="color:#FF9500; cursor:pointer;">重写</span>
-            <!-- ✨✨✨ 新增：总结按钮 ✨✨✨ -->
-            <span onclick="summarizeAiNovelChapter()" style="color:#34c759; cursor:pointer; font-weight:500;">总结</span>
+            <span onclick="summarizeAiNovelChapter()" style="color:#34c759; cursor:pointer;">总结</span>
         </div>
-        <span onclick="toggleEditMode()" style="color:#007AFF; cursor:pointer;">手动修文</span>
+
+        <!-- 右侧：下一章 -->
+        <div onclick="nextChapter()" style="cursor:pointer; padding:5px; font-weight:bold; display:flex; align-items:center;">
+            下章 <span style="font-size:18px;">›</span>
+        </div>
     </div>
 
     <!-- 第二行：输入剧情走向 -->
@@ -9556,8 +9565,7 @@ async function importDataV2(e) {
 
 // 启动加载
 loadLibrary();
-        // --- G. 查看阅读笔记 (UI) ---
-
+        // --- G. 查看阅读笔记 (支持跳转版) ---
 function openSummaryList() {
     const listContainer = document.getElementById('summary-list-content');
     listContainer.innerHTML = ''; // 清空旧数据
@@ -9568,27 +9576,24 @@ function openSummaryList() {
     const chapters = currentBookData.chapters || [];
     
     // 遍历所有章节
-    // 注意：我们要显示所有章节，哪怕没有总结的也要显示标题，方便知道进度
     chapters.forEach((chap, index) => {
-        // 如果这一章有总结
         const summaryText = summaries[index];
-        
-        // 只显示“有总结”的章节，或者“当前阅读进度之前”的章节
-        // 如果你希望显示所有章节（包括没读的），去掉下面这个 if 判断即可
-        // 这里我设计为：只显示到当前阅读进度的章节
-        if (index > currentBookMeta.progressIndex) return;
-
-        const div = document.createElement('div');
-        div.className = 'summary-card';
         
         // 标记当前正在读的章节
         const isCurrent = (index === currentBookMeta.progressIndex);
-        const statusBadge = isCurrent ? '<span style="color:#007AFF; font-size:12px;">(正在读)</span>' : '';
+        const statusBadge = isCurrent ? '<span style="color:#007AFF; font-size:12px; font-weight:bold;">(当前位置)</span>' : '';
+        const activeClass = isCurrent ? 'border: 2px solid #007AFF;' : ''; // 给当前章加个蓝框
 
-        // 如果没有总结内容
+        // 构建卡片
+        const div = document.createElement('div');
+        div.className = 'summary-card';
+        // ✨✨✨ 核心修改：添加点击跳转事件 ✨✨✨
+        div.setAttribute('onclick', `jumpToChapterFromSummary(${index})`);
+        div.style.cssText = `cursor: pointer; ${activeClass}`; 
+
         const contentHtml = summaryText 
             ? `<div class="sum-text">${summaryText}</div>`
-            : `<div class="sum-empty">暂无总结 (可能因为你跳过了或者是刚开始读)</div>`;
+            : `<div class="sum-empty">暂无总结 (点击跳转后可生成)</div>`;
 
         div.innerHTML = `
             <div class="sum-chap-title">
@@ -9596,27 +9601,42 @@ function openSummaryList() {
                 ${statusBadge}
             </div>
             ${contentHtml}
+            <div style="text-align:right; font-size:10px; color:#ccc; margin-top:5px;">点击跳转 ></div>
         `;
         
-        // 倒序插入？还是正序？
-        // 既然是回顾，通常正序比较好（从第一章开始）。如果想看最新的，可以用 appendChild。
-        // 如果想把最新的放在最上面，可以用 prepend(div)。这里用正序：
         listContainer.appendChild(div);
     });
 
-    // 如果完全没数据
     if (listContainer.children.length === 0) {
-        listContainer.innerHTML = '<div style="text-align:center; color:#999; margin-top:50px;">还没有任何阅读笔记哦<br>读完一章后 AI 会自动记录</div>';
+        listContainer.innerHTML = '<div style="text-align:center; color:#999; margin-top:50px;">还没有章节<br>快去生成第一章吧</div>';
     }
 
-    // 滚动到底部（看到最新的）
+    // 自动滚动到当前章节的位置
     setTimeout(() => {
-        // 只有内容多的时候才自动滚到底
-        const modalBody = document.querySelector('#modal-book-summary .modal-body');
-        if(modalBody) modalBody.scrollTop = modalBody.scrollHeight;
-    }, 100);
+        const currentCard = listContainer.children[currentBookMeta.progressIndex];
+        if(currentCard) currentCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 200);
 
     openModal('modal-book-summary');
+}
+
+// ✨✨✨ 新增：跳转辅助函数 ✨✨✨
+function jumpToChapterFromSummary(index) {
+    if (index < 0 || index >= currentBookData.chapters.length) return;
+    
+    // 更新进度
+    currentBookMeta.progressIndex = index;
+    currentBookMeta.scrollRatio = 0; // 回到顶部
+    saveBookProgress();
+    
+    // 刷新页面
+    renderReaderPage();
+    
+    // 关闭弹窗
+    closeModal('modal-book-summary');
+    
+    // 提示
+    // if(navigator.vibrate) navigator.vibrate(50); // 震动反馈可选
 }
         // ==========================================
     // --- 🎵 音乐播放器核心逻辑 (Music Player) ---
@@ -16989,6 +17009,7 @@ ${summary}
     </script>
 </body>
 </html>
+
 
 
 
