@@ -2620,7 +2620,8 @@ select.x-input option {
                     <button class="btn-send" onclick="document.getElementById('fileInput').click()" style="color:#888;">⊕</button>
                     <input type="file" id="fileInput" hidden accept="image/*" onchange="handleFile(event)">
                     <input type="text" id="userInput" placeholder="iMessage" onkeypress="if(event.key==='Enter') sendMsg('user')">
-                    <button class="btn-send" onclick="sendMsg('user')">⬆</button>
+                    <!-- 改成点击调用 sendAndTrigger() -->
+<button class="btn-send" onclick="sendAndTrigger()">⬆</button>
                     <button class="btn-send" id="btn-ai" onclick="triggerAI()" style="color:#5856D6">🤖</button>
                 </div>
             </div>
@@ -5146,8 +5147,7 @@ select.x-input option {
             input.value = '';
             clearUpload();
             
-            // 触发 AI 回复 (在 sendMsg 内部调用 triggerAI)
-            setTimeout(triggerAI, 100); // 稍微延迟一点避免UI卡顿
+            
         }
 
         async function triggerAI() {
@@ -17232,7 +17232,7 @@ function sendStickerMsg(sticker) {
     saveData();
 
     renderChat(activeContactId);
-    triggerAI();
+    
 }
 
 // 5. 管理逻辑 (删除)
@@ -17334,10 +17334,31 @@ function addSingleSticker() {
     saveStickers();
     renderStickerGrid();
 }
+        // ==========================================
+// --- 🚀 新的发送逻辑：发送并召唤 AI ---
+// ==========================================
+function sendAndTrigger() {
+    const input = document.getElementById('userInput');
+    const txt = input.value.trim();
+    const hasImage = !!currentImg; // 检查是否有待发送的图片
+
+    // 逻辑：
+    // 1. 如果输入框里有字或者有图，先发送这条消息
+    if (txt || hasImage) {
+        sendMsg('user'); // 这会把字/图发出去，但不会触发AI（因为上面我们注释掉了）
+    }
+
+    // 2. 无论刚才有没有发消息，只要点击了这个按钮，就强制召唤 AI 回复
+    // 稍微延迟 200ms，确保数据保存完毕，体验更流畅
+    setTimeout(() => {
+        triggerAI();
+    }, 200);
+}
         
     </script>
 </body>
 </html>
+
 
 
 
