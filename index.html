@@ -2236,6 +2236,42 @@ select.x-input option {
     box-shadow: 0 4px 15px rgba(155, 89, 182, 0.4); cursor: pointer;
 }
 .mystic-desc { font-size: 12px; color: rgba(255,255,255,0.5); text-align: center; margin-top: 10px; }
+        /* AI 小说大纲卡片样式 */
+.outline-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+.outline-card:active { transform: scale(0.98); }
+.outline-card.selected { border: 2px solid #007AFF; background: #f0f8ff; }
+
+/* 模拟书籍封面左侧色条 */
+.outline-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
+    background: linear-gradient(to bottom, #FF9A9E, #FECFEF);
+}
+
+.outline-title { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 5px; }
+.outline-tag { font-size: 10px; color: #fff; background: #FF9500; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 8px; }
+.outline-desc { font-size: 13px; color: #666; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.outline-btn { 
+    margin-top: 10px; width: 100%; padding: 8px; 
+    background: #007AFF; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; 
+}
+
+/* 阅读器编辑模式高亮 */
+#reader-content[contenteditable="true"] {
+    background: rgba(255,255,255,0.5);
+    outline: 2px dashed #007AFF;
+    padding: 10px;
+}
     </style>
 </head>
 <body>
@@ -3115,6 +3151,8 @@ select.x-input option {
 <button class="btn-icon-only" id="btn-manage-books" onclick="toggleBookDeleteMode()" style="font-size: 18px; margin-right: 10px;">🗑️</button>
 <!-- 原有的导入按钮 -->
 <button class="btn-icon-only" onclick="document.getElementById('bookFileInput').click()">+</button>
+        <!-- 新增：AI 写书悬浮按钮 -->
+<button class="btn-float-write" onclick="openCreateNovelModal()" style="background: linear-gradient(135deg, #FF9A9E, #FECFEF); bottom: 90px;">✒️</button>
         <input type="file" id="bookFileInput" accept=".txt" hidden onchange="handleBookImport(event)">
     </div>
     <div class="content-scroll">
@@ -3264,6 +3302,23 @@ select.x-input option {
     <div id="reader-content" style="position:absolute; top:90px; bottom:70px; left:0; right:0; padding:20px 25px; overflow-y:auto; font-size:19px; line-height:1.8; color:#333; font-family:'Songti SC', serif; text-align:justify; scroll-behavior: smooth;">
         <!-- 章节正文 -->
     </div>
+    <!-- 新增：AI 小说专用互动栏 (默认隐藏) -->
+<div id="reader-interactive-bar" style="position:absolute; bottom:70px; left:0; right:0; background:rgba(255,255,255,0.95); backdrop-filter:blur(10px); padding:10px; border-top:1px solid #ccc; display:none; flex-direction:column; gap:8px; z-index:150;">
+    <!-- 第一行：输入剧情走向 -->
+    <div style="display:flex; gap:8px; align-items:center;">
+        <button onclick="insertRandomEvent()" style="font-size:20px; background:none; border:none;" title="随机事件骰子">⚡</button>
+        <input type="text" id="ai-novel-prompt" placeholder="下一章剧情走向 (例如: 突然下雨了/发现他的秘密)" style="flex:1; padding:8px; border-radius:8px; border:1px solid #ddd; outline:none;">
+        <button onclick="generateNextChapterAI()" style="background:#007AFF; color:white; border:none; padding:8px 12px; border-radius:8px; font-weight:bold; white-space:nowrap;">生成</button>
+    </div>
+    <!-- 第二行：修文操作 -->
+    <div style="display:flex; justify-content:space-between; font-size:12px; color:#666;">
+        <div style="display:flex; gap:15px;">
+            <span onclick="deleteLastChapter()" style="color:#ff3b30; cursor:pointer;">撤回上一章</span>
+            <span onclick="regenerateLastChapter()" style="color:#FF9500; cursor:pointer;">重写本章</span>
+        </div>
+        <span onclick="toggleEditMode()" style="color:#007AFF; cursor:pointer;">手动修文</span>
+    </div>
+</div>
 
     <!-- 底部导航 (双层控制) -->
     <div class="reader-footer" style="position:absolute; bottom:0; width:100%; height:70px; background:rgba(248,241,229,0.98); border-top:1px solid rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:space-between; padding:0 15px; padding-bottom:15px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05);">
@@ -4168,6 +4223,47 @@ select.x-input option {
     </div>
 
 </div>
+        </div>
+    </div>
+</div>
+        <!-- 弹窗 A: 创建小说配置 (选角色、填 Tag) -->
+<div class="modal-overlay" id="modal-create-novel">
+    <div class="modal-box" style="height:auto;">
+        <div class="modal-header">AI 共创小说</div>
+        <div class="modal-body" style="padding:20px;">
+            <div class="ios-list">
+                <div class="ios-item">
+                    <span class="ios-label">主角 (CP)</span>
+                    <select id="novel-cp-select" class="ios-input" style="direction:rtl;"></select>
+                </div>
+            </div>
+            
+            <div class="ios-group-title">关键词 / 梗 / 类型</div>
+            <textarea id="novel-tags-input" class="ios-input" style="width:100%; height:80px; border:1px solid #eee; padding:10px; border-radius:8px;" placeholder="例如：ABO、先婚后爱、破镜重圆、赛博朋克..."></textarea>
+            
+            <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+                <button onclick="fillRandomTags()" style="font-size:12px; padding:5px 10px; background:#f0f0f5; border:none; border-radius:15px; color:#5856d6;">🎲 听天由命</button>
+                <button onclick="addTag('甜宠')" style="font-size:12px; padding:5px 10px; background:#f0f0f5; border:none; border-radius:15px;">🍬 甜宠</button>
+                <button onclick="addTag('强取豪夺')" style="font-size:12px; padding:5px 10px; background:#f0f0f5; border:none; border-radius:15px;">⛓️ 强取豪夺</button>
+                <button onclick="addTag('无限流')" style="font-size:12px; padding:5px 10px; background:#f0f0f5; border:none; border-radius:15px;">♾️ 无限流</button>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-create-novel')">取消</button>
+            <button class="modal-btn" id="btn-gen-outline" onclick="generateOutlines()" style="color:#007AFF; font-weight:bold;">生成大纲</button>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗 B: 选择大纲 (类似晋江书单) -->
+<div class="modal-overlay" id="modal-select-outline">
+    <div class="modal-box" style="height:80%; background:#f9f9f9;">
+        <div class="modal-header">选择一个剧本</div>
+        <div id="outline-list-container" class="modal-body" style="padding:15px; overflow-y:auto;">
+            <!-- 动态生成的大纲卡片 -->
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-select-outline')">返回修改</button>
         </div>
     </div>
 </div>
@@ -8875,6 +8971,7 @@ async function openBook(id) {
     }
 
     renderReaderPage();
+    checkAiNovelMode();
 }
 
 // 渲染阅读器页面 (修改版：增加进度恢复 + 滚动监听)
@@ -16204,10 +16301,440 @@ window.addEventListener('load', () => {
         document.getElementById('cd-disc-img').style.backgroundImage = `url('${savedCover}')`;
     }
 });
+        // ==========================================
+// --- 🤖 AI 小说生成系统 (无限流共读) ---
+// ==========================================
+
+let generatedOutlines = []; // 临时存储生成的大纲
+
+// 1. 打开创建弹窗
+function openCreateNovelModal() {
+    const select = document.getElementById('novel-cp-select');
+    select.innerHTML = '';
+    
+    if (contacts.length === 0) return alert("请先创建一个角色！");
+
+    // 填充角色
+    contacts.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.innerText = c.name;
+        select.appendChild(opt);
+    });
+    // 默认选当前活跃角色
+    if (activeContactId) select.value = activeContactId;
+
+    document.getElementById('novel-tags-input').value = '';
+    openModal('modal-create-novel');
+}
+
+// 辅助：加 Tag
+function addTag(tag) {
+    const input = document.getElementById('novel-tags-input');
+    input.value = input.value ? input.value + "、" + tag : tag;
+}
+
+// 辅助：随机 Tag
+function fillRandomTags() {
+    const tropes = ["先婚后爱", "破镜重圆", "相爱相杀", "带球跑", "末世求生", "ABO", "赛博朋克", "修仙师徒", "无限流副本", "娱乐圈隐婚"];
+    const randomTrope = tropes[Math.floor(Math.random() * tropes.length)];
+    addTag(randomTrope);
+}
+
+// 2. 生成大纲 (Step 1)
+async function generateOutlines() {
+    if (!globalConfig.apiKey) return alert("请先配置 API Key");
+
+    const charId = document.getElementById('novel-cp-select').value;
+    const tags = document.getElementById('novel-tags-input').value.trim();
+    const char = contacts.find(c => c.id === charId);
+    const myName = char.userName || "我";
+
+    if (!tags) return alert("请至少输入一个关键词");
+
+    const btn = document.getElementById('btn-gen-outline');
+    const oldText = btn.innerText;
+    btn.innerText = "正在构思...";
+    btn.disabled = true;
+
+    // 构造 Prompt
+    const prompt = `
+    你是一位专业的通俗小说作家（晋江/起点风格）。
+    请根据以下要求，构思 4 个不同的小说大纲。
+    
+    【主角】："${char.name}" (攻/男主/对方) 和 "${myName}" (受/女主/我)。
+    【人设参考】：${char.name}的人设是：${char.systemPrompt}。
+    【关键词/Tags】：${tags}
+    
+    要求：
+    1. 每个大纲包含：书名、一句话亮点(Tag)、200字以内的故事简介。
+    2. 脑洞要大，剧情要吸引人，符合网文爽点或虐点。
+    3. 必须返回纯 JSON 数组格式：
+    [
+      {"title": "书名1", "tag": "亮点1", "summary": "简介1..."},
+      {"title": "书名2", "tag": "亮点2", "summary": "简介2..."}
+    ]
+    `;
+
+    try {
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.9
+        });
+        
+        const data = await res.json();
+        let content = data.choices[0].message.content;
+        content = content.replace(/```json|```/g, '').trim(); // 清洗 markdown
+        
+        generatedOutlines = JSON.parse(content);
+        
+        // 渲染大纲选择界面
+        renderOutlineSelection(charId, tags);
+        
+        closeModal('modal-create-novel');
+        openModal('modal-select-outline');
+
+    } catch (e) {
+        alert("生成失败: " + e.message);
+        console.error(e);
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
+
+// 3. 渲染大纲列表
+function renderOutlineSelection(charId, originalTags) {
+    const container = document.getElementById('outline-list-container');
+    container.innerHTML = '';
+
+    generatedOutlines.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'outline-card';
+        div.innerHTML = `
+            <div class="outline-title">${item.title}</div>
+            <div class="outline-tag">${item.tag}</div>
+            <div class="outline-desc">${item.summary}</div>
+            <button class="outline-btn" onclick="createAiBook(${index}, '${charId}', '${originalTags}')">开始创作这部</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// 4. 正式创建书籍 (存入 IndexedDB)
+async function createAiBook(index, charId, tags) {
+    const outlineData = generatedOutlines[index];
+    const bookId = 'ai_novel_' + Date.now();
+    
+    // 构造第一章 (序章)
+    const firstChapter = {
+        title: "第一章: 序幕",
+        body: `（点击底部“生成”按钮，开始这一章的冒险...）\n\n【大纲回顾】\n${outlineData.summary}`
+    };
+
+    // 存入 DB (大文件)
+    await saveBookToDB({ 
+        id: bookId, 
+        chapters: [firstChapter] 
+    });
+
+    // 存入 LocalStorage (元数据)
+    // 关键：添加 isAiNovel 标记，以及大纲信息
+    const newBook = {
+        id: bookId,
+        title: outlineData.title,
+        author: "AI 共创 · " + getActiveCharName(charId),
+        progressIndex: 0,
+        summaries: [],
+        
+        // --- AI 小说特有字段 ---
+        isAiNovel: true,
+        aiCharId: charId, // 绑定的角色ID
+        aiOutline: outlineData.summary,
+        aiTags: tags
+    };
+    
+    libraryMeta.push(newBook);
+    localStorage.setItem('ai_phone_library', JSON.stringify(libraryMeta));
+    
+    closeModal('modal-select-outline');
+    renderBookshelf();
+    
+    // 直接打开
+    activeContactId = charId; // 自动切换到该角色
+    openBook(bookId);
+}
+
+// 辅助：获取名字
+function getActiveCharName(id) {
+    const c = contacts.find(x => x.id === id);
+    return c ? c.name : "AI";
+}
+
+// ==========================================
+// --- 📖 AI 小说阅读器扩展逻辑 ---
+// ==========================================
+
+// 修改原有的 openBook 函数（你需要在原有代码里找到 openBook 并替换或修改）
+// 这里我提供一个 hook 逻辑，你可以在原有 openBook 的末尾加入 checkAiNovelMode()
+
+// ⚠️ 请在原有的 openBook() 函数最后一行添加： checkAiNovelMode();
+/*
+async function openBook(id) {
+    // ... 原有逻辑 ...
+    renderReaderPage();
+    checkAiNovelMode(); // <--- 加这一行
+}
+*/
+
+// 检查是否是 AI 小说，并切换 UI
+function checkAiNovelMode() {
+    const bar = document.getElementById('reader-interactive-bar');
+    const footer = document.querySelector('.reader-footer'); // 原有的底部翻页栏
+    
+    if (currentBookMeta && currentBookMeta.isAiNovel) {
+        // 是 AI 小说
+        bar.style.display = 'flex'; // 显示控制栏
+        footer.style.display = 'none'; // 隐藏普通翻页栏 (或者保留，用来回看，看你喜好。建议隐藏以免逻辑冲突)
+        
+        // 如果是第一章且内容很少，提示生成
+        const content = document.getElementById('reader-content').innerText;
+        if (content.includes("点击底部“生成”按钮")) {
+            document.getElementById('ai-novel-prompt').focus();
+        }
+    } else {
+        // 普通书
+        bar.style.display = 'none';
+        footer.style.display = 'flex';
+    }
+}
+
+// 5. 生成下一章 (核心)
+async function generateNextChapterAI() {
+    const promptInput = document.getElementById('ai-novel-prompt');
+    const userDirection = promptInput.value.trim(); // 用户输入的走向
+    
+    if (!globalConfig.apiKey) return alert("请先配置 API Key");
+
+    const char = contacts.find(c => c.id === currentBookMeta.aiCharId);
+    if (!char) return alert("找不到绑定角色");
+
+    const btn = event.target;
+    const oldText = btn.innerText;
+    btn.innerText = "写作中...";
+    btn.disabled = true;
+
+    // 准备上下文
+    const outline = currentBookMeta.aiOutline;
+    const currentChapIdx = currentBookMeta.progressIndex;
+    const prevSummary = (currentBookMeta.summaries || []).slice(-3).join('\n'); // 最近3章总结
+    
+    // 获取上一章的结尾 (作为衔接)
+    const prevBody = currentBookData.chapters[currentChapIdx].body;
+    const contextBody = prevBody.substring(prevBody.length - 500); // 取最后500字
+
+    // ✨ 角色互动 (打破第四面墙)
+    // 在生成前，先让悬浮球里的角色吐槽一句
+    if (userDirection.length > 5) {
+        triggerMetaComment(char, userDirection);
+    }
+
+    // 构造 Prompt
+    const systemPrompt = `
+    你现在是和用户共同创作小说的小说家。
+    
+    【小说设定】
+    书名：《${currentBookMeta.title}》
+    大纲：${outline}
+    主要角色：${char.name} (原型性格：${char.systemPrompt}) 和 用户(${char.userName})。
+    
+    【当前进度】
+    第 ${currentChapIdx + 1} 章刚刚结束。
+    剧情前情提要：${prevSummary || "故事刚开始"}
+    上一章结尾片段："...${contextBody}"
+    
+    【用户指令 (剧情走向)】
+    👉 "${userDirection || "顺其自然发展"}"
+    
+    【任务】
+    请续写 **第 ${currentChapIdx + 2} 章** 的正文。
+    要求：
+    1. 必须根据用户的指令发展剧情，如果用户指令很离谱，请用合理的逻辑圆回来。
+    2. 保持角色性格不崩坏。
+    3. 字数 800-1500 字。
+    4. 格式：第一行是章节标题，第二行开始是正文。
+    `;
+
+    try {
+        // 流式输出体验更好，但为了存 DB 方便，这里先用非流式 (你可以后续改造成流式)
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: [{ role: "user", content: systemPrompt }],
+            temperature: 0.8
+        });
+        
+        const data = await res.json();
+        const content = data.choices[0].message.content;
+
+        // 解析标题和正文
+        const lines = content.split('\n');
+        let title = `第 ${currentChapIdx + 2} 章`;
+        let body = content;
+        
+        // 尝试提取第一行做标题
+        if (lines[0].includes("章") || lines[0].length < 30) {
+            title = lines[0].trim();
+            body = lines.slice(1).join('\n').trim();
+        }
+
+        // --- 存入数据 ---
+        // 如果当前是最后一章，直接追加
+        // 现在的逻辑是：用户在读第 N 章，点击生成，应该生成第 N+1 章
+        // 如果用户想重写当前章，是另一个按钮
+        
+        currentBookData.chapters.push({ title: title, body: body });
+        await saveBookToDB(currentBookData); // 更新大文件
+        
+        // 更新元数据
+        currentBookMeta.progressIndex++; // 自动翻到新的一章
+        currentBookMeta.scrollRatio = 0;
+        localStorage.setItem('ai_phone_library', JSON.stringify(libraryMeta));
+
+        // 刷新界面
+        renderReaderPage();
+        
+        // 自动总结上一章 (静默执行)
+        autoSummarizePrevChapter(currentChapIdx);
+
+        // 清空输入框
+        promptInput.value = '';
+
+    } catch (e) {
+        alert("生成失败: " + e.message);
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
+
+// 6. 重写当前章
+async function regenerateLastChapter() {
+    if (!confirm("确定要重写这一章吗？当前内容将丢失。")) return;
+    
+    // 回退一章
+    if (currentBookData.chapters.length > 1) {
+        currentBookData.chapters.pop(); // 删掉最后一章
+        currentBookMeta.progressIndex--; // 指针回退
+        
+        // 保存状态
+        await saveBookToDB(currentBookData);
+        localStorage.setItem('ai_phone_library', JSON.stringify(libraryMeta));
+        
+        // 立即调用生成函数 (复用逻辑)
+        generateNextChapterAI();
+    } else {
+        alert("序章不能删除，请直接点击生成。");
+    }
+}
+
+// 7. 删除当前章 (回退)
+async function deleteLastChapter() {
+    if (currentBookData.chapters.length <= 1) return alert("已经是第一章了，无法再撤回。");
+    
+    if (confirm("撤回这一章，回到上一章结尾？")) {
+        currentBookData.chapters.pop();
+        currentBookMeta.progressIndex--;
+        currentBookMeta.scrollRatio = 0; // 回到顶部
+        
+        await saveBookToDB(currentBookData);
+        localStorage.setItem('ai_phone_library', JSON.stringify(libraryMeta));
+        
+        renderReaderPage();
+    }
+}
+
+// 8. 随机事件骰子
+function insertRandomEvent() {
+    const events = [
+        "突然停电了", "情敌突然出现", "不小心喝醉了", "被困在电梯里", 
+        "捡到一只流浪猫", "发烧生病了", "收到一封神秘信件", "窗外下起了暴雨",
+        "不小心摔倒在对方怀里", "系统发布了强制任务"
+    ];
+    const rand = events[Math.floor(Math.random() * events.length)];
+    const input = document.getElementById('ai-novel-prompt');
+    input.value = rand;
+}
+
+// 9. 角色吐槽 (Meta Comment)
+async function triggerMetaComment(char, instruction) {
+    // 简单的本地随机吐槽，省钱又快，或者你可以接 API
+    // 这里为了演示，写几个简单的模板
+    const modal = document.getElementById('modal-reader-chat');
+    
+    // 如果没有显示聊天窗，可以用 toast 或者短暂显示一下气泡
+    // 这里我们简单粗暴：直接弹一个漂亮的 Toast 或者利用悬浮球
+    
+    const bubble = document.querySelector('.reader-ai-bubble');
+    const oldHtml = bubble.innerHTML;
+    
+    // 临时显示气泡文字
+    bubble.style.width = 'auto';
+    bubble.style.borderRadius = '20px';
+    bubble.style.padding = '5px 15px';
+    bubble.style.right = '20px';
+    
+    let comment = "收到！看我怎么编...";
+    if (instruction.includes("吻") || instruction.includes("亲")) comment = "哎呀...这也太快了吧？///";
+    if (instruction.includes("死") || instruction.includes("虐")) comment = "你心也太狠了...真的要这样吗？";
+    if (instruction.includes("甜")) comment = "嘿嘿，我也喜欢甜的！";
+    
+    bubble.innerText = comment;
+    
+    // 3秒后恢复头像
+    setTimeout(() => {
+        bubble.innerHTML = oldHtml;
+        bubble.style.width = '50px';
+        bubble.style.borderRadius = '50%';
+        bubble.style.padding = '0';
+    }, 3000);
+}
+
+// 10. 手动修文模式
+function toggleEditMode() {
+    const contentBox = document.getElementById('reader-content');
+    const isEditable = contentBox.isContentEditable;
+    
+    if (isEditable) {
+        // 保存修改
+        contentBox.contentEditable = "false";
+        const idx = currentBookMeta.progressIndex;
+        currentBookData.chapters[idx].body = contentBox.innerText; // 保存文本
+        saveBookToDB(currentBookData);
+        alert("修改已保存！");
+    } else {
+        // 开启编辑
+        contentBox.contentEditable = "true";
+        contentBox.focus();
+        alert("已进入修文模式，直接点击正文修改。\n再次点击按钮保存。");
+    }
+}
+
+// 辅助：自动总结 (静默)
+async function autoSummarizePrevChapter(idx) {
+    if (idx < 0) return;
+    // 如果已经有总结了跳过
+    if (currentBookMeta.summaries && currentBookMeta.summaries[idx]) return;
+    
+    // 复用之前的 generateChapterSummary 逻辑，但要去掉 alert，做成静默的
+    // 这里简化处理，你可以直接调用原本的 generateChapterSummary，只是它会弹窗
+    // 建议把 generateChapterSummary 改造一下，加个 isSilent 参数
+}
         
     </script>
 </body>
 </html>
+
 
 
 
