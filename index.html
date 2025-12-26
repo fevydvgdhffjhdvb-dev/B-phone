@@ -2306,6 +2306,10 @@ select.x-input option {
     margin-left: -2px; /* 微调位置让视觉居中 */
     margin-top: 2px;
 }
+        /* 新加这个：给正文底部留出空间，防止被输入框挡住 */
+#reader-content {
+    padding-bottom: 160px !important;
+}
     </style>
 </head>
 <body>
@@ -3344,21 +3348,41 @@ select.x-input option {
     <div id="reader-content" style="position:absolute; top:90px; bottom:70px; left:0; right:0; padding:20px 25px; overflow-y:auto; font-size:19px; line-height:1.8; color:#333; font-family:'Songti SC', serif; text-align:justify; scroll-behavior: smooth;">
         <!-- 章节正文 -->
     </div>
-    <!-- 新增：AI 小说专用互动栏 (默认隐藏) -->
-<div id="reader-interactive-bar" style="position:absolute; bottom:70px; left:0; right:0; background:rgba(255,255,255,0.95); backdrop-filter:blur(10px); padding:10px; border-top:1px solid #ccc; display:none; flex-direction:column; gap:8px; z-index:150;">
-    <!-- 第一行：输入剧情走向 -->
-    <div style="display:flex; gap:8px; align-items:center;">
-        <button onclick="insertRandomEvent()" style="font-size:20px; background:none; border:none;" title="随机事件骰子">⚡</button>
-        <input type="text" id="ai-novel-prompt" placeholder="下一章剧情走向 (例如: 突然下雨了/发现他的秘密)" style="flex:1; padding:8px; border-radius:8px; border:1px solid #ddd; outline:none;">
-        <button onclick="generateNextChapterAI()" style="background:#007AFF; color:white; border:none; padding:8px 12px; border-radius:8px; font-weight:bold; white-space:nowrap;">生成</button>
-    </div>
-    <!-- 第二行：修文操作 -->
-    <div style="display:flex; justify-content:space-between; font-size:12px; color:#666;">
+    <!-- 新增：AI 小说专用互动栏 (位置修复版) -->
+<div id="reader-interactive-bar" style="
+    position: absolute; 
+    bottom: 0; 
+    left: 0; 
+    right: 0; 
+    background: rgba(248, 248, 248, 0.95); 
+    backdrop-filter: blur(20px); 
+    border-top: 1px solid #ccc; 
+    display: none; 
+    flex-direction: column; 
+    gap: 10px; 
+    z-index: 200; 
+    /* 关键：利用 padding 顶起内容，避开 iPhone 底部黑条 */
+    padding: 15px 15px max(20px, env(safe-area-inset-bottom)) 15px;
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+">
+    <!-- 第一行：修文操作 (移到上面，避免误触) -->
+    <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; padding-left:5px; padding-right:5px;">
         <div style="display:flex; gap:15px;">
             <span onclick="deleteLastChapter()" style="color:#ff3b30; cursor:pointer;">撤回上一章</span>
             <span onclick="regenerateLastChapter()" style="color:#FF9500; cursor:pointer;">重写本章</span>
         </div>
         <span onclick="toggleEditMode()" style="color:#007AFF; cursor:pointer;">手动修文</span>
+    </div>
+
+    <!-- 第二行：输入剧情走向 (核心区域) -->
+    <div style="display:flex; gap:10px; align-items:center;">
+        <button onclick="insertRandomEvent()" style="font-size:24px; background:none; border:none; padding:0;" title="随机事件">⚡</button>
+        <input type="text" id="ai-novel-prompt" placeholder="接下来发生什么？(如: 突然下雨/发现秘密)" 
+               style="flex:1; height:40px; padding:0 12px; border-radius:20px; border:1px solid #ddd; outline:none; font-size:15px; background:#fff;">
+        <button onclick="generateNextChapterAI()" 
+                style="background:#007AFF; color:white; border:none; height:36px; padding:0 15px; border-radius:18px; font-weight:bold; font-size:14px; box-shadow: 0 2px 5px rgba(0,122,255,0.3);">
+            生成
+        </button>
     </div>
 </div>
 
@@ -16776,6 +16800,7 @@ async function autoSummarizePrevChapter(idx) {
     </script>
 </body>
 </html>
+
 
 
 
