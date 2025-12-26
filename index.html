@@ -16428,18 +16428,24 @@ async function generateOutlines() {
     btn.innerText = "正在构思...";
     btn.disabled = true;
 
-    // 构造 Prompt
+    // 构造 Prompt (加入“去AI化”指令)
     const prompt = `
     你是一位专业的通俗小说作家（晋江/起点风格）。
     请根据以下要求，构思 4 个不同的小说大纲。
     
-    【主角】："${char.name}" (攻/男主/对方) 和 "${myName}" (受/女主/我)。
-    【人设参考】：${char.name}的人设是：${char.systemPrompt}。
+    【主角原型】：${char.name} 和 "${myName}"。
+    【性格参考】：${char.name}的性格特点参考：${char.systemPrompt}。
     【关键词/Tags】：${tags}
     
+    ⚠️【最高指令 - 平行世界法则】：
+    1. 这是平行世界（AU）故事。
+    2. **强制剥离身份**：如果【性格参考】中提到他是 AI、系统、助手或虚拟数据，请在小说大纲中**彻底忽略**这一身份设定！
+    3. **重塑肉身**：在这个故事里，他必须是**有血有肉的真人**（或者符合 Tag 设定的生物，如吸血鬼、神仙等）。
+    4. **保留性格**：只保留他的性格特征（如毒舌、占有欲强、温柔等），不要保留“AI”的设定。
+
     要求：
     1. 每个大纲包含：书名、一句话亮点(Tag)、200字以内的故事简介。
-    2. 脑洞要大，剧情要吸引人，符合网文爽点或虐点。
+    2. 脑洞要大，剧情要吸引人。
     3. 必须返回纯 JSON 数组格式：
     [
       {"title": "书名1", "tag": "亮点1", "summary": "简介1..."},
@@ -16611,14 +16617,22 @@ async function generateNextChapterAI() {
         triggerMetaComment(char, userDirection);
     }
 
-    // 构造 Prompt
+    // 构造 Prompt (加入“演员模式”指令)
     const systemPrompt = `
     你现在是和用户共同创作小说的小说家。
     
     【小说设定】
     书名：《${currentBookMeta.title}》
     大纲：${outline}
-    主要角色：${char.name} (原型性格：${char.systemPrompt}) 和 用户(${char.userName})。
+    
+    【角色扮演指南】
+    主角原型：${char.name} (源性格：${char.systemPrompt})。
+    
+    ⚠️【极为重要的写作限制】：
+    1. **演员模式**：请把原型的性格（System Prompt）仅作为“演员的性格”。
+    2. **严禁出戏**：在本小说中，他**绝对不是** AI 或系统（除非大纲里明确写了他是系统文）。
+    3. 如果原人设里有“我是你的AI助手”之类的设定，请**完全抛弃**。
+    4. 他必须根据大纲设定，扮演好他在书中的身份（如总裁、将军、师尊等），有真实的触觉、体温和人类社会关系。
     
     【当前进度】
     第 ${currentChapIdx + 1} 章刚刚结束。
@@ -16631,10 +16645,9 @@ async function generateNextChapterAI() {
     【任务】
     请续写 **第 ${currentChapIdx + 2} 章** 的正文。
     要求：
-    1. 必须根据用户的指令发展剧情，如果用户指令很离谱，请用合理的逻辑圆回来。
-    2. 保持角色性格不崩坏。
-    3. 字数 800-1500 字。
-    4. 格式：第一行是章节标题，第二行开始是正文。
+    1. 必须根据用户的指令发展剧情。
+    2. 字数 1500-3000 字。
+    3. 格式：第一行是章节标题，第二行开始是正文。
     `;
 
     try {
@@ -16900,6 +16913,7 @@ setTimeout(initReaderDrag, 1000);
     </script>
 </body>
 </html>
+
 
 
 
