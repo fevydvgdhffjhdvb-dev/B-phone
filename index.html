@@ -3348,39 +3348,43 @@ select.x-input option {
     <div id="reader-content" style="position:absolute; top:90px; bottom:70px; left:0; right:0; padding:20px 25px; overflow-y:auto; font-size:19px; line-height:1.8; color:#333; font-family:'Songti SC', serif; text-align:justify; scroll-behavior: smooth;">
         <!-- 章节正文 -->
     </div>
-    <!-- 新增：AI 小说专用互动栏 (位置修复版) -->
+    <!-- 新增：AI 小说专用互动栏 (修复版：按钮防挤压) -->
 <div id="reader-interactive-bar" style="
     position: absolute; 
     bottom: 0; 
     left: 0; 
     right: 0; 
-    background: rgba(248, 248, 248, 0.95); 
+    background: rgba(248, 248, 248, 0.98); 
     backdrop-filter: blur(20px); 
-    border-top: 1px solid #ccc; 
+    border-top: 1px solid #e5e5ea; 
     display: none; 
     flex-direction: column; 
-    gap: 10px; 
+    gap: 12px; 
     z-index: 200; 
-    /* 关键：利用 padding 顶起内容，避开 iPhone 底部黑条 */
-    padding: 15px 15px max(20px, env(safe-area-inset-bottom)) 15px;
-    box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+    padding: 12px 15px max(20px, env(safe-area-inset-bottom)) 15px;
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
 ">
-    <!-- 第一行：修文操作 (移到上面，避免误触) -->
-    <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; padding-left:5px; padding-right:5px;">
+    <!-- 第一行：修文操作 -->
+    <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; padding:0 5px;">
         <div style="display:flex; gap:15px;">
-            <span onclick="deleteLastChapter()" style="color:#ff3b30; cursor:pointer;">撤回上一章</span>
-            <span onclick="regenerateLastChapter()" style="color:#FF9500; cursor:pointer;">重写本章</span>
+            <span onclick="deleteLastChapter()" style="color:#ff3b30; cursor:pointer;">撤回</span>
+            <span onclick="regenerateLastChapter()" style="color:#FF9500; cursor:pointer;">重写</span>
         </div>
         <span onclick="toggleEditMode()" style="color:#007AFF; cursor:pointer;">手动修文</span>
     </div>
 
-    <!-- 第二行：输入剧情走向 (核心区域) -->
+    <!-- 第二行：输入剧情走向 (修复布局) -->
     <div style="display:flex; gap:10px; align-items:center;">
-        <button onclick="insertRandomEvent()" style="font-size:24px; background:none; border:none; padding:0;" title="随机事件">⚡</button>
-        <input type="text" id="ai-novel-prompt" placeholder="接下来发生什么？(如: 突然下雨/发现秘密)" 
-               style="flex:1; height:40px; padding:0 12px; border-radius:20px; border:1px solid #ddd; outline:none; font-size:15px; background:#fff;">
+        <!-- 闪电按钮：禁止压缩 -->
+        <button onclick="insertRandomEvent()" style="font-size:24px; background:none; border:none; padding:0; flex-shrink: 0;" title="随机事件">⚡</button>
+        
+        <!-- 输入框：自动伸缩，最小宽度设为0防止撑开 -->
+        <input type="text" id="ai-novel-prompt" placeholder="接下来..." 
+               style="flex:1; min-width:0; height:40px; padding:0 12px; border-radius:20px; border:1px solid #ddd; outline:none; font-size:15px; background:#fff;">
+        
+        <!-- 生成按钮：禁止压缩 (flex-shrink: 0) -->
         <button onclick="generateNextChapterAI()" 
-                style="background:#007AFF; color:white; border:none; height:36px; padding:0 15px; border-radius:18px; font-weight:bold; font-size:14px; box-shadow: 0 2px 5px rgba(0,122,255,0.3);">
+                style="background:#007AFF; color:white; border:none; height:36px; padding:0 15px; border-radius:18px; font-weight:bold; font-size:14px; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,122,255,0.3);">
             生成
         </button>
     </div>
@@ -3405,10 +3409,11 @@ select.x-input option {
         <button onclick="nextChapter()" class="reader-btn-chap" title="下一章">章 ⏭</button>
     </div>
 
-    <!-- AI 伴读悬浮球 -->
-    <div class="reader-ai-bubble" onclick="openReaderChat()" style="position:absolute; bottom:90px; right:20px; width:50px; height:50px; border-radius:50%; background:#fff; box-shadow:0 4px 15px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; border:2px solid #5856d6; z-index:200; cursor:pointer;">
-        <img id="reader-ai-avatar" src="" style="width:42px; height:42px; border-radius:50%; object-fit:cover;">
-    </div>
+    <!-- AI 伴读悬浮球 (修改版：加了ID，去掉了 onclick，加了触摸样式) -->
+<div id="reader-float-btn" class="reader-ai-bubble" 
+     style="position:absolute; bottom:150px; right:20px; width:50px; height:50px; border-radius:50%; background:#fff; box-shadow:0 4px 15px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; border:2px solid #5856d6; z-index:200; cursor:pointer; touch-action: none;">
+    <img id="reader-ai-avatar" src="" style="width:42px; height:42px; border-radius:50%; object-fit:cover; pointer-events: none;">
+</div>
 </div>
 
 <!-- 阅读器聊天弹窗 -->
@@ -16796,10 +16801,106 @@ async function autoSummarizePrevChapter(idx) {
     // 这里简化处理，你可以直接调用原本的 generateChapterSummary，只是它会弹窗
     // 建议把 generateChapterSummary 改造一下，加个 isSilent 参数
 }
+        // ==========================================
+// --- 🖱️ 阅读器悬浮球拖拽逻辑 ---
+// ==========================================
+function initReaderDrag() {
+    const btn = document.getElementById('reader-float-btn');
+    if (!btn) return; // 防止报错
+
+    // 限制拖拽范围的容器 (阅读器页面)
+    const container = document.getElementById('page-reader'); 
+
+    let isDragging = false;
+    let hasMoved = false; // 区分点击和拖拽
+    let startX, startY, startLeft, startTop;
+
+    // 获取坐标
+    const getXY = (e) => {
+        return e.touches ? { x: e.touches[0].clientX, y: e.touches[0].clientY } 
+                         : { x: e.clientX, y: e.clientY };
+    };
+
+    const start = (e) => {
+        isDragging = true;
+        hasMoved = false;
+        const { x, y } = getXY(e);
+        startX = x;
+        startY = y;
+
+        // 获取当前位置 (计算 offset)
+        const rect = btn.getBoundingClientRect();
+        // 如果父容器是 relative/absolute，我们需要计算相对于父容器的 left/top
+        // 这里简化处理：直接获取 computedStyle 的 left/top
+        const style = window.getComputedStyle(btn);
+        
+        // 如果是从 bottom/right 定位的，第一次拖动前要转成 left/top
+        if (btn.style.left === '' || btn.style.left === 'auto') {
+            btn.style.left = btn.offsetLeft + 'px';
+            btn.style.top = btn.offsetTop + 'px';
+            btn.style.bottom = 'auto';
+            btn.style.right = 'auto';
+        }
+        
+        startLeft = parseFloat(btn.style.left);
+        startTop = parseFloat(btn.style.top);
+    };
+
+    const move = (e) => {
+        if (!isDragging) return;
+        // 阻止默认滚动，让球跟手
+        if (e.type === 'touchmove') e.preventDefault(); 
+
+        const { x, y } = getXY(e);
+        const dx = x - startX;
+        const dy = y - startY;
+
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) hasMoved = true;
+
+        let newL = startLeft + dx;
+        let newT = startTop + dy;
+
+        // 边界限制 (防止拖出屏幕)
+        const maxL = container.offsetWidth - btn.offsetWidth;
+        const maxT = container.offsetHeight - btn.offsetHeight;
+        
+        // 限制在 0 ~ max 之间
+        newL = Math.max(0, Math.min(newL, maxL));
+        newT = Math.max(0, Math.min(newT, maxT));
+
+        btn.style.left = newL + 'px';
+        btn.style.top = newT + 'px';
+    };
+
+    const end = (e) => {
+        isDragging = false;
+        // 如果只是轻点（没移动），则触发点击事件
+        if (!hasMoved) {
+            openReaderChat(); // <--- 这里调用原来的打开聊天函数
+        }
+    };
+
+    // 绑定事件
+    btn.addEventListener('touchstart', start, {passive: false});
+    btn.addEventListener('touchmove', move, {passive: false});
+    btn.addEventListener('touchend', end);
+    
+    // 鼠标兼容 (可选)
+    btn.addEventListener('mousedown', start);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', () => { if(isDragging) end(); isDragging=false; });
+}
+
+// ⚠️ 重要：要在打开阅读器时启动这个逻辑
+// 请在原来的 renderReaderPage 函数的最后一行，加上 initReaderDrag();
+// 为了保险，我们也可以直接监听 click，但那样每次进页面都要绑一次可能会重复
+// 简单的办法：直接现在运行一次，因为 DOM 已经在那里了
+setTimeout(initReaderDrag, 1000);
         
     </script>
 </body>
 </html>
+
 
 
 
