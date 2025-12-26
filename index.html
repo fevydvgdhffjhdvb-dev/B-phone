@@ -3193,9 +3193,10 @@ select.x-input option {
     <!-- 滚动区域 -->
     <div class="content-scroll">
         <div class="ios-group-title">我的书架</div>
-        <div id="bookshelf-container" class="app-grid" style="grid-template-columns: repeat(3, 1fr); gap: 20px;">
-            <!-- 书籍列表 -->
-        </div>
+        <!-- 修复版：加上 display: grid 强制网格布局，并调整间距 -->
+<div id="bookshelf-container" class="app-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 0 10px;">
+    <!-- 书籍列表动态生成 -->
+</div>
         <div style="padding:20px; text-align:center; color:#999; font-size:12px;">
             点击右上角 + 号导入 TXT<br>
             书籍正文存储于 IndexedDB
@@ -16913,6 +16914,7 @@ setTimeout(initReaderDrag, 1000);
     </script>
 </body>
 </html>
+
 
 
 
