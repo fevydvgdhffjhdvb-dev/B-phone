@@ -2310,11 +2310,11 @@ select.x-input option {
 #reader-content {
     padding-bottom: 160px !important;
 }
-        /* --- 表情包模块样式 --- */
+        /* --- 表情包专属样式 (修复版) --- */
 .sticker-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
+    gap: 10px;
     padding: 15px;
     max-height: 300px;
     overflow-y: auto;
@@ -2325,26 +2325,20 @@ select.x-input option {
     flex-direction: column;
     align-items: center;
     cursor: pointer;
-    position: relative;
     padding: 5px;
     border-radius: 8px;
     transition: background 0.2s;
+    position: relative; /* 关键：为了定位选中勾选框 */
 }
-
 .sticker-item:active { background: rgba(0,0,0,0.05); transform: scale(0.95); }
 
-/* 聊天框里的表情包样式 */
-.chat-sticker-img {
-    max-width: 120px;
-    max-height: 120px;
-    border-radius: 8px;
-    display: block;
-}
-
+/* 预览图 */
 .sticker-thumb {
     width: 60px;
     height: 60px;
-    object-fit: contain; /* 保持比例 */
+    object-fit: contain; /* 保持比例，完全显示 */
+    background: #f0f0f0; /* 给个灰色背景，防止透明图看不见 */
+    border-radius: 4px;
 }
 
 .sticker-name {
@@ -2358,34 +2352,35 @@ select.x-input option {
     text-overflow: ellipsis;
 }
 
-/* 删除模式下的选中态 */
+/* --- 核心修复：聊天框内的表情包图片 --- */
+.chat-sticker-img {
+    max-width: 150px;  /* 限制最大宽度 */
+    max-height: 150px; /* 限制最大高度 */
+    width: auto;       /* 自动宽度 */
+    height: auto;      /* 自动高度 */
+    border-radius: 8px;
+    display: block;    /* 块级显示 */
+    margin: 5px 0;
+    cursor: pointer;   /* 鼠标变手型 */
+}
+
+/* 删除模式样式 */
 .sticker-item.selected {
     background: #ffe5e5;
     border: 1px solid #ff3b30;
 }
 .sticker-check {
     position: absolute;
-    top: 0; right: 0;
-    color: #ff3b30;
-    display: none;
+    top: 2px; right: 2px;
+    background: #ff3b30; color: white;
+    border-radius: 50%; width: 16px; height: 16px;
+    font-size: 10px; display: none; align-items: center; justify-content: center;
 }
-.sticker-item.selected .sticker-check { display: block; }
+.sticker-item.selected .sticker-check { display: flex; }
 
-/* 底部操作栏 */
-.sticker-footer-tabs {
-    display: flex;
-    border-top: 1px solid #eee;
-    background: #f9f9f9;
-}
-.sticker-tab {
-    flex: 1;
-    padding: 12px;
-    text-align: center;
-    font-size: 12px;
-    color: #007AFF;
-    cursor: pointer;
-    border-right: 1px solid #eee;
-}
+/* 底部栏 */
+.sticker-footer-tabs { display: flex; border-top: 1px solid #eee; background: #f9f9f9; }
+.sticker-tab { flex: 1; padding: 12px; text-align: center; font-size: 13px; color: #007AFF; cursor: pointer; border-right: 1px solid #eee; font-weight: 500; }
 .sticker-tab:last-child { border-right: none; }
 .sticker-tab:active { background: #eee; }
 .sticker-tab.danger { color: #ff3b30; }
@@ -4456,6 +4451,24 @@ select.x-input option {
         <div class="sticker-footer-tabs" id="sticker-delete-tabs" style="display:none;">
             <div class="sticker-tab" onclick="toggleStickerDeleteMode()" style="color:#666">取消</div>
             <div class="sticker-tab danger" onclick="confirmDeleteStickers()">确认删除 (<span id="del-count">0</span>)</div>
+        </div>
+    </div>
+</div>
+        <!-- ============ 📥 表情包批量导入弹窗 ============ -->
+<div class="modal-overlay" id="modal-sticker-import" style="z-index: 700;">
+    <div class="modal-box" style="height: 60%;">
+        <div class="modal-header">批量导入表情</div>
+        <div class="modal-body" style="padding: 15px; display: flex; flex-direction: column;">
+            <div style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                请粘贴格式：名称：图片URL<br>
+                (支持中文/英文冒号，一行一个)
+            </div>
+            <!-- 大文本框，这就不会漏数据了 -->
+            <textarea id="sticker-import-textarea" style="flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-size: 12px; resize: none;" placeholder="粘贴你的列表到这里..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-sticker-import')">取消</button>
+            <button class="modal-btn" onclick="processStickerImport()" style="color: #007AFF; font-weight: bold;">开始识别</button>
         </div>
     </div>
 </div>
@@ -17118,27 +17131,21 @@ ${summary}
     }
 }
         // ==========================================
-// --- 🤪 表情包系统 (Sticker System) ---
+// --- 🤪 表情包系统 (Sticker System 2.0) ---
 // ==========================================
 
 let stickerLibrary = [];
 let isStickerDeleteMode = false;
-let selectedStickers = new Set(); // 存储要删除的索引
+let selectedStickers = new Set(); 
 
-// 1. 初始化与加载
+// 1. 初始化
 function initStickers() {
     const s = localStorage.getItem('ai_phone_stickers');
     if(s) {
         stickerLibrary = JSON.parse(s);
     } else {
-        // 预设几个表情包，防止空空如也
-        stickerLibrary = [
-            { name: "干杯", url: "https://api.dicebear.com/7.x/fun-emoji/svg?seed=Cheers" },
-            { name: "心虚", url: "https://api.dicebear.com/7.x/fun-emoji/svg?seed=Sweat" },
-            { name: "爱你", url: "https://api.dicebear.com/7.x/fun-emoji/svg?seed=Love" },
-            { name: "哭哭", url: "https://api.dicebear.com/7.x/fun-emoji/svg?seed=Cry" }
-        ];
-        saveStickers();
+        // 默认空，或者保留你想要的默认值
+        stickerLibrary = []; 
     }
 }
 window.addEventListener('load', initStickers);
@@ -17147,14 +17154,16 @@ function saveStickers() {
     localStorage.setItem('ai_phone_stickers', JSON.stringify(stickerLibrary));
 }
 
-// 2. 打开弹窗与渲染
+// 2. 打开主弹窗
 function openStickerModal() {
     isStickerDeleteMode = false;
+    selectedStickers.clear();
     updateStickerTabs();
     renderStickerGrid();
     openModal('modal-stickers');
 }
 
+// 3. 渲染网格
 function renderStickerGrid() {
     const grid = document.getElementById('sticker-grid-view');
     grid.innerHTML = '';
@@ -17168,18 +17177,16 @@ function renderStickerGrid() {
         const div = document.createElement('div');
         div.className = 'sticker-item';
         
-        // 删除模式下的选中样式
         if (isStickerDeleteMode && selectedStickers.has(index)) {
             div.classList.add('selected');
         }
 
-        // 点击逻辑
         div.onclick = () => handleStickerClick(index);
 
         div.innerHTML = `
             <img src="${sticker.url}" class="sticker-thumb" loading="lazy">
             <div class="sticker-name">${sticker.name}</div>
-            <div class="sticker-check">✅</div>
+            <div class="sticker-check">✓</div>
         `;
         grid.appendChild(div);
     });
@@ -17187,7 +17194,6 @@ function renderStickerGrid() {
 
 function handleStickerClick(index) {
     if (isStickerDeleteMode) {
-        // 删除模式：切换选中状态
         if (selectedStickers.has(index)) {
             selectedStickers.delete(index);
         } else {
@@ -17196,39 +17202,40 @@ function handleStickerClick(index) {
         document.getElementById('del-count').innerText = selectedStickers.size;
         renderStickerGrid();
     } else {
-        // 正常模式：发送表情包
+        // 发送表情
         sendStickerMsg(stickerLibrary[index]);
         closeModal('modal-stickers');
     }
 }
 
-// 3. 核心：发送表情包逻辑
+// 4. 发送逻辑 (修复显示问题)
 function sendStickerMsg(sticker) {
     const char = getActiveChar();
     if (!char) return alert("请先进入一个聊天窗口");
 
-    // 1. 构建 HTML (给自己看的)
-    const displayHtml = `<img src="${sticker.url}" class="chat-sticker-img">`;
+    // 核心修复：确保 HTML 结构干净，且 URL 没有空格
+    const cleanUrl = sticker.url.trim();
+    
+    // 显示给用户看的 HTML
+    // 注意：这里 class="chat-sticker-img" 对应 CSS 里的样式
+    const displayHtml = `<img src="${cleanUrl}" class="chat-sticker-img" onclick="window.open(this.src)">`;
 
-    // 2. 构建 Hidden Context (给 AI 看的)
-    // 这是让 AI 能“看懂”表情包的关键
-    const hiddenCtx = `[用户发送了一个表情包: "${sticker.name}"]`;
+    // 传给 AI 的“隐藏文本”
+    const hiddenCtx = `[用户发送了一个表情包图片: "${sticker.name}"]`;
 
-    // 3. 存入数据
     char.messages.push({
         role: 'user',
-        content: displayHtml, // 界面显示图片
-        hiddenContext: hiddenCtx, // AI 读取文字描述
+        content: displayHtml, // 界面显示
+        hiddenContext: hiddenCtx, // AI 理解
         timestamp: Date.now()
     });
     saveData();
 
-    // 4. 刷新界面并触发 AI
     renderChat(activeContactId);
     triggerAI();
 }
 
-// 4. 管理逻辑 (删除)
+// 5. 管理逻辑 (删除)
 function toggleStickerDeleteMode() {
     isStickerDeleteMode = !isStickerDeleteMode;
     selectedStickers.clear();
@@ -17238,58 +17245,49 @@ function toggleStickerDeleteMode() {
 }
 
 function updateStickerTabs() {
-    const normalTabs = document.getElementById('sticker-normal-tabs');
-    const delTabs = document.getElementById('sticker-delete-tabs');
+    const normal = document.getElementById('sticker-normal-tabs');
+    const del = document.getElementById('sticker-delete-tabs');
     const hint = document.getElementById('sticker-delete-hint');
 
     if (isStickerDeleteMode) {
-        normalTabs.style.display = 'none';
-        delTabs.style.display = 'flex';
+        normal.style.display = 'none';
+        del.style.display = 'flex';
         hint.style.display = 'block';
     } else {
-        normalTabs.style.display = 'flex';
-        delTabs.style.display = 'none';
+        normal.style.display = 'flex';
+        del.style.display = 'none';
         hint.style.display = 'none';
     }
 }
 
 function confirmDeleteStickers() {
     if (selectedStickers.size === 0) return toggleStickerDeleteMode();
-
     if (confirm(`确定删除选中的 ${selectedStickers.size} 个表情吗？`)) {
-        // 过滤掉选中的索引
         stickerLibrary = stickerLibrary.filter((_, index) => !selectedStickers.has(index));
         saveStickers();
-        toggleStickerDeleteMode(); // 退出删除模式并刷新
+        toggleStickerDeleteMode();
     }
 }
 
-// 5. 导入逻辑 (单个 & 批量)
-function addSingleSticker() {
-    const name = prompt("请输入表情包名字：");
-    if (!name) return;
-    const url = prompt("请输入表情包图片链接 (URL)：");
-    if (!url) return;
+// 6. 新版导入逻辑 (使用弹窗)
 
-    stickerLibrary.push({ name, url });
-    saveStickers();
-    renderStickerGrid();
+// 打开导入窗口
+function openStickerImport() {
+    // 清空输入框
+    document.getElementById('sticker-import-textarea').value = "";
+    // 打开我们新加的弹窗
+    openModal('modal-sticker-import');
 }
 
-function openStickerImport() {
-    const input = prompt(
-        "批量导入格式 (支持空行/逗号/分号分隔)：\n" +
-        "开心:http://...\n" +
-        "难过:http://...\n\n" +
-        "请粘贴内容："
-    );
-    
-    if (!input) return;
+// 执行处理
+function processStickerImport() {
+    const rawText = document.getElementById('sticker-import-textarea').value;
+    if (!rawText.trim()) return alert("请输入内容");
 
-    // 解析逻辑
-    // 1. 先把各种分隔符统一换成换行符
-    let cleanText = input.replace(/[,;，；]/g, '\n');
-    
+    // 1. 统一换行符 (把逗号、分号都变成换行)
+    // 你的需求里可能有逗号分隔，这里统一处理
+    let cleanText = rawText.replace(/[,;，；]/g, '\n');
+
     // 2. 按行分割
     const lines = cleanText.split('\n');
     let count = 0;
@@ -17298,12 +17296,17 @@ function openStickerImport() {
         line = line.trim();
         if (!line) return;
 
-        // 3. 分割名字和URL (支持中英文冒号)
-        // 使用正则匹配：名字 + (冒号) + URL
-        const match = line.match(/^(.+?)[:：](.+)$/);
+        // 3. 正则匹配：支持 http 和 https
+        // ^(.+?)  => 名字 (非贪婪)
+        // [:：]   => 冒号
+        // \s*     => 可能存在的空格 (关键!)
+        // (http.+)=> URL (关键!)
+        const match = line.match(/^(.+?)[:：]\s*(http.+)$/i);
+        
         if (match) {
             const name = match[1].trim();
-            const url = match[2].trim();
+            const url = match[2].trim(); // 去掉 URL 前后的空格！
+            
             if (name && url) {
                 stickerLibrary.push({ name, url });
                 count++;
@@ -17314,15 +17317,28 @@ function openStickerImport() {
     if (count > 0) {
         saveStickers();
         renderStickerGrid();
-        alert(`成功导入 ${count} 个表情包！`);
+        closeModal('modal-sticker-import');
+        alert(`成功识别并导入 ${count} 个表情包！`);
     } else {
-        alert("格式似乎不对？请确保格式为：名字:链接");
+        alert("未能识别出任何表情。\n请确保格式为：\n名字：https://...");
     }
+}
+
+// 单个添加 (保留)
+function addSingleSticker() {
+    const name = prompt("表情名字：");
+    if (!name) return;
+    const url = prompt("图片链接：");
+    if (!url) return;
+    stickerLibrary.push({ name, url: url.trim() });
+    saveStickers();
+    renderStickerGrid();
 }
         
     </script>
 </body>
 </html>
+
 
 
 
