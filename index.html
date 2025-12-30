@@ -16758,10 +16758,10 @@ function checkAiNovelMode() {
     }
 }
 
-// 5. 生成下一章 (核心)
+// 5. 生成下一章 (修复版：增加错误捕捉)
 async function generateNextChapterAI() {
     const promptInput = document.getElementById('ai-novel-prompt');
-    const userDirection = promptInput.value.trim(); // 用户输入的走向
+    const userDirection = promptInput.value.trim(); 
     
     if (!globalConfig.apiKey) return alert("请先配置 API Key");
 
@@ -16776,19 +16776,17 @@ async function generateNextChapterAI() {
     // 准备上下文
     const outline = currentBookMeta.aiOutline;
     const currentChapIdx = currentBookMeta.progressIndex;
-    const prevSummary = (currentBookMeta.summaries || []).slice(-5).join('\n'); // 最近3章总结
+    const prevSummary = (currentBookMeta.summaries || []).slice(-3).join('\n'); 
     
-    // 获取上一章的结尾 (作为衔接)
     const prevBody = currentBookData.chapters[currentChapIdx].body;
-    const contextBody = prevBody.substring(prevBody.length - 500); // 取最后500字
+    const contextBody = prevBody.substring(prevBody.length - 500); 
 
-    // ✨ 角色互动 (打破第四面墙)
-    // 在生成前，先让悬浮球里的角色吐槽一句
+    // 角色互动
     if (userDirection.length > 5) {
         triggerMetaComment(char, userDirection);
     }
 
-    // 构造 Prompt (加入“演员模式”指令)
+    // 构造 Prompt
     const systemPrompt = `
     你现在是和用户共同创作小说的小说家。
     
@@ -16800,10 +16798,10 @@ async function generateNextChapterAI() {
     主角原型：${char.name} (源性格：${char.systemPrompt})。
     
     ⚠️【极为重要的写作限制】：
-    1. **演员模式**：请把原型的性格（System Prompt）仅作为“演员的性格”。
+    1. **演员模式**：请把原型的性格仅作为“演员的性格”。
     2. **严禁出戏**：在本小说中，他**绝对不是** AI 或系统（除非大纲里明确写了他是系统文）。
     3. 如果原人设里有“我是你的AI助手”之类的设定，请**完全抛弃**。
-    4. 他必须根据大纲设定，扮演好他在书中的身份（如总裁、将军、师尊等），有真实的触觉、体温和人类社会关系。
+    4. 他必须根据大纲设定，扮演好他在书中的身份，有真实的触觉、体温和人类社会关系。
     
     【当前进度】
     第 ${currentChapIdx + 1} 章刚刚结束。
@@ -16817,12 +16815,11 @@ async function generateNextChapterAI() {
     请续写 **第 ${currentChapIdx + 2} 章** 的正文。
     要求：
     1. 必须根据用户的指令发展剧情。
-    2. 字数 1500-3000 字。
+    2. 字数 2000-4000 字。
     3. 格式：第一行是章节标题，第二行开始是正文。
     `;
 
     try {
-        // 流式输出体验更好，但为了存 DB 方便，这里先用非流式 (你可以后续改造成流式)
         const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             model: globalConfig.model,
             messages: [{ role: "user", content: systemPrompt }],
@@ -16830,42 +16827,40 @@ async function generateNextChapterAI() {
         });
         
         const data = await res.json();
+
+        // 🔥🔥🔥 核心修复：先检查有没有报错，再读取内容 🔥🔥🔥
+        if (data.error) {
+            throw new Error("API 返回错误: " + data.error.message);
+        }
+        if (!data.choices || data.choices.length === 0) {
+            console.log("异常数据:", data);
+            throw new Error("API 返回格式异常: " + JSON.stringify(data));
+        }
+
         const content = data.choices[0].message.content;
 
-        // 解析标题和正文
         const lines = content.split('\n');
         let title = `第 ${currentChapIdx + 2} 章`;
         let body = content;
         
-        // 尝试提取第一行做标题
         if (lines[0].includes("章") || lines[0].length < 30) {
             title = lines[0].trim();
             body = lines.slice(1).join('\n').trim();
         }
 
-        // --- 存入数据 ---
-        // 如果当前是最后一章，直接追加
-        // 现在的逻辑是：用户在读第 N 章，点击生成，应该生成第 N+1 章
-        // 如果用户想重写当前章，是另一个按钮
-        
         currentBookData.chapters.push({ title: title, body: body });
-        await saveBookToDB(currentBookData); // 更新大文件
+        await saveBookToDB(currentBookData); 
         
-        // 更新元数据
-        currentBookMeta.progressIndex++; // 自动翻到新的一章
+        currentBookMeta.progressIndex++; 
         currentBookMeta.scrollRatio = 0;
         localStorage.setItem('ai_phone_library', JSON.stringify(libraryMeta));
 
-        // 刷新界面
         renderReaderPage();
-        
-        // 自动总结上一章 (静默执行)
         autoSummarizePrevChapter(currentChapIdx);
-
-        // 清空输入框
         promptInput.value = '';
 
     } catch (e) {
+        // 这里会弹窗告诉你具体的错误原因
         alert("生成失败: " + e.message);
     } finally {
         btn.innerText = oldText;
@@ -17081,7 +17076,7 @@ function initReaderDrag() {
 // 简单的办法：直接现在运行一次，因为 DOM 已经在那里了
 setTimeout(initReaderDrag, 1000);
         // ==========================================
-// --- 📝 AI 小说专用：手动总结本章 ---
+// --- 📝 AI 小说专用：手动总结本章 (修复版) ---
 // ==========================================
 async function summarizeAiNovelChapter() {
     if (!globalConfig.apiKey) return alert("请先配置 API Key");
@@ -17089,9 +17084,8 @@ async function summarizeAiNovelChapter() {
 
     const idx = currentBookMeta.progressIndex;
     const chapter = currentBookData.chapters[idx];
-    const char = contacts.find(c => c.id === currentBookMeta.aiCharId); // 获取绑定的角色
+    const char = contacts.find(c => c.id === currentBookMeta.aiCharId); 
 
-    // UI 提示
     const btn = event.target;
     const oldText = btn.innerText;
     btn.innerText = "生成中...";
@@ -17119,6 +17113,17 @@ async function summarizeAiNovelChapter() {
         });
 
         const data = await res.json();
+
+        // 🔥🔥🔥 核心修复：先检查有没有报错，再读取内容 🔥🔥🔥
+        if (data.error) {
+            throw new Error("API 返回错误: " + data.error.message);
+        }
+        if (!data.choices || data.choices.length === 0) {
+            // 可能是 Google 的 Safety Block，或者是其他格式
+            console.log("异常数据:", data);
+            throw new Error("API 返回格式异常 (可能是触发了安全过滤): " + JSON.stringify(data));
+        }
+
         const summary = data.choices[0].message.content;
 
         // 1. 存入书籍元数据
@@ -17126,10 +17131,10 @@ async function summarizeAiNovelChapter() {
         currentBookMeta.summaries[idx] = summary;
         localStorage.setItem('ai_phone_library', JSON.stringify(libraryMeta));
 
-        // 2. 同步到聊天界面 (让角色记住)
+        // 2. 同步到聊天界面
         if (char) {
             const report = `
-📖【共创小说·剧情存档】
+📖【AI 共创小说·剧情存档】
 ------------------
 书名：《${currentBookMeta.title}》
 章节：${chapter.title}
@@ -17140,17 +17145,18 @@ ${summary}
             `.trim();
 
             char.messages.push({
-                role: 'user', // 伪装成系统推送
+                role: 'user', 
                 content: report,
                 timestamp: Date.now()
             });
             saveData();
         }
 
-        alert("✅ 总结已生成并存入记忆库！\n\nAI 在生成下一章时将会参考这段摘要。");
+        alert("✅ 总结已生成并存入记忆库！");
 
     } catch (e) {
         alert("总结失败: " + e.message);
+        console.error(e);
     } finally {
         btn.innerText = oldText;
         btn.style.opacity = "1";
@@ -17416,6 +17422,7 @@ function updateUserAvatarFromUrl() {
     </script>
 </body>
 </html>
+
 
 
 
