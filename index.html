@@ -12370,6 +12370,10 @@ async function sendTheaterAction() {
     await triggerTheaterRoleplay(script, save, aiChar);
 }
 
+// =======================
+// 3. 核心互动逻辑 (Prompt) - 话痨增强版
+// =======================
+
 async function triggerTheaterRoleplay(script, save, aiChar) {
     if(!globalConfig.apiKey) return alert("请配置 API Key");
 
@@ -12377,7 +12381,6 @@ async function triggerTheaterRoleplay(script, save, aiChar) {
     btn.disabled = true; btn.innerText = "⏳";
 
     // --- 构建 Prompt ---
-    // 提取最近历史
     const recentLogs = save.logs.slice(-10).map(l => {
         if(l.role === 'narrator') return `(旁白): ${l.content}`;
         if(l.role === 'ai') return `${aiChar.name}: ${l.content}`;
@@ -12400,18 +12403,24 @@ async function triggerTheaterRoleplay(script, save, aiChar) {
     
     2. 用户扮演角色 (User)：
        - 剧本身份：${script.char2_def}
-       - 基础性格/人设 (参考)：${aiChar.userPersona || "无"} (这是用户在现实中的性格，请让他在剧本中也流露出一部分这种性格)
+       - 基础性格/人设 (参考)：${aiChar.userPersona || "无"} (这是用户在现实中的性格，请让他在剧本中流露出一部分这种性格)
        - 名字：${save.actors.userName}
     
     【任务】：
     根据用户的行动，推进剧情。
+    ⚠️ **请输出一段详尽、丰富的剧情**。不要只回一句话。
+    你可以交替使用“旁白”和“台词”来构建更有沉浸感的演出（例如：先描写环境，角色说话，然后描写角色的微表情，再继续说话）。
     
-    【输出格式要求】：
-    请返回一个 JSON 对象：
+    【输出格式要求 (严格 JSON)】：
+    请返回一个包含 sequence 数组的对象：
     {
-        "narrator": "这里写第三人称的旁白描述，描写环境、动作、心理或剧情进展 (必填)",
-        "speech": "这里写 ${aiChar.name} 的第一人称台词 (如果角色需要说话则填，否则留空)",
-        "goal_met": boolean (如果判定用户达成了故事目标，设为 true，否则 false)
+        "sequence": [
+            { "type": "narrator", "content": "这里写环境、动作或心理描写..." },
+            { "type": "speech", "content": "这里写角色的台词..." },
+            { "type": "narrator", "content": "可以继续穿插描写..." },
+            { "type": "speech", "content": "可以继续说话..." }
+        ],
+        "goal_met": boolean (是否达成结局)
     }
     
     【历史剧情】：
@@ -12422,35 +12431,50 @@ async function triggerTheaterRoleplay(script, save, aiChar) {
         const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             model: globalConfig.model,
             messages: [{ role: "user", content: prompt }],
-            temperature: 0.85
+            temperature: 0.9 // 温度稍微调高点，让它更有创造力
         });
         
         const data = await res.json();
-        const jsonStr = data.choices[0].message.content.replace(/```json|```/g, '').trim();
+        let jsonStr = data.choices[0].message.content;
+        
+        // 清洗一下，防止 AI 加 Markdown 代码块
+        jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+        
         const result = JSON.parse(jsonStr);
 
-        // 处理返回
-        if (result.narrator) {
-            appendTheaterBubble('narrator', result.narrator, aiChar, save.actors.userName);
-            save.logs.push({ role: 'narrator', content: result.narrator });
-        }
-        
-        if (result.speech) {
-            appendTheaterBubble('ai', result.speech, aiChar, save.actors.userName);
-            save.logs.push({ role: 'ai', content: result.speech });
+        // --- 核心修改：遍历数组，依次上屏 ---
+        if (result.sequence && Array.isArray(result.sequence)) {
+            result.sequence.forEach(item => {
+                if (item.type === 'narrator') {
+                    appendTheaterBubble('narrator', item.content, aiChar, save.actors.userName);
+                    save.logs.push({ role: 'narrator', content: item.content });
+                } else if (item.type === 'speech') {
+                    appendTheaterBubble('ai', item.content, aiChar, save.actors.userName);
+                    save.logs.push({ role: 'ai', content: item.content });
+                }
+            });
+        } 
+        // 兼容性兜底：万一 AI 抽风还是回了旧格式
+        else if (result.narrator || result.speech) {
+            if(result.narrator) {
+                appendTheaterBubble('narrator', result.narrator, aiChar, save.actors.userName);
+                save.logs.push({ role: 'narrator', content: result.narrator });
+            }
+            if(result.speech) {
+                appendTheaterBubble('ai', result.speech, aiChar, save.actors.userName);
+                save.logs.push({ role: 'ai', content: result.speech });
+            }
         }
 
         saveTheaterNewData();
 
-        // 检查结局
         if (result.goal_met) {
             setTimeout(() => handleStoryFinish(script, save, aiChar), 1000);
         }
 
     } catch(e) {
         console.error(e);
-        // 如果 JSON 解析失败，当作纯文本处理 (容错)
-        alert("AI 返回格式错误，请重试或检查模型");
+        alert("AI 返回格式错误 (可能内容太长 JSON 截断了)，请重试");
     } finally {
         btn.disabled = false; btn.innerText = "🎬";
     }
@@ -15829,6 +15853,7 @@ function updateUserAvatarFromUrl() {
     </script>
 </body>
 </html>
+
 
 
 
