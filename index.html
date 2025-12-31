@@ -11283,9 +11283,41 @@ const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/comp
 });
         
         const data = await res.json();
-        let jsonStr = data.choices[0].message.content;
-        jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
-        const result = JSON.parse(jsonStr);
+        // --- ✅ 修复后的代码 (复制这一段覆盖上面那三行) ---
+let rawContent = data.choices[0].message.content;
+
+// 1. 尝试找到第一个 '{' 和 最后一个 '}'
+const firstOpen = rawContent.indexOf('{');
+const lastClose = rawContent.lastIndexOf('}');
+
+if (firstOpen !== -1 && lastClose !== -1) {
+    // 提取纯净的 JSON 部分
+    let jsonCandidate = rawContent.substring(firstOpen, lastClose + 1);
+    try {
+        const result = JSON.parse(jsonCandidate);
+        
+        // --- 下面是原本的后续逻辑，保持衔接 ---
+        // 存入数据
+        const newPost = {
+            id: Date.now().toString(),
+            charId: charId,
+            cpName: `${char.name} x ${myName}`,
+            tone: tone,
+            timestamp: Date.now(),
+            title: result.title,
+            content: result.content,
+            authorName: result.authorName || "热心产粮太太",
+            comments: result.comments || [],
+            likes: Math.floor(Math.random() * 500) + 100
+        };
+        // ... (后续代码不用动)
+        
+    } catch (parseErr) {
+        throw new Error("提取到了 JSON 但格式有误: " + parseErr.message);
+    }
+} else {
+    throw new Error("AI 没有返回有效的数据格式 (未找到 JSON 对象)");
+}
 
         // 存入数据
         const newPost = {
@@ -16598,21 +16630,27 @@ async function generateOutlines() {
     const oldText = btn.innerText;
     btn.innerText = "正在构思...";
     btn.disabled = true;
+    const myName = char.userName || "我";
+    const myPersona = char.userPersona || "性格不限，请根据剧情自由发挥";
 
     // 构造 Prompt (加入“去AI化”指令)
     const prompt = `
     你是一位专业的通俗小说作家（晋江/起点风格）。
     请根据以下要求，构思 4 个不同的小说大纲。
     
-    【主角原型】：${char.name} 和 "${myName}"。
-    【性格参考】：${char.name}的性格特点参考：${char.systemPrompt}。
+    【双主角设定】：
+    1. **主角A (原型)**：${char.name}
+       - 性格参考：${char.systemPrompt}
+    2. **主角B (用户)**：${myName}
+       - 性格/人设参考：${myPersona}
+    
     【关键词/Tags】：${tags}
     
     ⚠️【最高指令 - 平行世界法则】：
     1. 这是平行世界（AU）故事。
-    2. **强制剥离身份**：如果【性格参考】中提到他是 AI、系统、助手或虚拟数据，请在小说大纲中**彻底忽略**这一身份设定！
-    3. **重塑肉身**：在这个故事里，他必须是**有血有肉的真人**（或者符合 Tag 设定的生物，如吸血鬼、神仙等）。
-    4. **保留性格**：只保留他的性格特征（如毒舌、占有欲强、温柔等），不要保留“AI”的设定。
+    2. **强制剥离身份**：如果主角A原本是AI/系统，或者主角B原本是手机用户，请在小说大纲中**彻底忽略**这一设定！
+    3. **重塑身份**：他们必须是符合小说世界观的**人类**（例如：仙侠背景下是师尊徒弟，赛博背景下是黑客特工）。
+    4. **保留性格**：必须保留双方的性格内核（比如A的毒舌/腹黑，B的傲娇/温柔），在这个新世界里发生碰撞。
 
     要求：
     1. 每个大纲包含：书名、一句话亮点(Tag)、200字以内的故事简介。
@@ -16772,6 +16810,8 @@ async function generateNextChapterAI() {
     const oldText = btn.innerText;
     btn.innerText = "写作中...";
     btn.disabled = true;
+     const myName = char.userName || "我";
+    const myPersona = char.userPersona || "普通人";
 
     // 准备上下文
     const outline = currentBookMeta.aiOutline;
@@ -16794,8 +16834,17 @@ async function generateNextChapterAI() {
     书名：《${currentBookMeta.title}》
     大纲：${outline}
     
-    【角色扮演指南】
-    主角原型：${char.name} (源性格：${char.systemPrompt})。
+    【角色扮演指南 (Character Sheets)】
+    
+    🌟 **男主/攻/对方 (Actor A)**：
+    - 原型：${char.name}
+    - 核心性格：${char.systemPrompt}
+    - ⚠️ **演员模式**：请保留他的性格内核，但剥离“AI/系统”身份，让他完全融入小说设定的身份（如王爷、总裁、杀手）。
+    
+    🌟 **女主/受/我 (Actor B)**：
+    - 名字：${myName}
+    - 核心性格：${myPersona}
+    - 指令：请务必按照这个性格来描写"${myName}"的语言和心理活动，不要写成千篇一律的工具人。如果她性格强势，就不要写得唯唯诺诺；如果她性格清冷，就不要写得傻白甜。
     
     ⚠️【极为重要的写作限制】：
     1. **演员模式**：请把原型的性格仅作为“演员的性格”。
@@ -17422,6 +17471,7 @@ function updateUserAvatarFromUrl() {
     </script>
 </body>
 </html>
+
 
 
 
