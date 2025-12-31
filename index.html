@@ -1673,274 +1673,170 @@ select.x-input option {
     0% { transform: rotateX(0) rotateY(0); }
     100% { transform: rotateX(360deg) rotateY(360deg); }
 }
-        /* ============ 剧场模式专属样式 ============ */
+        /* ============ 剧场模式 2.0 专属样式 (新版) ============ */
 
-/* 头部 */
-/* 修改后的剧场顶部栏 */
+/* 1. 剧场顶部栏 (保持与旧版类似，但适配新功能) */
 .theater-header {
     position: absolute;
     top: 0; left: 0; width: 100%; 
-    height: 100px; /* 👈 加高，给刘海留位置 */
-    padding-top: 50px; /* 👈 核心：内容下移，避开状态栏 */
-    padding-left: 20px; 
-    padding-right: 20px;
+    height: 90px; /* 高度 */
+    padding-top: 44px; /* 避开刘海 */
+    padding-left: 15px; 
+    padding-right: 15px;
     display: flex; justify-content: space-between; align-items: center;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
-    z-index: 50; /* 提高层级，确保能点到 */
+    background: #1a1a1a; /* 纯黑背景，更有沉浸感 */
+    border-bottom: 1px solid #333;
+    z-index: 50;
 }
-.theater-title { font-family: 'Songti SC', serif; font-size: 18px; letter-spacing: 2px; text-shadow: 0 2px 4px black; }
-
-/* 舞台 (正文区) */
-.theater-stage {
-    flex: 1; overflow-y: auto; 
-    padding: 120px 25px 100px 25px; /* 上下留白大一点 */
-    font-family: 'Songti SC', 'Georgia', serif; /* 衬线体，更有文学感 */
-    font-size: 17px;
-    line-height: 1.8;
-    color: #d0d0d0;
-    scroll-behavior: smooth;
+.theater-title {
+    font-size: 17px; font-weight: bold; color: #fff;
+    max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* 消息块 - 不再是气泡，而是段落 */
-.t-msg-block {
-    margin-bottom: 25px;
-    opacity: 0; animation: fadeIn 0.5s forwards;
-}
-.t-role-label {
-    font-size: 12px; color: #666; margin-bottom: 5px;
-    letter-spacing: 1px; font-weight: bold;
-}
-.t-text {
-    white-space: pre-wrap; /* 保留换行 */
-    text-align: justify;   /* 两端对齐，像书一样 */
-}
-.t-text.user { color: #888; border-left: 2px solid #444; padding-left: 10px; } /* 用户的话稍微灰一点，加个引用线 */
-.t-text.ai { color: #e0e0e0; }
-
-/* 底部输入栏 */
-.theater-input-area {
-    position: absolute; bottom: 0; width: 100%;
-    background: #111; border-top: 1px solid #333;
-    padding: 15px; display: flex; align-items: flex-end; gap: 10px;
-    padding-bottom: max(20px, env(safe-area-inset-bottom));
-}
-#theater-input {
-    flex: 1; background: #222; border: 1px solid #444; color: #fff;
-    border-radius: 8px; padding: 10px; font-size: 16px;
-    resize: none; outline: none; max-height: 120px;
-    font-family: sans-serif; /* 输入框还是用黑体看清楚点 */
-}
-.theater-send-btn {
-    background: #007AFF; color: #fff; border: none; width: 40px; height: 40px;
-    border-radius: 50%; font-size: 18px; cursor: pointer; flex-shrink: 0;
-}
-
-/* 导演控制台样式 */
-.theater-tabs {
-    display: flex; border-bottom: 1px solid #444; background: #1a1a1a;
-}
-.t-tab {
-    flex: 1; text-align: center; padding: 12px; font-size: 14px; color: #888; cursor: pointer;
-}
-.t-tab.active { color: #fff; border-bottom: 2px solid #007AFF; }
-.t-tab-content { display: none; padding-top: 10px; }
-
-.t-input {
-    width: 100%; background: #333; border: 1px solid #444; 
-    color: #fff; padding: 10px; border-radius: 6px; margin-bottom: 10px;
-}
-.t-group-title { font-size: 12px; color: #007AFF; margin: 15px 0 5px; text-transform: uppercase; letter-spacing: 1px;}
-.t-tip { font-size: 10px; color: #666; }
-
-.t-upload-box {
-    border: 2px dashed #444; border-radius: 8px; padding: 20px;
-    text-align: center; color: #888; cursor: pointer; transition: 0.2s;
-}
-.t-upload-box:active { background: #333; }
-
-/* 开关列表 */
-.t-item-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px; border-bottom: 1px solid #333;
-}
-.t-item-name { font-size: 14px; color: #ccc; }
-.t-radio-check { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #666; }
-.t-item-row.active .t-radio-check { background: #007AFF; border-color: #007AFF; }
-.t-item-row.active .t-item-name { color: #fff; font-weight: bold; }
-
-@keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        /* --- 剧本列表样式 (仿截图) --- */
+/* 2. 剧本列表项 (复用并优化) */
 .script-item {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 15px;
     background: #fff;
     border-bottom: 1px solid #f0f0f0;
     cursor: pointer;
     transition: background 0.2s;
-    position: relative;
-    height: 90px; /* 固定高度，保持整齐 */
 }
-.script-item:active {
-    background: #fafafa;
-}
+.script-item:active { background: #f9f9f9; }
+.script-info { flex: 1; min-width: 0; }
+.script-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.script-preview { font-size: 13px; color: #8e8e93; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-.script-avatar-box {
-    position: relative;
-    margin-right: 12px;
-}
-.script-avatar {
-    width: 55px;
-    height: 55px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid rgba(0,0,0,0.1);
-}
-
-.script-info {
-    flex: 1;
-    min-width: 0; /* 防止文本溢出 */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.script-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 4px;
-}
-
-.script-title {
-    font-size: 16px;
-    font-weight: bold;
-    color: #333;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 180px;
-    font-family: 'Songti SC', serif; /* 标题用宋体更有剧场感 */
-}
-
-.script-time {
-    font-size: 12px;
-    color: #999;
-    font-family: sans-serif;
-}
-
-.script-preview {
-    font-size: 13px;
-    color: #666;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2; /* 显示两行 */
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    font-family: 'UserCustomFont', sans-serif;
-}
-
-/* 删除按钮 (滑动或长按显示，这里简化为绝对定位的红叉) */
+/* 删除按钮 */
 .btn-del-script {
-    position: absolute;
-    right: 5px;
-    bottom: 5px;
-    padding: 10px;
-    color: #ccc;
-    font-size: 18px;
-    background: none;
-    border: none;
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    color: #ccc; font-size: 20px; background: none; border: none;
 }
 .btn-del-script:hover { color: #ff3b30; }
-        /* --- 剧场模式：剧情总结卡片样式 --- */
-.t-msg-block.system {
-    text-align: center;
-    margin: 30px 0;
-    opacity: 0.9;
+
+/* 3. 剧本编辑表单 (新增) */
+.script-form-group {
+    background: #fff;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.script-form-item {
+    padding: 15px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex; flex-direction: column;
+}
+.script-form-item:last-child { border-bottom: none; }
+.script-label {
+    font-size: 13px; color: #8e8e93; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.script-input {
+    width: 100%; border: none; font-size: 17px; outline: none; background: transparent; font-weight: bold; color: #000;
+}
+.script-textarea {
+    width: 100%; border: none; font-size: 16px; outline: none; background: transparent; font-family: inherit; resize: none; line-height: 1.5; min-height: 60px; color: #333;
 }
 
-.t-system-card {
-    display: inline-block;
-    background: rgba(255, 255, 255, 0.08); /* 深色背景下的微透白 */
-    border: 1px solid rgba(255, 255, 255, 0.2);
+/* 4. 舞台区 (聊天界面容器) */
+.theater-stage {
+    position: absolute; top: 90px; bottom: 70px; left: 0; right: 0;
+    overflow-y: auto; 
+    padding: 20px 15px;
+    background: #1a1a1a; /* 深色背景 */
+    display: flex; flex-direction: column;
+}
+
+/* 5. 气泡与旁白样式 (核心改动) */
+
+/* 旁白框 (灰框，上帝视角) */
+.narrator-box {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
-    padding: 15px 20px;
-    text-align: left;
-    max-width: 90%;
-    color: #a0a0a0;
+    padding: 12px 15px;
+    margin: 20px 10px; /* 上下留白大一点 */
+    color: #aaa;       /* 浅灰色文字 */
     font-size: 14px;
-    font-family: sans-serif; /* 用黑体显得更像系统文字 */
     line-height: 1.6;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    text-align: justify;
+    align-self: center;
+    width: 95%;
+    font-style: italic; /* 斜体更有旁白感 */
 }
 
-.t-system-header {
-    color: #FF9500; /* 橙色标题 */
+/* 角色气泡通用 */
+.theater-bubble {
+    max-width: 85%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 16px;
+    line-height: 1.5;
+    margin-bottom: 15px;
+    position: relative;
+    word-wrap: break-word;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* AI (人物1) 气泡 - 深灰色/黑色 */
+.theater-bubble.ai {
+    background: #2c2c2e; 
+    color: #fff; 
+    border-bottom-left-radius: 4px; 
+    align-self: flex-start; /* 靠左 */
+    margin-right: auto;
+}
+
+/* 用户 (人物2) 气泡 - 蓝色 */
+.theater-bubble.user {
+    background: #0a84ff; 
+    color: #fff; 
+    border-bottom-right-radius: 4px; 
+    align-self: flex-end; /* 靠右 */
+    margin-left: auto;
+}
+
+/* 气泡上的小名字 */
+.bubble-name {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 4px;
     font-weight: bold;
-    font-size: 12px;
-    margin-bottom: 8px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+}
+.theater-bubble.user .bubble-name { text-align: right; color: rgba(255,255,255,0.7); }
+
+/* 6. 底部输入栏 */
+.theater-input-area {
+    position: absolute; bottom: 0; width: 100%;
+    background: #111; border-top: 1px solid #333;
+    padding: 10px 15px; 
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    display: flex; align-items: flex-end; gap: 10px;
+}
+#theater-input {
+    flex: 1; 
+    background: #222; border: 1px solid #444; color: #fff;
+    border-radius: 20px; padding: 10px 15px; font-size: 16px;
+    resize: none; outline: none; max-height: 100px;
+}
+.theater-send-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #0a84ff; color: #fff; border: none;
+    font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
 }
 
-.t-system-header::before {
-    content: '💾';
-}
-        /* 剧场模式 - 楼层号样式 */
-.t-floor-tag {
-    position: absolute;
-    left: -25px; /* 放在气泡左侧外面 */
-    top: 0;
-    font-size: 10px;
-    color: #555;
-    font-family: monospace;
-    opacity: 0.5;
-}
-/* 给消息块加相对定位，以便放楼层号 */
-.t-msg-block {
-    position: relative; 
-    margin-left: 10px; /* 给左边留点空放楼层号 */
-}
-
-/* 档案列表样式 */
-.archive-card {
-    background: #2a2a2a;
-    border: 1px solid #444;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 10px;
-}
-.archive-header {
-    display: flex; justify-content: space-between;
-    font-size: 12px; color: #FF9500; font-weight: bold; margin-bottom: 5px;
-}
-.archive-body {
-    font-size: 13px; color: #ccc; line-height: 1.5;
-    max-height: 80px; overflow: hidden; text-overflow: ellipsis;
-    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-}
-        /* 剧场模式 - 重刷按钮 */
-.theater-reroll-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid #444;
-    background: #2a2a2a;
-    color: #fff;
-    font-size: 18px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0; /* 防止被挤扁 */
-    transition: transform 0.2s, background 0.2s;
-}
-
-.theater-reroll-btn:active {
-    transform: rotate(-180deg) scale(0.9); /* 点击时旋转一下 */
-    background: #444;
+/* 7. 故事记录卡片 */
+.story-record-card {
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    border-left: 5px solid #34c759; /* 绿色完成态 */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
         /* --- 相册网格 --- */
 .gallery-grid {
@@ -3744,194 +3640,123 @@ select.x-input option {
         <div class="page" id="page-theater-list" style="background: #f5f5f5;">
     <div class="app-header" style="background: #fff; border-bottom: 1px solid #eee;">
         <button class="btn-icon-text" onclick="goHome()" style="color:#000;">‹ 桌面</button>
-        <span class="app-title" style="font-size: 18px; color:#000;">我的剧本</span>
-        <button class="btn-icon-only" onclick="createNewScript()" style="font-size: 24px; color:#000;">+</button>
+        <span class="app-title" style="color:#000;">小剧场</span>
+        <!-- 右上角功能区 -->
+        <div style="display:flex; gap:15px;">
+            <button class="btn-icon-only" onclick="openStoryHistory()" title="故事记录" style="color:#000; font-size: 20px;">📜</button>
+            <button class="btn-icon-only" onclick="openEditScript(-1)" title="新增剧本" style="color:#007AFF; font-size: 24px;">+</button>
+        </div>
     </div>
     
-    <div class="content-scroll" id="theater-list-container" style="background: #f7f7fa; padding: 0;">
-        </div>
+    <div class="content-scroll" id="script-list-container" style="padding: 15px;">
+        <!-- 动态生成剧本列表 -->
+    </div>
 </div>
         <!-- ============ 19. 剧场模式 (Theater Mode) ============ -->
 <div class="page" id="page-theater" style="background-color: #1a1a1a; color: #d0d0d0;">
-    
-    <!-- 沉浸式背景层 -->
-    <div id="theater-bg-layer" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:-1; background-size:cover; background-position:center; opacity:0.3;"></div>
-
-    <!-- 顶部导演栏 -->
+    <!-- 顶部 -->
     <div class="theater-header">
-        <button class="btn-icon-only" onclick="goHome()" style="color:#999;">‹ 退出</button>
-        
-        <span class="theater-title" id="theater-title">未命名剧本</span>
-        
-        <div style="display:flex; gap:15px;">
-            <button class="btn-icon-only" onclick="openArchiveModal()" style="color:#d4a373; font-size:20px;">📜</button>
-            <button class="btn-icon-only" onclick="generateTheaterSummary()" style="color:#FF9500; font-size:20px;">✨</button>
-            
-            <button class="btn-icon-only" onclick="openTheaterConsole()" style="color:#007AFF;">🎬</button>
-        </div>
+        <button class="btn-icon-only" onclick="exitTheater()" style="color:#fff;">‹ 退出</button>
+        <span class="theater-title" id="play-script-title" style="color:#fff;">剧本进行中</span>
+        <button class="btn-icon-only" onclick="rerollTheaterReply()" style="color:#fff; font-size:20px;">🔄</button>
     </div>
 
-    <!-- 剧本阅读区 (取代聊天框) -->
-    <div class="theater-stage" id="theater-stage">
-        <div class="theater-start-tip">
-            <p>这里是异世界。</p>
-            <p>没有气泡，没有边界。</p>
-            <p>请点击右上角配置你的剧本。</p>
-        </div>
+    <!-- 舞台区 -->
+    <div class="theater-stage" id="theater-stage" style="padding-bottom: 120px;">
+        <!-- 动态生成 -->
     </div>
 
     <!-- 底部输入区 -->
     <div class="theater-input-area">
-        <textarea id="theater-input" rows="1" placeholder="我猜你也想靠近吧？" oninput="autoResizeTextArea(this)"></textarea>
-        <button class="theater-reroll-btn" onclick="rerollTheaterMsg()" style="margin-right: 8px;">🔄</button>
-        <button class="theater-send-btn" onclick="sendTheaterMsg()">✒️</button>
+        <textarea id="theater-input" rows="1" placeholder="输入你的行动或对白..." oninput="autoResizeTextArea(this)"></textarea>
+        <button class="theater-send-btn" onclick="sendTheaterAction()">🎬</button>
     </div>
 </div>
-
-<!-- ============ 导演控制台弹窗 ============ -->
-<div class="modal-overlay" id="modal-theater-console">
-    <div class="modal-box" style="height: 85%; background: #222; color: #eee; border: 1px solid #444;">
-        <div class="modal-header" style="border-bottom: 1px solid #444; background: #222;">
-            <button onclick="closeModal('modal-theater-console')" style="color:#999;">关闭</button>
-            <span style="color:#fff;">导演控制台</span>
-            <button onclick="saveTheaterSettings()" style="color:#007AFF;">保存</button>
-        </div>
-        
-        <!-- 简单的 Tab 切换 -->
-        <div class="theater-tabs">
-            <div class="t-tab active" onclick="switchTheaterTab('tab-connect')">连接</div>
-            <div class="t-tab" onclick="switchTheaterTab('tab-presets')">预设</div>
-            <div class="t-tab" onclick="switchTheaterTab('tab-styles')">文风</div>
-            <div class="t-tab" onclick="switchTheaterTab('tab-modules')">剧场</div>
-            <div class="t-tab" onclick="switchTheaterTab('tab-world')">世界</div>
-            <div class="t-tab" onclick="switchTheaterTab('tab-regex')">正则</div>
-        </div>
-
-        <div class="modal-body" style="background: #111; padding: 15px;">
-            
-            <!-- Tab 1: 独立连接 -->
-            <div id="tab-connect" class="t-tab-content" style="display:block;">
-                <div id="theaterApiPresetManager" style="background:#2a2a2a; padding:10px; border-radius:8px; margin-bottom:15px; border:1px solid #444;">
-        <div style="font-size:12px; color:#aaa; margin-bottom:5px; display:flex; justify-content:space-between;">
-            <span>API 配置预设库</span>
-            <span style="font-size:10px; color:#666;">URL + Key + Model</span>
-        </div>
+<div class="page" id="page-theater-edit" style="background: #f2f2f7;">
+    <div class="app-header" style="background: #fff; border-bottom: 1px solid #eee;">
+        <button class="btn-icon-text" onclick="navigateTo('page-theater-list')" style="color:#000;">取消</button>
+        <span class="app-title" style="color:#000; font-size:17px;">新增剧本</span>
         <div style="display:flex; gap:10px;">
-            <select id="t-api-preset-select" class="t-input" style="margin-bottom:0; flex:1; background:#1a1a1a; border-color:#555;" onchange="applyTheaterApiPreset()">
-                <option value="">-- 选择预设 --</option>
-            </select>
-            <button onclick="saveTheaterApiPreset()" style="background:#333; border:1px solid #007AFF; color:#007AFF; width:50px; border-radius:6px; cursor:pointer;">另存</button>
-            <button onclick="deleteTheaterApiPreset()" style="background:#333; border:1px solid #ff3b30; color:#ff3b30; width:50px; border-radius:6px; cursor:pointer;">删除</button>
+            <button class="btn-icon-only" onclick="aiAutoFillScript()" style="color:#FF9500; font-size:14px; font-weight:bold;">AI润色</button>
+            <button class="btn-icon-only" onclick="saveScript()" style="color:#34c759; font-size:14px; font-weight:bold;">保存</button>
         </div>
     </div>
-                <div class="t-group-title">独立 API 设置 (仅剧场生效)</div>
-                
-                <input type="text" id="t-api-url" class="t-input" placeholder="API URL (例如: https://api.openai.com/v1)">
-                
-                <input type="password" id="t-api-key" class="t-input" placeholder="sk-...">
-                
-                <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <button onclick="fetchTheaterModels()" style="flex:1; padding:12px; background:#333; color:#fff; border:1px solid #444; border-radius:8px; cursor:pointer; font-size:14px; transition:0.2s;">
-                        ⬇️ 拉取模型
-                    </button>
-                    <button onclick="testTheaterConnection()" style="flex:1; padding:12px; background:#007AFF; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; transition:0.2s;">
-                        ✅ 测试连接
-                    </button>
-                </div>
-
-                <div id="t-model-select-box" style="display:none; margin-bottom:10px;">
-                    <select id="t-model-select" class="t-input" onchange="document.getElementById('t-model').value = this.value" style="background:#222; border-color:#007AFF;">
-                        </select>
-                </div>
-
-                <input type="text" id="t-model" class="t-input" placeholder="Model ID (推荐 Claude 3.5 / GPT-4)">
-                
-                <div class="t-tip" style="margin-top:10px; opacity:0.6;">
-                    * 如果留空，将默认使用手机全局设置。<br>
-                    * 先填 Key，点“拉取模型”，选好后点“测试连接”。
-                </div>
+    
+    <div class="content-scroll" style="padding: 20px;">
+        <input type="hidden" id="edit-script-id">
+        
+        <div class="script-form-group">
+            <div class="script-form-item">
+                <span class="script-label">剧本名称</span>
+                <input type="text" id="ipt-script-title" class="script-input" placeholder="给剧本起个名字...">
             </div>
+        </div>
 
-            <!-- Tab 2: 预设导入 (核心) -->
-            <div id="tab-presets" class="t-tab-content">
-                
-                <!-- ✨ 新增：预设管理区 ✨ -->
-                <div class="t-group-title">我的预设库 (规则+文风+正则)</div>
-                <div style="display:flex; gap:10px; margin-bottom:15px;">
-                    <select id="saved-preset-select" class="t-input" style="margin-bottom:0; flex:1;" onchange="applySavedPreset()">
-                        <option value="">-- 选择预设 --</option>
+        <div class="script-form-group">
+            <div class="script-form-item">
+                <span class="script-label">故事背景 (时代/地点/基本情境)</span>
+                <textarea id="ipt-script-bg" class="script-textarea" placeholder="例如：2050年赛博朋克都市，贫民窟的雨夜..."></textarea>
+            </div>
+            <div class="script-form-item">
+                <span class="script-label">故事目标 (达成条件)</span>
+                <textarea id="ipt-script-goal" class="script-textarea" placeholder="例如：找到真凶、成功逃脱、让对方爱上你..."></textarea>
+            </div>
+            <div class="script-form-item">
+                <span class="script-label">开场白 (可选，用于引入场景)</span>
+                <textarea id="ipt-script-opening" class="script-textarea" placeholder="留空则由AI自动生成开场..."></textarea>
+            </div>
+        </div>
+
+        <div class="script-form-group">
+            <div class="script-form-item">
+                <span class="script-label">人物1 身份背景 (通常由AI扮演)</span>
+                <textarea id="ipt-script-char1" class="script-textarea" placeholder="描述人物1的身份、秘密任务等..."></textarea>
+            </div>
+            <div class="script-form-item">
+                <span class="script-label">人物2 身份背景 (通常由你扮演)</span>
+                <textarea id="ipt-script-char2" class="script-textarea" placeholder="描述人物2的身份..."></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+        <div class="modal-overlay" id="modal-theater-role">
+    <div class="modal-box">
+        <div class="modal-header">剧本选角</div>
+        <div class="modal-body" style="padding: 20px;">
+            <p style="font-size:12px; color:#666; margin-bottom:15px;">请选择谁来出演剧本中的角色。</p>
+            
+            <div class="ios-group-title">人物1 (AI 扮演)</div>
+            <div class="ios-list">
+                <div class="ios-item">
+                    <select id="select-actor-ai" class="ios-input" style="direction:ltr; font-weight:bold;">
+                        <!-- JS 填充联系人 -->
                     </select>
-                    <button onclick="doSavePreset()" style="background:#222; border:1px solid #007AFF; color:#007AFF; width:40px; border-radius:6px;">另存为</button>
-                    <button onclick="doDeletePreset()" style="background:#222; border:1px solid #ff3b30; color:#ff3b30; width:40px; border-radius:6px;">删除</button>
                 </div>
-                <hr style="border:0; border-top:1px solid #333; margin-bottom:15px;">
+            </div>
+            <div style="font-size:10px; color:#999; margin:5px 15px;">* AI 将结合此角色的性格来演绎剧本中的身份。</div>
 
-                <div class="t-group-title">导入新文件 (JSON)</div>
-                <div class="t-upload-box" onclick="document.getElementById('theaterPresetInput').click()">
-                    点击上传 .json 文件
-                </div>
-                <input type="file" id="theaterPresetInput" accept=".json" hidden onchange="handleTheaterImport(event)">
-                
-                <div class="t-group-title">当前加载</div>
-                <div id="t-current-preset-name" style="color:#007AFF; margin-bottom:10px;">无</div>
-                
-                <div class="t-group-title">核心规则 (Core)</div>
-                <div id="t-core-list" class="t-toggle-list">
-                    <!-- JS 动态生成 -->
+            <div class="ios-group-title" style="margin-top:15px;">人物2 (你 扮演)</div>
+            <div class="ios-list">
+                <div class="ios-item">
+                    <span class="ios-label">玩家昵称</span>
+                    <input type="text" id="input-actor-user" class="ios-input" placeholder="我在剧里的名字">
                 </div>
             </div>
-
-            <!-- Tab 3: 文风选择 -->
-            <div id="tab-styles" class="t-tab-content">
-                <div class="t-group-title">文风滤镜 (单选)</div>
-                <div id="t-style-list" class="t-radio-list">
-                    <div style="color:#666; font-size:12px;">请先在“预设”页导入文件...</div>
-                </div>
-            </div>
-
-            <!-- Tab 4: 小剧场开关 -->
-            <div id="tab-modules" class="t-tab-content">
-                <div class="t-group-title">特殊剧场模式 (开关)</div>
-                <div id="t-module-list" class="t-toggle-list">
-                    <div style="color:#666; font-size:12px;">请先在“预设”页导入文件...</div>
-                </div>
-            </div>
-            <div id="tab-world" class="t-tab-content">
-                <div class="t-group-title">我的世界观存档</div>
-                <div style="display:flex; gap:10px; margin-bottom:15px;">
-                    <select id="saved-world-select" class="t-input" style="margin-bottom:0; flex:1;" onchange="applySavedWorld()">
-                        <option value="">-- 选择世界书 --</option>
-                    </select>
-                    <button onclick="doSaveWorld()" style="background:#222; border:1px solid #007AFF; color:#007AFF; width:40px; border-radius:6px;">另存为</button>
-                    <button onclick="doDeleteWorld()" style="background:#222; border:1px solid #ff3b30; color:#ff3b30; width:40px; border-radius:6px;">删除</button>
-                </div>
-                <hr style="border:0; border-top:1px solid #333; margin-bottom:15px;">
-                <div class="t-group-title">世界书词条 (点击文字=强制激活)</div>
-                <div class="t-upload-box" style="margin-bottom:10px; padding:10px; font-size:12px;" onclick="document.getElementById('importWorldInput').click()">
-                    📂 导入世界书 (.json)
-                </div>
-                <input type="file" id="importWorldInput" accept=".json" hidden onchange="handleWorldImport(event)">
-                <div style="font-size:10px; color:#666; margin-bottom:10px;">
-                    灰色=未启用 | 白色=待机 | <span style="color:#34c759">绿色=已触发</span> | <span style="color:#ffcc00">黄色=强制常驻</span>
-                </div>
-                <div id="t-world-list" class="t-toggle-list" style="max-height:300px; overflow-y:auto;">
-                    <div class="t-tip">请先在“预设”页导入包含 World Info 的文件...</div>
-                </div>
-            </div>
-            <div id="tab-regex" class="t-tab-content">
-                <div class="t-group-title">正则脚本 (Regex Scripts)</div>
-                <div class="t-upload-box" style="margin-bottom:10px; padding:10px; font-size:12px;" onclick="document.getElementById('importRegexInput').click()">
-                    📂 导入正则脚本 (.json)
-                </div>
-                <input type="file" id="importRegexInput" accept=".json" hidden onchange="handleRegexImport(event)">
-                <div style="font-size:10px; color:#666; margin-bottom:10px;">
-                    跟随预设自动导入。用于清洗文本或替换关键词。
-                </div>
-                <div id="t-regex-list" class="t-toggle-list" style="max-height:300px; overflow-y:auto;">
-                    <div class="t-tip">暂无脚本</div>
-                </div>
-            </div>
-
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-theater-role')">取消</button>
+            <button class="modal-btn" onclick="confirmStartGame()">开始演出</button>
+        </div>
+    </div>
+</div>
+        <div class="modal-overlay" id="modal-story-history">
+    <div class="modal-box" style="height: 70%;">
+        <div class="modal-header">已完成的故事</div>
+        <div class="modal-body" id="story-history-list" style="padding: 15px; background: #f2f2f7;">
+            <!-- 动态生成 -->
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-story-history')">关闭</button>
         </div>
     </div>
 </div>
@@ -12196,2104 +12021,632 @@ function deleteBank(index) {
     }
 }
         // ==========================================
-// --- 20. 剧场模式 (Theater Mode) 基础逻辑 ---
+// --- 🎭 新版剧场模式 (Scripted Roleplay) ---
 // ==========================================
 
-// ========================================================
-// 🎭 剧场模式 2.0：多剧本列表版 (数据结构升级)
-// ========================================================
+// --- 数据结构 ---
+let theaterScripts = []; // 存储所有剧本定义
+let theaterSaves = {};   // 存储存档 { scriptId: { logs: [], isFinished: false, actors: {...} } }
+let finishedStories = []; // 存储已完成的故事记录
 
-// 1. 新的状态管理
-let theaterState = {
-    config: { apiUrl: "", apiKey: "", model: "" },
-    preset: { name: "未加载", core: [], styles: [], modules: [], activeStyleId: null, activeModules: [], worldInfo: [], regexScripts: [] },
+// 初始化
+function initTheaterMode() {
+    loadTheaterNewData();
+    renderScriptList();
+    navigateTo('page-theater-list');
+}
+
+function loadTheaterNewData() {
+    const s = localStorage.getItem('theater_scripts_v2');
+    if(s) theaterScripts = JSON.parse(s);
     
-    // --- 新增：当前正在玩的剧本 ID ---
-    currentScriptId: null, 
-    
-    // 依然保留这个 logs 变量作为“当前运行中的缓存”，方便 API 函数调用
-    logs: [] 
-};
-        
-// 所有的剧本数据 (从 localStorage 读取)
-// 格式: [{ id, title, charId, logs: [], lastModified: timestamp }]
-let allScripts = [];
+    const sv = localStorage.getItem('theater_saves_v2');
+    if(sv) theaterSaves = JSON.parse(sv);
 
-// ========================================================
-// 2. 入口改写
-// ========================================================
-
-// 初始化：不再直接进舞台，而是进列表
-initTheaterMode = function() {
-    loadTheaterConfig();
-    loadAllScripts(); // 加载列表数据
-    renderScriptList(); // 渲染列表UI
-    navigateTo('page-theater-list'); // 跳转到列表页
+    const fs = localStorage.getItem('theater_stories_v2');
+    if(fs) finishedStories = JSON.parse(fs);
 }
 
-// 加载所有剧本
-function loadAllScripts() {
-    const s = localStorage.getItem('theater_all_scripts');
-    if(s) {
-        allScripts = JSON.parse(s);
-    } else {
-        // 兼容旧数据：如果用户之前有单剧本数据，把它迁移过来
-        const oldLogs = localStorage.getItem('theater_chat_logs');
-        if(oldLogs) {
-            const logs = JSON.parse(oldLogs);
-            if(logs.length > 0) {
-                // 创建一个“旧存档”
-                const defaultCharId = contacts.length > 0 ? contacts[0].id : null;
-                const migrationScript = {
-                    id: 'script_' + Date.now(),
-                    title: "旧的存档",
-                    charId: defaultCharId,
-                    logs: logs,
-                    lastModified: Date.now()
-                };
-                allScripts.push(migrationScript);
-                saveAllScripts();
-                localStorage.removeItem('theater_chat_logs'); // 清理旧数据
-            }
-        }
-    }
+function saveTheaterNewData() {
+    localStorage.setItem('theater_scripts_v2', JSON.stringify(theaterScripts));
+    localStorage.setItem('theater_saves_v2', JSON.stringify(theaterSaves));
+    localStorage.setItem('theater_stories_v2', JSON.stringify(finishedStories));
 }
 
-function saveAllScripts() {
-    localStorage.setItem('theater_all_scripts', JSON.stringify(allScripts));
-}
+// =======================
+// 1. 剧本列表与编辑
+// =======================
 
-// 渲染列表 (仿截图)
 function renderScriptList() {
-    const container = document.getElementById('theater-list-container');
+    const container = document.getElementById('script-list-container');
     container.innerHTML = '';
 
-    if(allScripts.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding:50px; color:#999;">暂无剧本<br>点击右上角 + 开始</div>`;
+    if (theaterScripts.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:50px; color:#999;">暂无剧本<br>点击右上角 + 创建</div>`;
         return;
     }
 
-    // 按时间倒序
-    const sorted = [...allScripts].sort((a,b) => b.lastModified - a.lastModified);
-
-    sorted.forEach(script => {
-        // 获取主角头像和名字
-        const char = contacts.find(c => c.id === script.charId);
-        const avatarUrl = char ? char.avatar : 'https://api.dicebear.com/7.x/shapes/svg?seed=Unknown';
-        const charName = char ? char.name : '未知角色';
+    theaterScripts.forEach(script => {
+        const hasSave = theaterSaves[script.id] && !theaterSaves[script.id].isFinished;
         
-        // 获取预览文字 (最后一条内容)
-        const lastLog = script.logs.length > 0 ? script.logs[script.logs.length-1].content : "无内容";
-        // 清洗一下预览文字 (去掉换行符)
-        const previewText = lastLog.replace(/<[^>]+>/g, '').substring(0, 50); // 简单去标签
-
-        // 格式化时间
-        const date = new Date(script.lastModified);
-        const timeStr = `${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2,'0')}`;
-
         const div = document.createElement('div');
-        div.className = 'script-item';
+        div.className = 'script-item'; // 复用之前的样式
+        div.style.height = 'auto'; // 自适应高度
         div.onclick = (e) => {
-            // 如果点的是删除按钮，不进剧本
             if(e.target.classList.contains('btn-del-script')) return;
-            openScript(script.id);
+            onScriptClick(script.id);
         };
 
         div.innerHTML = `
-            <div class="script-avatar-box">
-                <img src="${avatarUrl}" class="script-avatar">
-            </div>
-            <div class="script-info">
+            <div class="script-info" style="margin-right:10px;">
                 <div class="script-header">
-                    <span class="script-title">${charName} - ${script.title}</span>
-                    <span class="script-time">${timeStr}</span>
+                    <span class="script-title" style="font-size:17px;">${script.title}</span>
+                    ${hasSave ? '<span style="font-size:10px; background:#34c759; color:white; padding:2px 6px; border-radius:4px;">进行中</span>' : ''}
                 </div>
-                <div class="script-preview">${previewText}</div>
+                <div class="script-preview" style="margin-top:5px;">${script.background.substring(0, 60)}...</div>
             </div>
-            <button class="btn-del-script" onclick="deleteScript('${script.id}')">×</button>
+            <!-- 编辑按钮 -->
+            <button class="btn-icon-only" onclick="event.stopPropagation(); openEditScript('${script.id}')" style="font-size:18px; color:#007AFF; margin-right:10px;">✎</button>
+            <button class="btn-del-script" onclick="deleteScriptDef('${script.id}')">×</button>
         `;
         container.appendChild(div);
     });
 }
 
-// ========================================================
-// 3. 交互逻辑：新建与打开
-// ========================================================
-
-// 新建剧本 (先选人，再起名)
-function createNewScript() {
-    if(contacts.length === 0) return alert("请先在信息列表创建角色！");
-    
-    // 弹窗让用户输入标题
-    const title = prompt("给新剧本起个名字：", "未命名剧本");
-    if(!title) return;
-
-    // 选择角色 (默认用当前活跃角色或第一个)
-    let charId = activeContactId;
-    if(!charId) {
-        charId = contacts[0].id;
-        alert(`未选择当前角色，默认使用：${contacts[0].name}`);
+// 打开编辑页
+function openEditScript(id) {
+    // 无论是新增还是修改，先清空/填充数据
+    if (id === -1) {
+        // 新增
+        document.getElementById('edit-script-id').value = "";
+        document.getElementById('ipt-script-title').value = "";
+        document.getElementById('ipt-script-bg').value = "";
+        document.getElementById('ipt-script-goal').value = "";
+        document.getElementById('ipt-script-opening').value = "";
+        document.getElementById('ipt-script-char1').value = "";
+        document.getElementById('ipt-script-char2').value = "";
+    } else {
+        // 修改
+        const s = theaterScripts.find(x => x.id === id);
+        if(!s) return;
+        document.getElementById('edit-script-id').value = s.id;
+        document.getElementById('ipt-script-title').value = s.title;
+        document.getElementById('ipt-script-bg').value = s.background;
+        document.getElementById('ipt-script-goal').value = s.goal;
+        document.getElementById('ipt-script-opening').value = s.opening || "";
+        document.getElementById('ipt-script-char1').value = s.char1_def;
+        document.getElementById('ipt-script-char2').value = s.char2_def;
     }
-
-    const newScript = {
-        id: 'script_' + Date.now(),
-        title: title,
-        charId: charId,
-        logs: [], // 空记录
-        lastModified: Date.now()
-    };
-
-    allScripts.unshift(newScript);
-    saveAllScripts();
-    openScript(newScript.id); // 直接进入
+    navigateTo('page-theater-edit');
 }
 
-// 打开具体剧本 (进入舞台)
-function openScript(scriptId) {
-    const script = allScripts.find(s => s.id === scriptId);
-    if(!script) return;
+// 保存剧本
+function saveScript() {
+    const id = document.getElementById('edit-script-id').value;
+    const title = document.getElementById('ipt-script-title').value.trim();
+    if(!title) return alert("剧本名称不能为空");
 
-    // 1. 更新全局状态
-    theaterState.currentScriptId = scriptId;
-    theaterState.logs = script.logs; // 加载这个剧本的日志
-    
-    // 2. 加载预设
-    loadTheaterState(); 
+    const newScript = {
+        id: id || 'script_' + Date.now(),
+        title: title,
+        background: document.getElementById('ipt-script-bg').value,
+        goal: document.getElementById('ipt-script-goal').value,
+        opening: document.getElementById('ipt-script-opening').value,
+        char1_def: document.getElementById('ipt-script-char1').value,
+        char2_def: document.getElementById('ipt-script-char2').value,
+        updatedAt: Date.now()
+    };
 
-    // 3. 设置 UI
-    const char = contacts.find(c => c.id === script.charId);
-    document.getElementById('theater-title').innerText = script.title;
-    
-    // 如果角色不存在了，用默认名
-    const charName = char ? char.name : "未知";
-    
-    // 渲染舞台内容
-    const stage = document.getElementById('theater-stage');
-    stage.innerHTML = ''; // 清空上一场戏
-    
-    theaterState.logs.forEach(log => {
-        const displayName = log.role === 'user' ? "我" : charName;
-        appendTheaterLog(log.role, log.content, displayName);
-    });
+    if (id) {
+        const idx = theaterScripts.findIndex(x => x.id === id);
+        if (idx >= 0) theaterScripts[idx] = newScript;
+    } else {
+        theaterScripts.unshift(newScript);
+    }
 
-    // 4. 跳转
-    navigateTo('page-theater');
-    
-    // 滚动到底部
-    setTimeout(() => {
-        stage.scrollTop = stage.scrollHeight;
-    }, 100);
+    saveTheaterNewData();
+    alert("保存成功！");
+    navigateTo('page-theater-list');
+    renderScriptList();
 }
 
 // 删除剧本
-function deleteScript(id) {
-    if(confirm("确定要删除这个剧本存档吗？无法恢复。")) {
-        allScripts = allScripts.filter(s => s.id !== id);
-        saveAllScripts();
+function deleteScriptDef(id) {
+    if(confirm("确定删除这个剧本吗？存档也会一起删除。")) {
+        theaterScripts = theaterScripts.filter(x => x.id !== id);
+        delete theaterSaves[id];
+        saveTheaterNewData();
         renderScriptList();
     }
 }
-        // ==========================================
-// --- ✨ 新增：预设与世界书存档列表 ✨ ---
-// ==========================================
 
-// 1. 定义全局变量
-let savedTheaterPresets = []; // 存预设 (Core + Styles + Modules + Regex)
-let savedWorldSets = [];      // 存世界书 (World Info only)
+// AI 润色/填充
+async function aiAutoFillScript() {
+    if(!globalConfig.apiKey) return alert("请先在设置页配置 API Key");
+    
+    const title = document.getElementById('ipt-script-title').value;
+    const bg = document.getElementById('ipt-script-bg').value;
+    
+    const btn = event.target;
+    const oldText = btn.innerText;
+    btn.innerText = "生成中..."; btn.disabled = true;
 
-// 2. 定义加载函数
-function loadTheaterSavedLists() {
+    const prompt = `
+    你是一个专业剧本策划。用户正在填写一个 Roleplay 剧本，请根据已有的信息（如果有），补充或润色其余空白部分。
+    
+    【已有信息】：
+    剧名：${title || "未定"}
+    背景：${bg || "未定"}
+    
+    请生成一个 JSON，包含以下字段的内容（创意要精彩、有戏剧张力）：
+    {
+        "title": "剧本名称",
+        "background": "详细的故事背景，包含时代、地点、核心冲突",
+        "goal": "故事达成的目标（胜利条件）",
+        "opening": "第一段开场旁白，用于引入场景",
+        "char1": "人物1(AI扮演)的身份、性格、秘密",
+        "char2": "人物2(用户扮演)的身份、与人物1的关系"
+    }
+    `;
+
     try {
-        const p = localStorage.getItem('theater_saved_presets');
-        if (p) savedTheaterPresets = JSON.parse(p);
-        
-        const w = localStorage.getItem('theater_saved_worlds');
-        if (w) savedWorldSets = JSON.parse(w);
-        
-        console.log("已加载保存的预设和世界书列表");
-    } catch (e) {
-        console.error("读取保存列表失败", e);
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: [{ role: "user", content: prompt }]
+        });
+        const data = await res.json();
+        const jsonStr = data.choices[0].message.content.replace(/```json|```/g, '').trim();
+        const result = JSON.parse(jsonStr);
+
+        if(!title) document.getElementById('ipt-script-title').value = result.title;
+        if(!bg) document.getElementById('ipt-script-bg').value = result.background;
+        document.getElementById('ipt-script-goal').value = result.goal;
+        document.getElementById('ipt-script-opening').value = result.opening;
+        document.getElementById('ipt-script-char1').value = result.char1;
+        document.getElementById('ipt-script-char2').value = result.char2;
+
+    } catch(e) {
+        alert("生成失败: " + e.message);
+    } finally {
+        btn.innerText = oldText; btn.disabled = false;
     }
 }
 
-// 3. 确保页面打开时自动运行
-window.addEventListener('load', loadTheaterSavedLists);
+// =======================
+// 2. 游戏流程控制
+// =======================
 
-// ==========================================
+let currentPlayScriptId = null;
 
-function loadTheaterConfig() {
-    const s = localStorage.getItem('theater_config');
-    if(s) theaterState.config = JSON.parse(s);
-    
-    // 恢复UI
-    document.getElementById('t-api-url').value = theaterState.config.apiUrl || "";
-    document.getElementById('t-api-key').value = theaterState.config.apiKey || "";
-    document.getElementById('t-model').value = theaterState.config.model || "";
-}
+function onScriptClick(scriptId) {
+    currentPlayScriptId = scriptId;
+    const save = theaterSaves[scriptId];
 
-// 2. 导演台 UI 逻辑
-function openTheaterConsole() {
-     renderSavedPresetSelect();
-    renderSavedWorldSelect();
-    loadTheaterApiPresets();
-    openModal('modal-theater-console');
-}
-        // ==========================================
-// --- 🎭 剧场模式 API 预设逻辑 (新增) ---
-// ==========================================
-
-let theaterApiPresets = [];
-
-// 1. 加载预设列表 (从 localStorage)
-function loadTheaterApiPresets() {
-    const s = localStorage.getItem('theater_api_presets');
-    if (s) {
-        try {
-            theaterApiPresets = JSON.parse(s);
-        } catch (e) {
-            theaterApiPresets = [];
+    // 如果有未完成的存档
+    if (save && !save.isFinished) {
+        // 弹窗询问
+        if (confirm("检测到有未完成的剧情存档。\n\n点击【确定】继续存档\n点击【取消】开启新剧情 (旧存档将覆盖)")) {
+            enterTheaterStage(scriptId, true); // 继续
+        } else {
+            openRoleSelectModal(); // 新开
         }
     } else {
-        theaterApiPresets = [];
+        openRoleSelectModal(); // 新开
     }
-    renderTheaterApiPresetUI();
 }
 
-// 2. 渲染下拉框
-function renderTheaterApiPresetUI() {
-    const select = document.getElementById('t-api-preset-select');
-    if (!select) return;
+function openRoleSelectModal() {
+    const script = theaterScripts.find(s => s.id === currentPlayScriptId);
+    if (!script) return;
 
-    // 清空并重置默认选项
-    select.innerHTML = '<option value="">-- 选择配置 --</option>';
-
-    theaterApiPresets.forEach((preset, index) => {
+    // 填充 AI 列表
+    const aiSelect = document.getElementById('select-actor-ai');
+    aiSelect.innerHTML = '';
+    contacts.forEach(c => {
         const opt = document.createElement('option');
-        opt.value = index;
-        opt.innerText = preset.name;
-        select.appendChild(opt);
+        opt.value = c.id;
+        opt.innerText = c.name;
+        aiSelect.appendChild(opt);
     });
+
+    // 填充用户默认名
+    // 尝试找当前 active contact 的 userPersona
+    let defaultUserName = "玩家";
+    const activeChar = contacts.find(c => c.id === activeContactId);
+    if (activeChar && activeChar.userName) defaultUserName = activeChar.userName;
+    document.getElementById('input-actor-user').value = defaultUserName;
+
+    openModal('modal-theater-role');
 }
 
-// 3. 保存当前配置为新预设
-function saveTheaterApiPreset() {
-    const url = document.getElementById('t-api-url').value.trim();
-    const key = document.getElementById('t-api-key').value.trim();
-    const model = document.getElementById('t-model').value.trim();
+function confirmStartGame() {
+    const aiCharId = document.getElementById('select-actor-ai').value;
+    const userName = document.getElementById('input-actor-user').value.trim() || "玩家";
+    
+    if (!aiCharId) return alert("请至少创建一个角色");
 
-    if (!url || !key) {
-        return alert("请至少填写 API URL 和 Key 才能保存！");
-    }
-
-    const name = prompt("给这个配置起个名字 (例如: DeepSeek, 转发站A):");
-    if (!name) return;
-
-    const newPreset = {
-        name: name,
-        url: url,
-        key: key,
-        model: model
+    // 初始化新存档
+    theaterSaves[currentPlayScriptId] = {
+        isFinished: false,
+        startTime: Date.now(),
+        actors: {
+            aiCharId: aiCharId,
+            userName: userName
+        },
+        logs: []
     };
-
-    // 检查重名覆盖
-    const existingIndex = theaterApiPresets.findIndex(p => p.name === name);
-    if (existingIndex >= 0) {
-        if (!confirm(`预设 "${name}" 已存在，要覆盖吗？`)) return;
-        theaterApiPresets[existingIndex] = newPreset;
-    } else {
-        theaterApiPresets.push(newPreset);
+    
+    // 如果剧本有开场白，先存入
+    const script = theaterScripts.find(s => s.id === currentPlayScriptId);
+    if (script.opening) {
+        theaterSaves[currentPlayScriptId].logs.push({
+            role: 'narrator',
+            content: script.opening
+        });
     }
 
-    localStorage.setItem('theater_api_presets', JSON.stringify(theaterApiPresets));
-    renderTheaterApiPresetUI();
+    saveTheaterNewData();
+    closeModal('modal-theater-role');
+    enterTheaterStage(currentPlayScriptId, false);
+}
+
+// 进入舞台
+function enterTheaterStage(scriptId, isContinue) {
+    const script = theaterScripts.find(s => s.id === scriptId);
+    const save = theaterSaves[scriptId];
+    const aiChar = contacts.find(c => c.id === save.actors.aiCharId);
+
+    document.getElementById('play-script-title').innerText = script.title;
     
-    // 自动选中刚才保存的
-    const select = document.getElementById('t-api-preset-select');
-    select.selectedIndex = select.options.length - 1; // 选最后一个（如果是新增的话）或者对应的index
-    
-    alert(`配置 "${name}" 已保存！`);
-}
-
-// 4. 应用选中的预设
-function applyTheaterApiPreset() {
-    const select = document.getElementById('t-api-preset-select');
-    const index = select.value;
-
-    if (index === "") return; // 选了提示项，不操作
-
-    const preset = theaterApiPresets[index];
-    if (preset) {
-        document.getElementById('t-api-url').value = preset.url || "";
-        document.getElementById('t-api-key').value = preset.key || "";
-        document.getElementById('t-model').value = preset.model || "";
-        
-        // 视觉反馈
-        if(navigator.vibrate) navigator.vibrate(50);
-        
-        // 可选：应用后可以自动保存一下当前 Theater Config，防止用户忘了点最下面的保存按钮
-        // saveTheaterSettings(); 
-    }
-}
-
-// 5. 删除预设
-function deleteTheaterApiPreset() {
-    const select = document.getElementById('t-api-preset-select');
-    const index = select.value;
-
-    if (index === "") return alert("请先在下拉框中选择一个要删除的预设");
-
-    const presetName = theaterApiPresets[index].name;
-    if (confirm(`确定要删除预设 "${presetName}" 吗？`)) {
-        theaterApiPresets.splice(index, 1);
-        localStorage.setItem('theater_api_presets', JSON.stringify(theaterApiPresets));
-        renderTheaterApiPresetUI();
-        
-        // 清空输入框（可选，或者保持不变）
-        select.value = "";
-    }
-}
-
-function switchTheaterTab(tabId) {
-    document.querySelectorAll('.t-tab').forEach(t => t.classList.remove('active'));
-    event.currentTarget.classList.add('active');
-    
-    document.querySelectorAll('.t-tab-content').forEach(c => c.style.display = 'none');
-    document.getElementById(tabId).style.display = 'block';
-}
-
-function saveTheaterSettings() {
-    theaterState.config.apiUrl = document.getElementById('t-api-url').value.trim();
-    theaterState.config.apiKey = document.getElementById('t-api-key').value.trim();
-    theaterState.config.model = document.getElementById('t-model').value.trim();
-    
-    localStorage.setItem('theater_config', JSON.stringify(theaterState.config));
-    closeModal('modal-theater-console');
-    alert("剧场配置已保存");
-}
-
-// 3. 简单的输入框自适应
-function autoResizeTextArea(el) {
-    el.style.height = 'auto';
-    el.style.height = (el.scrollHeight) + 'px';
-}
-
-// 4. 临时发送逻辑 (只上屏，暂不接API，下一阶段写解析器)
-async function sendTheaterMsg() {
-    const input = document.getElementById('theater-input');
-    const txt = input.value.trim();
-    if(!txt) return;
-
-    // 1. 获取当前角色 (防错：没选人就默认用第一个)
-    let char = contacts.find(c => c.id === activeContactId);
-    if (!char && contacts.length > 0) char = contacts[0];
-    if (!char) return alert("请先在【信息】列表创建一个角色！");
-
-    // 2. 补丁：防止历史记录数组不存在导致报错
-    if (!theaterState.logs) theaterState.logs = [];
-
-    // 3. UI 上屏
-    appendTheaterLog('user', txt, char.userName || "我");
-    
-    // 4. 存入历史
-    theaterState.logs.push({ role: 'user', content: txt });
-    saveTheaterLogs();
-
-    // 5. 关键：先清空输入框，再叫 AI！
-    // (之前可能卡在这里，导致字消不掉)
-    input.value = '';
-    if(typeof autoResizeTextArea === 'function') autoResizeTextArea(input);
-
-    // 6. 召唤 AI (加了 await 保证顺序)
-    await triggerTheaterAI(char);
-    
-}
-        // === 【修复补丁】补充缺失的保存函数 ===
-function saveTheaterLogs() {
-    if (!theaterState.currentScriptId) return;
-
-    // 找到当前剧本
-    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-    if (script) {
-        script.logs = theaterState.logs; // 更新日志
-        script.lastModified = Date.now(); // 更新时间
-        saveAllScripts(); // 存入 localStorage
-    }
-}
-
-
-function appendTheaterLog(role, text, name) {
+    // 渲染历史
     const stage = document.getElementById('theater-stage');
-    const tip = document.querySelector('.theater-start-tip');
-    if(tip) tip.remove();
+    stage.innerHTML = '';
+    
+    save.logs.forEach(log => {
+        appendTheaterBubble(log.role, log.content, aiChar, save.actors.userName);
+    });
 
-    // 计算楼层：当前 DOM 里的 .t-msg-block 数量 + 1
-    const floor = stage.querySelectorAll('.t-msg-block').length + 1;
+    navigateTo('page-theater');
+    scrollToStageBottom();
 
+    // 如果是新开局且只有开场白，或者完全空，可以考虑让AI先说一句 (可选)
+    // 这里我们只是展示开场白，等待用户输入
+}
+
+function scrollToStageBottom() {
+    const stage = document.getElementById('theater-stage');
+    setTimeout(() => stage.scrollTop = stage.scrollHeight, 100);
+}
+
+// 渲染气泡
+function appendTheaterBubble(role, text, aiChar, userName) {
+    const stage = document.getElementById('theater-stage');
     const div = document.createElement('div');
-    div.className = 't-msg-block';
-    if(role === 'system') div.classList.add('system');
+    const cleanText = text.replace(/\n/g, '<br>');
 
-    // 格式化文本
-    const formattedText = text.replace(/\n/g, '<br>');
-
-    // 如果是系统消息，用特殊卡片 (之前的逻辑)
-    if (role === 'system') {
-        // 系统消息通常不占楼层号，或者占了但不显示，看你喜好。这里选择显示。
+    if (role === 'narrator') {
+        div.className = 'narrator-box clearfix';
+        div.innerHTML = cleanText;
+    } else if (role === 'ai') {
+        div.className = 'theater-bubble ai clearfix';
+        // 可以加个小头像
         div.innerHTML = `
-            <span class="t-floor-tag">#${floor}</span>
-            <div class="t-system-card">
-                <div class="t-system-header">剧情回顾 / 记忆存档</div>
-                <div>${formattedText}</div>
-            </div>`;
-    } else {
-        // 普通对话
+            <div style="font-size:10px; color:#888; margin-bottom:4px;">${aiChar.name} (饰 ${theaterScripts.find(s=>s.id===currentPlayScriptId).char1_def.substring(0,10)}...)</div>
+            ${cleanText}
+        `;
+    } else if (role === 'user') {
+        div.className = 'theater-bubble user clearfix';
         div.innerHTML = `
-            <span class="t-floor-tag">#${floor}</span>
-            <div class="t-role-label">${name}</div>
-            <div class="t-text ${role}">${formattedText}</div>
+            <div style="font-size:10px; color:#ddd; margin-bottom:4px; text-align:right;">${userName}</div>
+            ${cleanText}
         `;
     }
     
     stage.appendChild(div);
-    setTimeout(() => { stage.scrollTop = stage.scrollHeight; }, 100);
-    return div.querySelector('.t-text');
+    scrollToStageBottom();
 }
 
+// =======================
+// 3. 核心互动逻辑 (Prompt)
+// ===================================
 
-// ==========================================
-// --- 21. 剧场模式：核心解析器 (Parser) ---
-// ==========================================
+async function sendTheaterAction() {
+    const input = document.getElementById('theater-input');
+    const text = input.value.trim();
+    if(!text) return;
 
-// 1. 文件导入入口
-async function handleTheaterImport(e) {
-    const file = e.target.files[0];
-    if(!file) return;
+    const script = theaterScripts.find(s => s.id === currentPlayScriptId);
+    const save = theaterSaves[currentPlayScriptId];
+    const aiChar = contacts.find(c => c.id === save.actors.aiCharId);
 
-    try {
-        const text = await file.text();
-        const json = JSON.parse(text);
-        
-        // 开始解析
-        parseSillyTavernJSON(json, file.name);
-        
-        // 保存并刷新
-        saveTheaterState();
-        renderConsoleUI();
-        
-        alert(`✅ 成功导入预设：${file.name}\n已自动识别出文风和小剧场模块！`);
-        
-    } catch(err) {
-        alert("解析失败: " + err.message);
-        console.error(err);
-    } finally {
-        e.target.value = ''; // 清空input以便下次选同名文件
-    }
-}
-        // ==========================================
-// --- 📂 独立导入功能 (世界书 & 正则) ---
-// ==========================================
-
-// 1. 独立导入世界书
-// 1. 独立导入世界书 (终极兼容版：支持数组和对象格式)
-async function handleWorldImport(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-        const text = await file.text();
-        const json = JSON.parse(text);
-        let count = 0;
-        let entries = [];
-
-        // --- 1. 格式识别区 (核心修复) ---
-        if (Array.isArray(json)) {
-            // 情况A: 根目录就是数组
-            entries = json;
-        } else if (json.entries) {
-            if (Array.isArray(json.entries)) {
-                // 情况B: 标准数组格式
-                entries = json.entries;
-            } else if (typeof json.entries === 'object') {
-                // 🔥 情况C: 你的文件就是这种！(字典对象格式)
-                // 我们用 Object.values 把它强行转成数组
-                entries = Object.values(json.entries);
-            }
-        } 
-        
-        if (entries.length === 0) {
-            throw new Error("未找到有效的词条数据 (entries 为空)");
-        }
-
-        // --- 2. 数据清洗区 ---
-        entries.forEach(entry => {
-            // 提取关键词 (兼容各种奇葩写法)
-            let keys = [];
-            // 优先找 key (数组), 其次找 keys, 最后找 string 格式
-            const rawKey = entry.key || entry.keys; 
-            
-            if (Array.isArray(rawKey)) {
-                keys = rawKey;
-            } else if (typeof rawKey === 'string') {
-                keys = rawKey.split(',').map(k => k.trim());
-            }
-
-            // 存入系统
-            theaterState.preset.worldInfo.push({
-                id: entry.uid || 'wi_' + Math.random(),
-                comment: entry.comment || entry.name || '导入条目',
-                keys: keys,
-                content: entry.content || '',
-                enabled: entry.enabled !== false, // 默认开启，除非明确写了 false
-                // 处理你的文件里那种 forceActive 或者 constant 属性
-                forceActive: entry.constant || false, 
-                isActive: false
-            });
-            count++;
-        });
-
-        saveTheaterState();
-        renderConsoleUI();
-        alert(`成功导入 ${count} 条世界书设定！`);
-
-    } catch (err) {
-        alert("导入失败: " + err.message);
-        console.error(err);
-    } finally {
-        e.target.value = ''; // 清空 input
-    }
-}
-
-// 2. 独立导入正则脚本 (终极修正版：支持空替换 + 自动去斜杠)
-async function handleRegexImport(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-        const text = await file.text();
-        const json = JSON.parse(text);
-        let count = 0;
-        let scripts = [];
-        
-        // --- 内部工具：清洗酒馆格式的正则 (去掉两头的 / 和尾部的 g/m/i) ---
-        // 比如把 "/abc/g" 变成 "abc"，否则 JS 引擎无法识别
-        const cleanPattern = (str) => {
-            if (!str) return "";
-            // 匹配以 / 开头，以 / 加可选标志结尾的字符串
-            const match = str.match(/^\/(.*?)\/([a-z]*)$/);
-            return match ? match[1] : str;
-        };
-
-        // --- 1. 格式识别 ---
-        if (Array.isArray(json)) {
-            scripts = json;
-        } else if (json.regex_scripts && Array.isArray(json.regex_scripts)) {
-            scripts = json.regex_scripts;
-        } else if (json.scripts && Array.isArray(json.scripts)) {
-            scripts = json.scripts;
-        } else {
-            // 单个对象检查
-            // 🔥 核心修复：使用 !== undefined 来允许空字符串 ""
-            const hasLegacy = (json.regex && json.replacement !== undefined);
-            const hasNew = (json.findRegex && json.replaceString !== undefined);
-            
-            if (hasLegacy || hasNew) {
-                scripts = [json];
-            } else {
-                throw new Error("无法识别的正则文件格式");
-            }
-        }
-
-        // --- 2. 补丁：防止 regexScripts 容器缺失 ---
-        if (!theaterState.preset.regexScripts) {
-            theaterState.preset.regexScripts = [];
-        }
-
-        // --- 3. 数据清洗与存入 ---
-        scripts.forEach(r => {
-            // 获取原始正则字符串
-            let rawRegex = r.regex || r.findRegex;
-            // 🔥 自动脱壳：去掉酒馆格式两头的斜杠
-            let finalRegex = cleanPattern(rawRegex);
-
-            theaterState.preset.regexScripts.push({
-                id: r.id || 'reg_' + Math.random(),
-                scriptName: r.scriptName || '导入脚本',
-                regex: finalRegex, 
-                replacement: r.replacement || r.replaceString || "", // 确保即使是null也是空字符串
-                placement: r.placement || [1, 2],
-                disabled: r.disabled || false
-            });
-            count++;
-        });
-
-        saveTheaterState();
-        renderConsoleUI();
-        alert(`成功导入 ${count} 个正则脚本！`);
-
-    } catch (err) {
-        alert("导入失败: " + err.message);
-        console.error(err);
-    } finally {
-        e.target.value = '';
-    }
-}
-
-// 2. 核心：JSON 榨汁机
-function parseSillyTavernJSON(json, fileName) {
-    // 重置当前数据
-    theaterState.preset = {
-        name: fileName.replace('.json', ''),
-        core: [],
-        styles: [],
-        modules: [],
-        activeStyleId: null,
-        activeModules: [],      // <--- 注意这里加个逗号
-        worldInfo: []
-    };
-
-    // 检查 prompts 数组
-    if (!json.prompts || !Array.isArray(json.prompts)) {
-        throw new Error("这不是标准的酒馆预设文件 (找不到 prompts 列表)");
-    }
-
-    // 遍历并分类
-    // --- 修改后的 parseSillyTavernJSON 内部循环 ---
-    json.prompts.forEach(p => {
-        const item = {
-            id: p.identifier || 'id_' + Math.random(),
-            name: p.name || '未命名',
-            content: p.content || '',
-            // 关键修改：直接使用原文件里的 enabled 状态，如果没有则默认为 true
-            // 不再强制设为 false，也不再过滤
-            enabled: (p.enabled === undefined) ? true : p.enabled 
-        };
-
-        // --- 智能分类逻辑 ---
-        
-        if (item.name.includes("文风") || item.name.includes("WritingStyle")) {
-            // A. 归类为【文风】 (单选)
-            theaterState.preset.styles.push(item);
-            
-        } else if (item.name.includes("小剧场") || item.name.includes("Theater")) {
-            // B. 归类为【小剧场】 (开关)
-            // 现在的逻辑：如果原作者勾了，这就开；没勾这就关。不再强制关闭。
-            theaterState.preset.modules.push(item);
-            // 顺便把 ID 加到 activeModules 数组里，以便后续逻辑兼容
-            if (item.enabled) {
-                theaterState.preset.activeModules.push(item.id);
-            }
-            
-        } else {
-            // C. 归类为【核心规则】 (常驻 -> 改为可切换)
-            // 关键修改：删除了 if (p.enabled) 的判断
-            // 无论原作者是否开启，都导入进来，让用户自己决定
-            theaterState.preset.core.push(item);
-        }
-    });
-    // === ✨ 新增：解析世界书 (World Info) ===
-    // 兼容标准酒馆格式，通常在 entries 数组里
-    if (json.entries && Array.isArray(json.entries)) {
-        json.entries.forEach(entry => {
-            // 提取关键词 (兼容字符串或数组)
-            let keys = [];
-            if (Array.isArray(entry.key)) keys = entry.key;
-            else if (typeof entry.key === 'string') keys = entry.key.split(',').map(k => k.trim());
-            // 有些格式是用 keys 字段
-            if (entry.keys && Array.isArray(entry.keys)) keys = entry.keys;
-
-            theaterState.preset.worldInfo.push({
-                id: entry.uid || 'wi_' + Math.random(),
-                comment: entry.comment || entry.name || '未命名条目', // 条目名
-                keys: keys,           // 触发关键词数组
-                content: entry.content || '', // 条目内容
-                enabled: entry.enabled !== false, // 默认开启
-                isActive: false       // 运行时状态：是否被本次对话触发
-            });
-        });
-    }
-
-    // 默认选中第一个文风 (如果有的话)
-    if (theaterState.preset.styles.length > 0) {
-        theaterState.preset.activeStyleId = theaterState.preset.styles[0].id;
-    }
-    // === ✨ 新增：解析正则脚本 (Regex Scripts) ===
-    // 兼容酒馆格式，规则通常存在 regex_scripts 数组里
-    if (json.regex_scripts && Array.isArray(json.regex_scripts)) {
-        json.regex_scripts.forEach(r => {
-            theaterState.preset.regexScripts.push({
-                id: r.id || 'reg_' + Math.random(),
-                scriptName: r.scriptName || '未命名脚本',
-                regex: r.regex,             // 匹配规则 (字符串)
-                replacement: r.replacement, // 替换内容
-                // placement: 1=Input(用户发送前), 2=Output(AI回复后)
-                placement: r.placement || [1, 2], 
-                disabled: r.disabled || false
-            });
-        });
-    }
-}
-        // --- 渲染预设下拉框 ---
-function renderSavedPresetSelect() {
-    const select = document.getElementById('saved-preset-select');
-    if (!select) return;
+    // 1. 上屏 & 存盘
+    appendTheaterBubble('user', text, aiChar, save.actors.userName);
+    save.logs.push({ role: 'user', content: text });
+    saveTheaterNewData();
     
-    // 保留第一项
-    select.innerHTML = '<option value="">-- 选择预设 --</option>';
+    input.value = '';
     
-    savedTheaterPresets.forEach((item, index) => {
-        const opt = document.createElement('option');
-        opt.value = index;
-        opt.innerText = item.name;
-        select.appendChild(opt);
-    });
+    // 2. 触发 AI
+    await triggerTheaterRoleplay(script, save, aiChar);
 }
 
-// --- 保存当前配置为新预设 ---
-function doSavePreset() {
-    const p = theaterState.preset;
-    // 检查是否有内容
-    if (p.core.length === 0 && p.styles.length === 0) {
-        return alert("当前没有加载任何规则，无法保存！");
-    }
-
-    const name = prompt("给当前配置起个名字 (含规则/文风/正则):", p.name || "新预设");
-    if (!name) return;
-
-    // 构造存储对象 (剔除 worldInfo)
-    const package = {
-        name: name,
-        core: p.core,
-        styles: p.styles,
-        modules: p.modules,
-        activeStyleId: p.activeStyleId,
-        activeModules: p.activeModules,
-        regexScripts: p.regexScripts // 包含正则
-    };
-
-    // 检查重名覆盖
-    const idx = savedTheaterPresets.findIndex(x => x.name === name);
-    if (idx >= 0) {
-        if (!confirm(`预设 "${name}" 已存在，要覆盖吗？`)) return;
-        savedTheaterPresets[idx] = package;
-    } else {
-        savedTheaterPresets.push(package);
-    }
-
-    localStorage.setItem('theater_saved_presets', JSON.stringify(savedTheaterPresets));
-    renderSavedPresetSelect();
-    alert("预设保存成功！");
-}
-
-// --- 应用选中的预设 ---
-function applySavedPreset() {
-    const idx = document.getElementById('saved-preset-select').value;
-    if (idx === "") return;
-
-    const data = savedTheaterPresets[idx];
-    if (!data) return;
-
-    // 覆盖当前状态 (保留 WorldInfo 不动)
-    const currentWorld = theaterState.preset.worldInfo || [];
-    
-    theaterState.preset = {
-        name: data.name,
-        core: JSON.parse(JSON.stringify(data.core || [])),     // 深拷贝防止引用修改
-        styles: JSON.parse(JSON.stringify(data.styles || [])),
-        modules: JSON.parse(JSON.stringify(data.modules || [])),
-        activeStyleId: data.activeStyleId,
-        activeModules: JSON.parse(JSON.stringify(data.activeModules || [])),
-        regexScripts: JSON.parse(JSON.stringify(data.regexScripts || [])),
-        worldInfo: currentWorld // 🔥 关键：把世界书接回去
-    };
-
-    saveTheaterState(); // 存入运行时
-    renderConsoleUI();  // 刷新界面
-    
-    // 视觉反馈
-    if(navigator.vibrate) navigator.vibrate(50);
-}
-
-// --- 删除预设 ---
-function doDeletePreset() {
-    const idx = document.getElementById('saved-preset-select').value;
-    if (idx === "") return alert("请先选择一个预设");
-
-    if (confirm("确定删除该预设吗？")) {
-        savedTheaterPresets.splice(idx, 1);
-        localStorage.setItem('theater_saved_presets', JSON.stringify(savedTheaterPresets));
-        renderSavedPresetSelect();
-    }
-}
-        // --- 渲染世界书下拉框 ---
-function renderSavedWorldSelect() {
-    const select = document.getElementById('saved-world-select');
-    if (!select) return;
-    
-    select.innerHTML = '<option value="">-- 选择世界书 --</option>';
-    
-    savedWorldSets.forEach((item, index) => {
-        const opt = document.createElement('option');
-        opt.value = index;
-        opt.innerText = `${item.name} (${item.entries.length}条)`;
-        select.appendChild(opt);
-    });
-}
-
-// --- 保存当前世界书 ---
-function doSaveWorld() {
-    const currentEntries = theaterState.preset.worldInfo;
-    if (!currentEntries || currentEntries.length === 0) {
-        return alert("当前没有任何世界书条目！");
-    }
-
-    const name = prompt("给这套世界观起个名字:", "新世界观");
-    if (!name) return;
-
-    const package = {
-        name: name,
-        entries: JSON.parse(JSON.stringify(currentEntries)) // 深拷贝
-    };
-
-    const idx = savedWorldSets.findIndex(x => x.name === name);
-    if (idx >= 0) {
-        if (!confirm(`世界书 "${name}" 已存在，要覆盖吗？`)) return;
-        savedWorldSets[idx] = package;
-    } else {
-        savedWorldSets.push(package);
-    }
-
-    localStorage.setItem('theater_saved_worlds', JSON.stringify(savedWorldSets));
-    renderSavedWorldSelect();
-    alert("世界书保存成功！");
-}
-
-// --- 应用选中的世界书 ---
-function applySavedWorld() {
-    const idx = document.getElementById('saved-world-select').value;
-    if (idx === "") return;
-
-    const data = savedWorldSets[idx];
-    if (!data) return;
-
-    if (theaterState.preset.worldInfo.length > 0) {
-        if (!confirm("加载新世界书将覆盖当前所有条目，确定吗？")) {
-            // 恢复下拉框选择
-            document.getElementById('saved-world-select').value = "";
-            return;
-        }
-    }
-
-    // 覆盖世界书
-    theaterState.preset.worldInfo = JSON.parse(JSON.stringify(data.entries));
-    
-    saveTheaterState();
-    renderConsoleUI(); // 刷新列表
-}
-
-// --- 删除世界书 ---
-function doDeleteWorld() {
-    const idx = document.getElementById('saved-world-select').value;
-    if (idx === "") return alert("请先选择一个世界书");
-
-    if (confirm("确定删除该世界书存档吗？")) {
-        savedWorldSets.splice(idx, 1);
-        localStorage.setItem('theater_saved_worlds', JSON.stringify(savedWorldSets));
-        renderSavedWorldSelect();
-    }
-}
-
-// ========================================================
-// 🛠️ 升级版：渲染控制台 (支持世界书编辑 + 新增按钮)
-// ========================================================
-function renderConsoleUI() {
-    const p = theaterState.preset;
-    document.getElementById('t-current-preset-name').innerText = p.name;
-
-    // --- A. 核心列表 (Core) [已修改：支持开关] ---
-    const coreList = document.getElementById('t-core-list');
-    if (coreList) {
-        coreList.innerHTML = '';
-        p.core.forEach((item, index) => {
-            // 判断是否启用
-            const isActive = item.enabled;
-            const div = document.createElement('div');
-            div.className = 't-item-row';
-            
-            // 绑定点击事件：点击切换 toggleCoreItem
-            div.onclick = () => toggleCoreItem(index);
-
-            // 样式：启用是绿色，未启用是灰色
-            const toggleColor = isActive ? '#34c759' : '#444';
-            const togglePos = isActive ? '22px' : '2px';
-            const textColor = isActive ? '#fff' : '#888';
-
-            div.innerHTML = `
-            <div style="flex:1;">
-                <span class="t-item-name" style="color:${textColor}; font-size:14px;">${item.name}</span>
-            </div>
-            <!-- 仿 iOS 开关 UI -->
-            <div style="width:40px; height:22px; background:${toggleColor}; border-radius:11px; position:relative; transition:0.2s;">
-                <div style="width:18px; height:18px; background:#fff; border-radius:50%; position:absolute; top:2px; left:${togglePos}; transition:0.2s;"></div>
-            </div>`;
-            
-            coreList.appendChild(div);
-        });
-    }
-
-    // --- B. 文风列表 (Style) ---
-    const styleList = document.getElementById('t-style-list');
-    if (styleList) {
-        styleList.innerHTML = '';
-        if (p.styles.length === 0) styleList.innerHTML = '<div class="t-tip">无文风选项</div>';
-        p.styles.forEach(item => {
-            const isActive = (item.id === p.activeStyleId);
-            const div = document.createElement('div');
-            div.className = `t-item-row ${isActive ? 'active' : ''}`;
-            div.onclick = () => selectTheaterStyle(item.id);
-            div.innerHTML = `<span class="t-item-name">${item.name}</span><div class="t-radio-check"></div>`;
-            styleList.appendChild(div);
-        });
-    }
-
-    // --- C. 小剧场列表 (Modules) ---
-    const moduleList = document.getElementById('t-module-list');
-    if (moduleList) {
-        moduleList.innerHTML = '';
-        if (p.modules.length === 0) moduleList.innerHTML = '<div class="t-tip">无小剧场模块</div>';
-        p.modules.forEach(item => {
-            const isActive = p.activeModules.includes(item.id);
-            const div = document.createElement('div');
-            div.className = 't-item-row';
-            div.onclick = () => toggleTheaterModule(item.id);
-            const toggleColor = isActive ? '#34c759' : '#444';
-            const togglePos = isActive ? '22px' : '2px';
-            div.innerHTML = `
-            <span class="t-item-name" style="${isActive ? 'color:#fff' : ''}">${item.name}</span>
-            <div style="width:40px; height:22px; background:${toggleColor}; border-radius:11px; position:relative; transition:0.2s;">
-                <div style="width:18px; height:18px; background:#fff; border-radius:50%; position:absolute; top:2px; left:${togglePos}; transition:0.2s;"></div>
-            </div>`;
-            moduleList.appendChild(div);
-        });
-    }
-
-    // --- D. 世界书列表 (World Info) - 升级版 ---
-    const worldList = document.getElementById('t-world-list');
-    if (worldList) {
-        worldList.innerHTML = '';
-        
-        // 1. 在列表顶部加一个“+ 新增”按钮
-        const addBtn = document.createElement('div');
-        addBtn.className = 't-upload-box';
-        addBtn.style.padding = "8px"; 
-        addBtn.style.marginBottom = "10px";
-        addBtn.style.borderStyle = "dashed";
-        addBtn.style.borderColor = "#007AFF";
-        addBtn.style.color = "#007AFF";
-        addBtn.innerText = "➕ 新建世界书条目";
-        addBtn.onclick = () => openWorldEditor(-1); // -1 代表新建
-        // 把它插入到 worldList 的前面？不，worldList 是容器，直接 append 进去作为第一个元素
-        worldList.appendChild(addBtn);
-
-        if (!p.worldInfo || p.worldInfo.length === 0) {
-            const tip = document.createElement('div');
-            tip.className = 't-tip';
-            tip.innerText = '暂无条目，请导入或新建';
-            worldList.appendChild(tip);
-        } else {
-            p.worldInfo.forEach((item, index) => {
-                let color = '#888';
-                let statusText = "";
-                
-                if (item.enabled) {
-                    color = '#fff';
-                    if (item.forceActive) {
-                        color = '#ffcc00'; // 黄色 (常驻)
-                        statusText = "⚡";
-                    } else if (item.isActive) {
-                        color = '#34c759'; // 绿色 (触发)
-                        statusText = "🟢";
-                    }
-                }
-
-                const div = document.createElement('div');
-                div.className = 't-item-row';
-                div.style.cursor = 'pointer';
-                
-                // 点击整行 -> 打开编辑
-                div.onclick = () => openWorldEditor(index);
-
-                div.innerHTML = `
-                    <div style="flex:1; overflow:hidden; padding-right:10px;">
-                        <div class="t-item-name" style="color:${color}; font-weight:${item.isActive||item.forceActive?'bold':'normal'}; display:flex; align-items:center; gap:5px;">
-                            ${statusText} ${item.comment || '未命名'}
-                        </div>
-                        <div style="font-size:10px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                            ${item.keys.join(', ')}
-                        </div>
-                    </div>
-                    
-                    <div onclick="event.stopPropagation(); toggleWorldInfoEnable(${index})" 
-                         style="width:30px; height:18px; border-radius:9px; background:${item.enabled ? '#34c759':'#333'}; position:relative;">
-                         <div style="width:14px; height:14px; background:#fff; border-radius:50%; position:absolute; top:2px; left:${item.enabled?'14px':'2px'}; transition:0.2s;"></div>
-                    </div>
-                `;
-                worldList.appendChild(div);
-            });
-        }
-    }
-
-    // --- E. 正则列表 ---
-    // (这部分保持原样，如果有的话)
-    const regList = document.getElementById('t-regex-list');
-    if (regList && p.regexScripts) {
-        regList.innerHTML = '';
-        p.regexScripts.forEach((item, index) => {
-            const div = document.createElement('div');
-            div.className = 't-item-row';
-            div.onclick = () => toggleRegexScript(index);
-            div.innerHTML = `
-                <div style="flex:1; overflow:hidden;">
-                    <div class="t-item-name" style="color:${item.disabled ? '#888' : '#fff'};">${item.scriptName}</div>
-                </div>
-                <div style="width:10px; height:10px; border-radius:50%; background:${item.disabled ? '#333' : '#34c759'}; border:1px solid #555;"></div>
-            `;
-            regList.appendChild(div);
-        });
-    }
-}
-        // 新增：切换核心规则的开关
-function toggleCoreItem(index) {
-    const item = theaterState.preset.core[index];
-    if (item) {
-        item.enabled = !item.enabled; // 取反状态
-        saveTheaterState(); // 保存更改
-        renderConsoleUI();  // 刷新界面
-    }
-}
-
-// ========================================================
-// ✨ 新增逻辑：世界书编辑功能
-// ========================================================
-
-// 1. 打开编辑器 (index=-1 为新建)
-function openWorldEditor(index) {
-    const p = theaterState.preset;
-    const modal = document.getElementById('modal-world-edit');
-    
-    // 存索引
-    document.getElementById('we-index').value = index;
-
-    if (index === -1) {
-        // 新建模式：清空
-        document.getElementById('we-comment').value = "";
-        document.getElementById('we-keys').value = "";
-        document.getElementById('we-content').value = "";
-        document.getElementById('we-force').checked = false;
-    } else {
-        // 编辑模式：回显
-        const item = p.worldInfo[index];
-        document.getElementById('we-comment').value = item.comment || "";
-        document.getElementById('we-keys').value = item.keys.join(", ");
-        document.getElementById('we-content').value = item.content || "";
-        document.getElementById('we-force').checked = item.forceActive || false;
-    }
-
-    // 显示弹窗
-    modal.style.display = 'flex';
-    setTimeout(() => modal.classList.add('show'), 10);
-}
-
-// 2. 保存条目
-function saveWorldEntry() {
-    const index = parseInt(document.getElementById('we-index').value);
-    const comment = document.getElementById('we-comment').value.trim() || "未命名条目";
-    const keysStr = document.getElementById('we-keys').value.trim();
-    const content = document.getElementById('we-content').value;
-    const forceActive = document.getElementById('we-force').checked;
-
-    // 分割关键词 (支持中文逗号)
-    let keys = keysStr.split(/[,，]/).map(k => k.trim()).filter(k => k !== "");
-
-    const entry = {
-        id: (index === -1) ? ('wi_' + Date.now()) : theaterState.preset.worldInfo[index].id,
-        comment: comment,
-        keys: keys,
-        content: content,
-        enabled: true, // 保存即默认启用
-        forceActive: forceActive,
-        isActive: false
-    };
-
-    if (index === -1) {
-        // 新增
-        if (!theaterState.preset.worldInfo) theaterState.preset.worldInfo = [];
-        theaterState.preset.worldInfo.push(entry);
-    } else {
-        // 修改
-        theaterState.preset.worldInfo[index] = entry;
-    }
-
-    saveTheaterState(); // 保存到本地
-    renderConsoleUI();  // 刷新列表
-    closeModal('modal-world-edit');
-}
-
-// 3. 删除条目
-function deleteWorldEntry() {
-    const index = parseInt(document.getElementById('we-index').value);
-    if (index === -1) {
-        closeModal('modal-world-edit');
-        return;
-    }
-
-    if (confirm("确定要删除这个词条吗？")) {
-        theaterState.preset.worldInfo.splice(index, 1);
-        saveTheaterState();
-        renderConsoleUI();
-        closeModal('modal-world-edit');
-    }
-}
-        function toggleRegexScript(index) {
-    const item = theaterState.preset.regexScripts[index];
-    item.disabled = !item.disabled; // 切换禁用状态
-    saveTheaterState();
-    renderConsoleUI();
-}
-
-// 4. 交互逻辑
-function selectTheaterStyle(id) {
-    theaterState.preset.activeStyleId = id;
-    saveTheaterState();
-    renderConsoleUI();
-}
-
-function toggleTheaterModule(id) {
-    const list = theaterState.preset.activeModules;
-    if (list.includes(id)) {
-        // 如果有，就删掉 (关闭)
-        const idx = list.indexOf(id);
-        list.splice(idx, 1);
-    } else {
-        // 如果没有，就加上 (开启)
-        list.push(id);
-    }
-    saveTheaterState();
-    renderConsoleUI();
-}
-
-// 5. 数据持久化
-function saveTheaterState() {
-    // 保存配置
-    localStorage.setItem('theater_config', JSON.stringify(theaterState.config));
-    // 保存预设数据
-    localStorage.setItem('theater_preset_data', JSON.stringify(theaterState.preset));
-    localStorage.setItem('theater_chat_logs', JSON.stringify(theaterState.logs));
-}
-
-// 页面加载时恢复数据
-function loadTheaterState() {
-    const c = localStorage.getItem('theater_config');
-    if(c) theaterState.config = JSON.parse(c);
-    
-    const p = localStorage.getItem('theater_preset_data');
-    if(p) {
-        theaterState.preset = JSON.parse(p);
-        renderConsoleUI(); // 恢复后立即渲染
-    }
-}
-
-
-        function loadTheaterLogs() {
-    const s = localStorage.getItem('theater_chat_logs');
-    if(s) {
-        theaterState.logs = JSON.parse(s);
-        // 重新渲染历史
-        const stage = document.getElementById('theater-stage');
-        stage.innerHTML = ''; // 清空
-        // 获取角色名
-        let char = contacts.find(c => c.id === activeContactId) || (contacts[0] || {name:"AI"});
-        
-        theaterState.logs.forEach(log => {
-            const name = log.role === 'user' ? (char.userName || "我") : char.name;
-            appendTheaterLog(log.role, log.content, name);
-        });
-    }
-}
-        // === 最终完全体：流式 + 缓冲区 + 正则回滚保护 ===
-async function triggerTheaterAI(char) {
-    // 1. 获取配置
-    let apiUrl = theaterState.config.apiUrl || globalConfig.apiUrl;
-    let apiKey = theaterState.config.apiKey || globalConfig.apiKey;
-    let model = theaterState.config.model || globalConfig.model;
-
-    // 2. 基础检查
-    if (!model) {
-        alert("错误：未填写模型 ID (Model ID)，请在导演控制台填写！");
-        return;
-    }
+async function triggerTheaterRoleplay(script, save, aiChar) {
+    if(!globalConfig.apiKey) return alert("请配置 API Key");
 
     const btn = document.querySelector('.theater-send-btn');
-    const oldBtnText = btn.innerText;
-    btn.innerText = "⏳"; 
-    btn.disabled = true;
+    btn.disabled = true; btn.innerText = "⏳";
 
-    // 3. UI 占位符
-    const aiUiBox = appendTheaterLog('ai', '...', char.name);
-    let fullText = ""; 
+    // --- 构建 Prompt ---
+    // 提取最近历史
+    const recentLogs = save.logs.slice(-10).map(l => {
+        if(l.role === 'narrator') return `(旁白): ${l.content}`;
+        if(l.role === 'ai') return `${aiChar.name}: ${l.content}`;
+        return `${save.actors.userName}: ${l.content}`;
+    }).join('\n');
+
+    const prompt = `
+    【剧本扮演模式 (Roleplay Mode)】
+    
+    【剧本信息】：
+    剧名：${script.title}
+    背景：${script.background}
+    目标：${script.goal}
+    
+    【角色分配】：
+    1. AI扮演角色 (Character)：
+       - 剧本身份：${script.char1_def}
+       - 性格基调 (参考)：${aiChar.systemPrompt} (请保持这个性格，但身份必须是剧本里的身份)
+       - 名字：${aiChar.name}
+    
+    2. 用户扮演角色 (User)：
+       - 剧本身份：${script.char2_def}
+       - 名字：${save.actors.userName}
+    
+    【任务】：
+    根据用户的行动，推进剧情。
+    
+    【输出格式要求】：
+    请返回一个 JSON 对象：
+    {
+        "narrator": "这里写第三人称的旁白描述，描写环境、动作、心理或剧情进展 (必填)",
+        "speech": "这里写 ${aiChar.name} 的第一人称台词 (如果角色需要说话则填，否则留空)",
+        "goal_met": boolean (如果判定用户达成了故事目标，设为 true，否则 false)
+    }
+    
+    【历史剧情】：
+    ${recentLogs}
+    `;
 
     try {
-        const systemPrompt = assembleSystemPrompt(char);
-        
-        let userLastMsg = "";
-        if (theaterState.logs.length > 0) {
-            userLastMsg = theaterState.logs[theaterState.logs.length - 1].content;
-        }
-        let finalUserContent = runRegex(userLastMsg, 'input');
-
-        const contextMessages = theaterState.logs.slice(0, -1).slice(-10).map(l => ({
-            role: l.role,
-            content: l.content
-        }));
-
-        const messagesToSend = [
-            { role: "system", content: systemPrompt },
-            ...contextMessages,
-            { role: "user", content: finalUserContent }
-        ];
-
-        // 1. 先定义好请求内容 (Payload)，避免重复写
-        const requestPayload = {
-            model: model,
-            messages: messagesToSend,
-            temperature: 1.0, 
-            stream: true 
-        };
-
-        let res; // 声明响应变量
-
-        // 2. 智能判断逻辑 🔥
-        // 情况 A: 剧场有独立 Key -> 使用原生 fetch (直连，保持独立性)
-        if (theaterState.config.apiKey) {
-            res = await fetch(normalizeUrl(apiUrl) + '/chat/completions', {
-                method: "POST",
-                headers: { 
-                    "Content-Type": "application/json", 
-                    "Authorization": "Bearer " + apiKey 
-                },
-                body: JSON.stringify(requestPayload)
-            });
-        } 
-        // 情况 B: 剧场没填 Key (想用全局) -> 使用 fetchWithRetry (自动去 Google 钥匙包里找)
-        else {
-            res = await fetchWithRetry(normalizeUrl(apiUrl) + '/chat/completions', requestPayload);
-        }
-
-        // 3. 错误处理 (保持原样)
-        if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`API请求失败 ${res.status}: ${errText.substring(0, 100)}`);
-        }
-
-        // === 🔥 核心 1: 缓冲区机制 (都在这儿) ===
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let buffer = "";
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            
-            // 拼接数据
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop(); // 保留未完成的半截数据
-
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed || trimmed === 'data: [DONE]') continue;
-
-                if (trimmed.startsWith('data: ')) {
-                    try {
-                        const jsonStr = trimmed.replace('data: ', '');
-                        const json = JSON.parse(jsonStr);
-                        
-                        // === 🔥 核心 2: 宽容读取 (都在这儿) ===
-                        const delta = json.choices[0].delta?.content || json.choices[0].message?.content || "";
-                        
-                        if (delta) {
-                            fullText += delta;
-                            // 实时显示，让字蹦出来
-                            aiUiBox.innerHTML = fullText.replace(/\n/g, '<br>');
-                            
-                            const stage = document.getElementById('theater-stage');
-                            if(stage) stage.scrollTop = stage.scrollHeight;
-                        }
-                    } catch (e) { 
-                        // 忽略单行解析错误
-                    }
-                }
-            }
-        }
-
-        if (!fullText) throw new Error("收到空回复");
-
-        // === 🔥 核心 3: 正则回滚保护 (防止瞬间消失) ===
-        // 先备份原始文本
-        const originalText = fullText;
-        
-        // 尝试应用正则
-        let processedText = runRegex(fullText, 'output');
-        
-        // 判断：如果原本有字，处理后却没了，说明正则有问题！
-        if (!processedText && originalText.length > 5) {
-            console.warn("⚠️ 触发保护机制：正则处理导致内容丢失，已回滚到原文。");
-            processedText = originalText; // 强制回滚
-        }
-        
-        fullText = processedText;
-
-        // 最终更新
-        aiUiBox.innerHTML = fullText.replace(/\n/g, '<br>');
-        theaterState.logs.push({ role: 'assistant', content: fullText });
-        saveTheaterLogs();
-
-    } catch (e) {
-        console.error("Theater Error:", e);
-        aiUiBox.innerHTML = `<span style="color:#ff3b30">❌ 错误: ${e.message}</span>`;
-    } finally {
-        btn.innerText = oldBtnText;
-        btn.disabled = false;
-    }
-}
-
-
-// 5. 核心：积木拼装师 (Assembler) - 升级版
-function assembleSystemPrompt(char) {
-    const p = theaterState.preset;
-    let parts = [];
-
-    // --- 占位符处理 ---
-    const process = (text) => {
-        if(!text) return "";
-        let res = text;
-        const userName = char.userName || "我";
-        const charName = char.name || "AI";
-        res = res.replace(/{{user}}/gi, userName).replace(/{{user}}/g, userName);
-        res = res.replace(/{{char}}/gi, charName).replace(/{{char}}/g, charName);
-        return res;
-    };
-
-    // 1. 获取当前剧本的【历史剧情存档】 (这就是你要的功能！)
-    if (theaterState.currentScriptId) {
-        const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-        if (script && script.archives && script.archives.length > 0) {
-            // 把所有存档拼接起来
-            const allSummaries = script.archives.map(a => 
-                `[📜 剧情存档 #${a.startFloor}-${a.endFloor}]:\n${a.summary}`
-            ).join('\n\n');
-            
-            parts.push(`
-========== 📜 历史剧情回顾 (Previous Story) ==========
-(以下是之前的剧情摘要，请以此为背景继续扮演)
-${allSummaries}
-====================================================
-`);
-        }
-    }
-
-    // 2. 世界书 (World Info)
-    const inputEl = document.getElementById('theater-input');
-    const currentInput = inputEl ? inputEl.value : "";
-    const worldInfoContext = scanWorldInfo(currentInput, char);
-    if (worldInfoContext) parts.push(worldInfoContext);
-
-    // 3. 核心规则 (Core) [已修改：增加状态检查]
-    p.core.forEach(item => {
-        // 只有开启的才拼装进去
-        if (item.enabled) {
-            parts.push(process(item.content));
-        }
-    });
-
-    // 4. 文风 (Style)
-    if (p.activeStyleId) {
-        const style = p.styles.find(s => s.id === p.activeStyleId);
-        if (style) parts.push(`\n【当前激活文风】：\n` + process(style.content));
-    }
-
-    // 5. 角色设定
-    parts.push(`
-    <CharSetting>
-    Name: ${char.name}
-    Persona: ${char.systemPrompt}
-    </CharSetting>
-    <UserSetting>
-    Name: ${char.userName || "用户"}
-    Persona: ${char.userPersona || "无"}
-    </UserSetting>
-    `);
-
-    // 6. 小剧场模块
-    if (p.activeModules.length > 0) {
-        parts.push(`\n【特殊剧场模式已开启】：\n`);
-        p.activeModules.forEach(mid => {
-            const mod = p.modules.find(m => m.id === mid);
-            if (mod) parts.push(process(mod.content));
-        });
-    }
-
-    return parts.join('\n\n');
-}
-        // === 🌍 世界书核心引擎 ===
-
-// 扫描并获取激活的世界书内容
-function scanWorldInfo(userText, char) {
-    const p = theaterState.preset;
-    if (!p.worldInfo || p.worldInfo.length === 0) return "";
-
-    let activeEntries = [];
-    
-    // 1. 准备扫描文本：用户的新消息 + 最近 2 条历史记录
-    // (这样即使你没提关键词，只要上下文里有，AI也能记得)
-    let textToScan = userText.toLowerCase();
-    const recentLogs = theaterState.logs.slice(-2);
-    recentLogs.forEach(l => textToScan += " " + l.content.toLowerCase());
-
-    // 2. 遍历所有启用的条目
-    p.worldInfo.forEach(entry => {
-        if (!entry.enabled) return;
-
-        // 检查是否手动强制激活 (稍后在UI里做这个功能)
-        if (entry.forceActive) {
-            activeEntries.push(entry);
-            return;
-        }
-
-        // 关键词匹配
-        // 只要有一个关键词出现在文本中，就激活该条目
-        const isHit = entry.keys.some(key => {
-            if(!key) return false;
-            return textToScan.includes(key.toLowerCase());
-        });
-
-        if (isHit) {
-            entry.isActive = true; // 标记为活跃，方便UI展示
-            activeEntries.push(entry);
-        } else {
-            entry.isActive = false;
-        }
-    });
-
-    if (activeEntries.length === 0) return "";
-
-    // 3. 组装 Prompt
-    // 按照酒馆惯例，世界书通常放在最前面或最后面。这里我们处理一下占位符。
-    const worldInfoText = activeEntries.map(e => e.content).join('\n\n');
-    
-    // 简单的占位符替换
-    const userName = char.userName || "我";
-    const charName = char.name || "AI";
-    let finalInfo = worldInfoText.replace(/{{user}}/gi, userName).replace(/{{char}}/gi, charName);
-
-    return `\n【世界书/知识库 (World Info)】:\n${finalInfo}\n`;
-}
-        function toggleWorldInfoForce(index) {
-    const item = theaterState.preset.worldInfo[index];
-    if (!item.enabled) return; // 没开启的不能强制
-    item.forceActive = !item.forceActive;
-    saveTheaterState();
-    renderConsoleUI();
-}
-
-function toggleWorldInfoEnable(index) {
-    const item = theaterState.preset.worldInfo[index];
-    item.enabled = !item.enabled;
-    // 如果禁用了，也顺便取消强制
-    if (!item.enabled) item.forceActive = false;
-    saveTheaterState();
-    renderConsoleUI();
-}
-        // === 最终修正版：带“防误删报警”的正则引擎 ===
-function runRegex(text, placementType) {
-    // 1. 安全检查
-    if (!theaterState.preset || !theaterState.preset.regexScripts) return text;
-    if (typeof text !== 'string') return text;
-    
-    const scripts = theaterState.preset.regexScripts;
-    if (scripts.length === 0) return text;
-
-    let processedText = text;
-
-    scripts.forEach(script => {
-        // 跳过禁用的脚本
-        if (script.disabled) return;
-        
-        const targetEnum = placementType === 'input' ? 1 : 2;
-        const pl = script.placement || [1, 2];
-        
-        if (pl.includes(targetEnum)) {
-            try {
-                if (script.regex) {
-                    // 备份处理前的文本
-                    const before = processedText;
-                    
-                    const re = new RegExp(script.regex, 'gim');
-                    const replaceStr = script.replacement === undefined ? "" : script.replacement;
-                    
-                    // 执行替换
-                    let after = processedText.replace(re, replaceStr);
-
-                    // 🔥 核心保护机制 🔥
-                    // 如果处理前有字 (大于5个)，处理后变成了空字符串或纯空白
-                    // 说明这个脚本正在“杀人灭口”
-                    if (before.trim().length > 5 && after.trim().length === 0) {
-                        console.warn(`⚠️ 拦截到危险正则 [${script.scriptName}]，它试图清空所有回复！已强制忽略。`);
-                        // 保持原样，不应用这次替换
-                        after = before; 
-                    }
-
-                    processedText = after;
-                }
-            } catch (e) {
-                console.warn(`正则脚本 [${script.scriptName}] 运行出错:`, e);
-            }
-        }
-    });
-    
-    return processedText;
-}
-        // === 📡 功能 1：只拉取模型列表 ===
-async function fetchTheaterModels() {
-    const urlInput = document.getElementById('t-api-url');
-    const keyInput = document.getElementById('t-api-key');
-    const btn = event.target; 
-
-    let apiUrl = urlInput.value.trim();
-    let apiKey = keyInput.value.trim();
-
-    if (!apiUrl || !apiKey) return alert("请先填入 API URL 和 Key！");
-
-    const oldText = btn.innerText;
-    btn.innerText = "⏳...";
-    btn.disabled = true;
-
-    try {
-        const cleanUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
-        const res = await fetch(cleanUrl + '/models', {
-            method: 'GET',
-            headers: { "Authorization": "Bearer " + apiKey }
-        });
-
-        if (!res.ok) throw new Error("拉取失败 (Code: " + res.status + ")");
-
-        const data = await res.json();
-        let list = data.data || data.models || []; // 兼容 OpenAI/Google
-
-        if (!Array.isArray(list)) throw new Error("格式错误，未找到列表");
-
-        const select = document.getElementById('t-model-select');
-        select.innerHTML = '<option value="" disabled selected>👇 请选择模型...</option>';
-
-        list.sort((a, b) => a.id.localeCompare(b.id));
-        list.forEach(m => {
-            const id = m.id.replace('models/', '');
-            if (id.includes('embedding')) return;
-            const opt = document.createElement('option');
-            opt.value = id;
-            opt.innerText = id;
-            select.appendChild(opt);
-        });
-
-        document.getElementById('t-model-select-box').style.display = 'block';
-        // 成功提示
-        if(navigator.vibrate) navigator.vibrate(50);
-
-    } catch (e) {
-        alert("❌ " + e.message);
-    } finally {
-        btn.innerText = oldText;
-        btn.disabled = false;
-    }
-}
-
-// === 📡 功能 2：真实对话测试 (验证模型可用性) ===
-async function testTheaterConnection() {
-    const urlInput = document.getElementById('t-api-url');
-    const keyInput = document.getElementById('t-api-key');
-    const modelInput = document.getElementById('t-model');
-    const btn = event.target;
-
-    let apiUrl = urlInput.value.trim();
-    let apiKey = keyInput.value.trim();
-    let model = modelInput.value.trim();
-
-    if (!apiUrl || !apiKey) return alert("缺 URL 或 Key！");
-    if (!model) return alert("请先【拉取模型】并选择一个 Model ID！");
-
-    const oldText = btn.innerText;
-    btn.innerText = "测试中...";
-    btn.disabled = true;
-
-    try {
-        const cleanUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
-        
-        // 发送一个极简的请求
-        const res = await fetch(cleanUrl + '/chat/completions', {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json", 
-                "Authorization": "Bearer " + apiKey 
-            },
-            body: JSON.stringify({
-                model: model,
-                messages: [{ role: "user", content: "Hi" }],
-                max_tokens: 5 // 省钱，只测通不通
-            })
-        });
-
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(`错误 ${res.status}: ${errData.error?.message || res.statusText}`);
-        }
-
-        // 成功！
-        const data = await res.json();
-        const reply = data.choices?.[0]?.message?.content || "OK";
-        alert(`🎉 测试通过！\n模型 [${model}] 响应正常。\n回复: ${reply}`);
-
-    } catch (e) {
-        alert("❌ 连接失败:\n" + e.message);
-    } finally {
-        btn.innerText = oldText;
-        btn.disabled = false;
-    }
-}
-        // ========================================================
-// 🛠️ 补丁：自动注入“世界书编辑弹窗” HTML
-// ========================================================
-(function injectWorldEditorModal() {
-    if (document.getElementById('modal-world-edit')) return; // 防止重复注入
-
-    const html = `
-    <div class="modal-overlay" id="modal-world-edit" style="z-index: 600;">
-        <div class="modal-box" style="height: 70%; background: #222; color: #eee; border: 1px solid #444;">
-            <div class="modal-header" style="background: #1a1a1a; border-bottom: 1px solid #333;">
-                <button onclick="closeModal('modal-world-edit')" style="color:#999;">取消</button>
-                <span style="color:#fff; font-weight:bold;">编辑词条</span>
-                <button onclick="saveWorldEntry()" style="color:#007AFF; font-weight:bold;">保存</button>
-            </div>
-            <div class="modal-body" style="padding: 15px; background: #222;">
-                <input type="hidden" id="we-index">
-                
-                <div style="margin-bottom:15px;">
-                    <div style="font-size:12px; color:#888; margin-bottom:5px;">词条名称 (注释)</div>
-                    <input type="text" id="we-comment" class="t-input" placeholder="例如: 此时的地点 / 也就是个备注">
-                </div>
-
-                <div style="margin-bottom:15px;">
-                    <div style="font-size:12px; color:#888; margin-bottom:5px;">触发关键词 (逗号分隔)</div>
-                    <input type="text" id="we-keys" class="t-input" placeholder="例如: 厨房, 做饭, 冰箱">
-                </div>
-
-                <div style="margin-bottom:15px; flex:1; display:flex; flex-direction:column;">
-                    <div style="font-size:12px; color:#888; margin-bottom:5px;">内容 (Prompt)</div>
-                    <textarea id="we-content" class="t-input" style="flex:1; min-height:150px; line-height:1.5;" placeholder="当检测到关键词时，这段话会被注入给 AI..."></textarea>
-                </div>
-
-                <div style="display:flex; gap:15px; border-top:1px solid #333; padding-top:15px;">
-                    <label style="display:flex; align-items:center; gap:5px; color:#ccc; font-size:14px;">
-                        <input type="checkbox" id="we-force" style="width:16px; height:16px;"> 强制一直生效 (常驻)
-                    </label>
-                </div>
-
-                <button onclick="deleteWorldEntry()" style="width:100%; margin-top:20px; padding:12px; background:#3a1111; color:#ff3b30; border:1px solid #521818; border-radius:8px;">
-                    删除此条目
-                </button>
-            </div>
-        </div>
-    </div>`;
-
-    // 插入到 body 末尾
-    document.body.insertAdjacentHTML('beforeend', html);
-})();
-        // ==========================================
-// --- 🎭 剧场模式：剧情总结与存档功能 ---
-// ==========================================
-
-async function generateTheaterSummary() {
-    // 1. 安全检查
-    if (!theaterState.currentScriptId) return alert("请先进入一个剧本！");
-    if (!theaterState.logs || theaterState.logs.length === 0) return alert("剧本还是空的，没法总结哦。");
-    if (!globalConfig.apiKey) return alert("请先在设置中配置 API Key。");
-
-    // 2. 准备按钮动画
-    const btn = event.currentTarget; // 获取点击的按钮
-    const oldIcon = btn.innerText;
-    btn.innerText = "⏳"; // 变成漏斗
-    btn.disabled = true;
-
-    try {
-        // 3. 整理全文 (提取纯文本)
-        // 注意：为了省钱和防超长，我们可以限制只取最近的 15000 字，或者全部
-        // 这里默认全部，如果太长可能会被 API 截断
-        const fullStory = theaterState.logs
-            .map(l => {
-                const roleName = l.role === 'user' ? '用户' : '角色';
-                // 过滤掉之前的总结卡片，防止总结套总结
-                if (l.role === 'system') return ""; 
-                return `${roleName}: ${l.content}`;
-            })
-            .join('\n');
-
-        if (fullStory.length < 100) {
-            throw new Error("剧情太短了，还是多聊几句再总结吧！");
-        }
-
-        // 4. 构建 Prompt
-        const prompt = `
-        你是一个专业的剧情记录员。请阅读以下【剧本对话记录】，并生成一份【剧情摘要存档】。
-        
-        【要求】：
-        1. 概括从开头到现在发生的核心事件、关键转折、人物关系进展。
-        2. 忽略无关紧要的闲聊。
-        3. 格式清晰，分段落。
-        4. 字数控制在 300-500 字以内。
-        5. 这是为了让你（AI）在后续扮演中能记得之前的剧情，所以请保留重要细节（如物品、约定、秘密）。
-
-        【对话记录】：
-        ${fullStory.substring(0, 30000)} 
-        `; // 限制 3万字符防止爆 Token
-
-        // 5. 发送请求
         const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             model: globalConfig.model,
             messages: [{ role: "user", content: prompt }],
-            temperature: 0.5 // 总结需要准确，温度低一点
+            temperature: 0.85
         });
-
-        if (!res.ok) throw new Error("API 请求失败");
         
         const data = await res.json();
-        const summary = data.choices[0].message.content;
+        const jsonStr = data.choices[0].message.content.replace(/```json|```/g, '').trim();
+        const result = JSON.parse(jsonStr);
 
-        // 6. 构造系统存档消息 (Formatted for AI context)
-        const systemNote = `
---- 剧情存档点 (${new Date().toLocaleString()}) ---
-${summary}
----------------------------------------------
-[系统指令]: 以上是截止目前的剧情摘要。请将其作为【长期记忆】纳入考量，保持剧情连贯性。
-`;
+        // 处理返回
+        if (result.narrator) {
+            appendTheaterBubble('narrator', result.narrator, aiChar, save.actors.userName);
+            save.logs.push({ role: 'narrator', content: result.narrator });
+        }
+        
+        if (result.speech) {
+            appendTheaterBubble('ai', result.speech, aiChar, save.actors.userName);
+            save.logs.push({ role: 'ai', content: result.speech });
+        }
 
-        // 7. 写入数据
-        const newLog = { 
-            role: 'system', // 标记为系统消息
-            content: systemNote 
-        };
-        theaterState.logs.push(newLog);
-        saveTheaterLogs();
+        saveTheaterNewData();
 
-        // 8. 上屏渲染 (使用我们刚才写的特殊样式)
-        appendSystemCard(systemNote);
+        // 检查结局
+        if (result.goal_met) {
+            setTimeout(() => handleStoryFinish(script, save, aiChar), 1000);
+        }
 
-        // 9. 滚动到底部
-        const stage = document.getElementById('theater-stage');
-        setTimeout(() => { stage.scrollTop = stage.scrollHeight; }, 100);
-
-    } catch (e) {
-        alert("总结失败: " + e.message);
+    } catch(e) {
+        console.error(e);
+        // 如果 JSON 解析失败，当作纯文本处理 (容错)
+        alert("AI 返回格式错误，请重试或检查模型");
     } finally {
-        btn.innerText = oldIcon;
-        btn.disabled = false;
+        btn.disabled = false; btn.innerText = "🎬";
     }
 }
 
-// 辅助：渲染系统卡片到舞台
-function appendSystemCard(text) {
-    const stage = document.getElementById('theater-stage');
-    const div = document.createElement('div');
-    div.className = 't-msg-block system';
-    
-    // 清洗文本，去掉不需要显示的指令部分，只显示摘要给用户看
-    // 让显示稍微美观一点
-    let displayText = text.replace("[系统指令]: 以上是截止目前的剧情摘要。请将其作为【长期记忆】纳入考量，保持剧情连贯性。", "");
-    displayText = displayText.replace(/\n/g, '<br>');
+// 重刷 (删除最后一条 AI 和 旁白，重新生成)
+async function rerollTheaterReply() {
+    const save = theaterSaves[currentPlayScriptId];
+    if(!save || save.logs.length === 0) return;
 
-    div.innerHTML = `
-        <div class="t-system-card">
-            <div class="t-system-header">记忆存档</div>
-            <div>${displayText}</div>
-        </div>
-    `;
-    stage.appendChild(div);
-}
-        (function injectArchiveModal() {
-    if (document.getElementById('modal-theater-archives')) return;
-
-    const html = `
-    <div class="modal-overlay" id="modal-theater-archives" style="z-index: 650;">
-        <div class="modal-box" style="height: 70%; background: #222; color: #eee; border: 1px solid #444;">
-            <div class="modal-header" style="background: #1a1a1a; border-bottom: 1px solid #333; display:flex; justify-content:space-between; align-items:center;">
-                <button onclick="closeModal('modal-theater-archives')" style="color:#999; background:none; border:none;">关闭</button>
-                <span style="color:#fff; font-weight:bold;">剧情档案室</span>
-                <button onclick="openCreateArchiveView()" style="color:#007AFF; font-weight:bold; font-size:24px; background:none; border:none;">+</button>
-            </div>
-            
-            <div id="archive-list-view" class="modal-body" style="padding: 15px; background: #222;">
-                </div>
-
-            <div id="archive-create-view" class="modal-body" style="padding: 20px; background: #222; display:none;">
-                <div class="t-group-title">选择剧情范围 (楼层号)</div>
-                <div style="display:flex; gap:10px; margin-bottom:20px;">
-                    <input type="number" id="arc-start" class="t-input" placeholder="开始楼层" style="text-align:center;">
-                    <span style="line-height:40px;">至</span>
-                    <input type="number" id="arc-end" class="t-input" placeholder="结束楼层" style="text-align:center;">
-                </div>
-                <div style="text-align:center; font-size:12px; color:#666; margin-bottom:20px;">
-                    当前共 <span id="arc-total-floors">0</span> 层
-                </div>
-                <button onclick="doGenerateArchive()" class="ios-btn" style="background:#007AFF; color:#fff; border-radius:8px;">AI 生成剧情摘要</button>
-                <button onclick="backToArchiveList()" class="ios-btn" style="background:#333; color:#ccc; border-radius:8px; margin-top:10px;">返回列表</button>
-            </div>
-        </div>
-    </div>`;
-    document.body.insertAdjacentHTML('beforeend', html);
-})();
-        // ==========================================
-// --- 📜 剧场模式：后台档案室逻辑 ---
-// ==========================================
-
-// 1. 打开档案室
-function openArchiveModal() {
-    if (!theaterState.currentScriptId) return alert("请先进入剧本");
-    renderArchiveList();
-    
-    // 重置视图
-    document.getElementById('archive-list-view').style.display = 'block';
-    document.getElementById('archive-create-view').style.display = 'none';
-    
-    openModal('modal-theater-archives');
-}
-
-// 2. 渲染列表 (升级版：带同步功能)
-function renderArchiveList() {
-    const container = document.getElementById('archive-list-view');
-    container.innerHTML = '';
-
-    // 获取当前剧本
-    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-    if (!script.archives) script.archives = [];
-
-    if (script.archives.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:#666; margin-top:50px;">暂无存档<br>点击右上角 + 创建阶段性总结</div>';
-        return;
+    // 倒序检查，删除最后连续的 AI/Narrator 消息，直到遇到 User 消息
+    let logs = save.logs;
+    while(logs.length > 0) {
+        const last = logs[logs.length - 1];
+        if (last.role === 'user') break; // 遇到用户消息停止
+        logs.pop(); // 删除 AI 或 旁白
     }
+    
+    saveTheaterNewData();
+    
+    // 刷新界面
+    const script = theaterScripts.find(s => s.id === currentPlayScriptId);
+    enterTheaterStage(currentPlayScriptId, true);
+    
+    // 重新触发
+    const aiChar = contacts.find(c => c.id === save.actors.aiCharId);
+    await triggerTheaterRoleplay(script, save, aiChar);
+}
 
-    // 倒序显示
-    [...script.archives].reverse().forEach((arc, index) => {
-        // 原始索引
-        const realIndex = script.archives.length - 1 - index;
-        
-        const div = document.createElement('div');
-        div.className = 'archive-card';
-        div.innerHTML = `
-            <div class="archive-header">
-                <span>存档: #${arc.startFloor} - #${arc.endFloor}</span>
-                <div style="display:flex; gap:10px;">
-                    <span onclick="syncArchiveToMemory(${realIndex})" style="cursor:pointer; color:#007AFF;" title="同步到平时聊天的记忆库">📤 同步</span>
-                    <span onclick="deleteArchive(${realIndex})" style="cursor:pointer; color:#ff3b30;">×</span>
-                </div>
-            </div>
-            <div class="archive-body" onclick="alert('${arc.summary.replace(/\n/g, '\\n')}')">${arc.summary}</div>
-        `;
-        container.appendChild(div);
+// =======================
+// 4. 结局与同步
+// =======================
+
+function exitTheater() {
+    const save = theaterSaves[currentPlayScriptId];
+    // 如果没完成
+    if (save && !save.isFinished) {
+        if(confirm("剧情尚未结束。要保存进度退出吗？")) {
+            goHome(); // 保存已在每一步自动完成
+        }
+    } else {
+        goHome();
+    }
+}
+
+// =======================
+// 4. 结局与同步 (智能增强版)
+// =======================
+
+async function handleStoryFinish(script, save, aiChar) {
+    // 1. 存入历史记录库 (本地存档)
+    finishedStories.push({
+        id: Date.now(),
+        title: script.title,
+        date: new Date().toLocaleString(),
+        logs: save.logs
     });
-}
-
-// ✨ 新增：同步功能
-function syncArchiveToMemory(index) {
-    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-    if(!script || !script.archives[index]) return;
-
-    const summary = script.archives[index].summary;
-    const charId = script.charId; // 剧本关联的角色ID
     
-    const char = contacts.find(c => c.id === charId);
-    if (!char) return alert("找不到关联的角色，无法同步！");
+    // 2. 标记完成并清理暂存
+    delete theaterSaves[script.id];
+    saveTheaterNewData();
 
-    if (!char.memories) char.memories = [];
+    alert(`🎉 恭喜达成结局！\n故事已归档。正在为 AI 生成剧情记忆...`);
 
-    // 构造一条记忆
-    const memoryText = `[剧场剧情回忆]: ${summary}`;
-    
-    // 查重：避免重复添加
-    if (char.memories.includes(memoryText)) {
-        return alert("这条存档已经同步过了！");
+    // 3. 询问是否同步 (这里直接触发智能同步)
+    if (confirm("是否将这段剧情生成【永久记忆】同步给角色？\n(AI 将记住你们在剧里发生的一切)")) {
+        await syncStoryToChatSmart(script, save.logs, aiChar);
+    } else {
+        goHome();
     }
-
-    char.memories.push(memoryText);
-    saveData(); // 保存到全局联系人数据
-
-    alert(`✅ 已同步！\n\n现在 "${char.name}" 在平时聊天时，也能记得这段剧情了。`);
 }
 
-// 3. 打开新建视图
-function openCreateArchiveView() {
-    document.getElementById('archive-list-view').style.display = 'none';
-    document.getElementById('archive-create-view').style.display = 'block';
-    
-    // 自动填入楼层建议
-    const total = theaterState.logs.length;
-    document.getElementById('arc-total-floors').innerText = total;
-    
-    // 智能建议：从上次存档的结束位置+1 开始，到最新
-    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-    let suggestStart = 1;
-    if (script && script.archives && script.archives.length > 0) {
-        const lastArc = script.archives[script.archives.length - 1];
-        suggestStart = lastArc.endFloor + 1;
-    }
-    
-    document.getElementById('arc-start').value = Math.min(suggestStart, total);
-    document.getElementById('arc-end').value = total;
-}
+// ✨ 新增：智能总结并同步
+async function syncStoryToChatSmart(script, logs, char) {
+    const btn = document.querySelector('.theater-header .btn-icon-only'); // 借用顶部的按钮显示状态
+    if(btn) btn.innerText = "🧠";
 
-function backToArchiveList() {
-    document.getElementById('archive-list-view').style.display = 'block';
-    document.getElementById('archive-create-view').style.display = 'none';
-}
+    // 1. 整理原始文本
+    const rawStory = logs.map(l => {
+        if(l.role === 'narrator') return `(旁白): ${l.content}`;
+        if(l.role === 'ai') return `(${char.name}饰人物1): ${l.content}`;
+        return `(用户饰人物2): ${l.content}`;
+    }).join('\n');
 
-// 4. 执行生成 (AI)
-async function doGenerateArchive() {
-    const start = parseInt(document.getElementById('arc-start').value);
-    const end = parseInt(document.getElementById('arc-end').value);
-    const total = theaterState.logs.length;
-
-    if (isNaN(start) || isNaN(end) || start > end || start < 1) return alert("楼层范围无效");
-    if (end > total) return alert(`目前只有 ${total} 层`);
-
-    const btn = event.target;
-    const oldText = btn.innerText;
-    btn.innerText = "正在阅读并总结...";
-    btn.disabled = true;
-
+    // 2. 调用 API 生成摘要 (这是 AI 能看懂的关键)
     try {
-        // 提取指定范围的文本
-        // logs 索引是 0-based，楼层是 1-based
-        const slice = theaterState.logs.slice(start - 1, end);
-        const contextText = slice.map(l => `${l.role==='user'?'用户': l.role}: ${l.content}`).join('\n');
-
         const prompt = `
-        你是一个剧本记录员。请阅读以下【${start}楼 到 ${end}楼】的剧情片段。
-        请生成一段详细的【剧情存档总结】。
+        你是一个剧情记录员。请阅读以下【剧本扮演日志】，并生成一份详细的剧情回忆录。
         
-        要求：
-        1. 概括这段时间内发生的核心事件、角色情感变化、关键线索。
-        2. 忽略无意义的闲聊，只保留对后续剧情有影响的信息。
-        3. 字数 200-400 字。
-        4. 这是为了存入数据库供后续检索，所以要客观、准确。
+        【剧本信息】：
+        剧名：《${script.title}》
+        背景：${script.background}
         
-        剧情片段：
-        ${contextText.substring(0, 20000)}
+        【原始日志】：
+        ${rawStory.substring(0, 30000)} (如有截断请忽略后续)
+        
+        【任务】：
+        请总结这段经历，字数 300-500 字。必须包含：
+        1. **人物1 (AI) 的表现**：Ta 在剧里做了什么关键决策？有什么高光时刻？
+        2. **人物2 (用户) 的表现**：用户做了什么推动了剧情？
+        3. **结局**：故事是如何结束的？
+        
+        格式要求：请用第三人称叙述，例如“在这次冒险中，XX扮演的特工成功潜入了...”。
         `;
 
+        // 调用 API
         const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             model: globalConfig.model,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.5
         });
-
-        if (!res.ok) throw new Error("API Error");
+        
         const data = await res.json();
         const summary = data.choices[0].message.content;
 
-        // 存入当前剧本的 archives 数组
-        const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-        if (!script.archives) script.archives = [];
-        
-        script.archives.push({
-            id: Date.now(),
-            startFloor: start,
-            endFloor: end,
-            summary: summary,
+        // 3. 构造记忆卡片 (存入聊天记录)
+        const memoryCard = `
+🎭【剧场模式·剧情结案存档】
+------------------
+📂 剧本：《${script.title}》
+📝 剧情回顾：
+${summary}
+------------------
+[系统指令]: 这是你与用户刚刚共同经历的“平行时空”故事。
+虽然故事结束了，但请你保留这份记忆。如果用户在之后的聊天中提起这段经历，请根据上述回顾进行互动。
+        `.trim();
+
+        // 4. 写入聊天记录 (以 System 或 User 身份，这里用 User 模拟系统通知)
+        char.messages.push({
+            role: 'user',
+            content: memoryCard,
             timestamp: Date.now()
         });
+
+        // 5. (可选) 同时也存入“记忆库”APP，防止聊天记录被冲刷
+        if (!char.memories) char.memories = [];
+        char.memories.push(`[剧场回忆《${script.title}》]: ${summary}`);
+
+        saveData(); // 保存全局数据
         
-        // 保存到 localStorage
-        saveAllScripts();
+        alert("✅ 记忆同步完成！\nAI 现在已经记住了你们在剧里的点点滴滴。");
+        goHome();
 
-        alert("✅ 存档成功！");
-        backToArchiveList();
-        renderArchiveList();
-
-    } catch(e) {
-        alert("生成失败: " + e.message);
-    } finally {
-        btn.innerText = oldText;
-        btn.disabled = false;
+    } catch (e) {
+        console.error(e);
+        alert("总结失败，将直接同步原始记录（可能较长）。");
+        // 降级方案：直接存原始文本
+        char.messages.push({ role: 'user', content: `[剧场记录]:\n${rawStory.substring(0, 2000)}...` });
+        saveData();
+        goHome();
     }
 }
-
-function deleteArchive(index) {
-    if(confirm("确定删除这条存档吗？")) {
-        const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-        if(script && script.archives) {
-            script.archives.splice(index, 1);
-            saveAllScripts();
-            renderArchiveList();
-        }
+// 查看历史记录
+function openStoryHistory() {
+    const container = document.getElementById('story-history-list');
+    container.innerHTML = '';
+    
+    if (finishedStories.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#999;">暂无完成的故事</div>';
+    } else {
+        [...finishedStories].reverse().forEach(story => {
+            const div = document.createElement('div');
+            div.className = 'story-record-card';
+            div.innerHTML = `
+                <div style="font-weight:bold; font-size:16px;">${story.title}</div>
+                <div style="font-size:12px; color:#999; margin-bottom:10px;">${story.date}</div>
+                <button class="ios-btn" style="padding:5px; font-size:14px;" onclick="viewHistoryLog(${story.id})">回顾剧情</button>
+            `;
+            container.appendChild(div);
+        });
     }
+    
+    openModal('modal-story-history');
 }
-        // ==========================================
-// --- 🎭 剧场模式：重刷功能 (智能容错版) ---
-// ==========================================
 
-async function rerollTheaterMsg() {
-    // 1. 安全检查
-    if (!theaterState.currentScriptId) return;
-    const logs = theaterState.logs;
+function viewHistoryLog(id) {
+    const story = finishedStories.find(s => s.id === id);
+    if(!story) return;
     
-    if (!logs || logs.length === 0) return;
-
-    // 2. 获取最后一条消息
-    const lastMsg = logs[logs.length - 1];
+    // 简单粗暴：直接alert显示文本，或者复用 text area
+    // 为了体验好一点，我们把这些 log 拼成 html 放在弹窗里覆盖列表
+    const container = document.getElementById('story-history-list');
     
-    // === 核心修改逻辑 ===
+    let html = `<button onclick="openStoryHistory()" style="margin-bottom:10px;">‹ 返回列表</button><div style="height:400px; overflow-y:auto; background:#fff; padding:10px; border-radius:8px;">`;
     
-    // 情况 A: 最后一条是 AI 发的 (或者系统报错信息)
-    // -> 也就是你要“推倒重来”，需要先删掉这一条
-    if (lastMsg.role === 'assistant') {
-        // 删除数据
-        logs.pop(); 
-        saveTheaterLogs();
-
-        // 删除界面上的气泡
-        const stage = document.getElementById('theater-stage');
-        const blocks = stage.querySelectorAll('.t-msg-block');
-        if (blocks.length > 0) {
-            blocks[blocks.length - 1].remove();
-        }
-    }
+    story.logs.forEach(l => {
+        let color = '#333';
+        let prefix = '';
+        if(l.role==='narrator') { color='#888'; prefix='[旁白] '; }
+        else if(l.role==='ai') { color='#000'; prefix='[Ta] '; }
+        else { color='#007AFF'; prefix='[我] '; }
+        
+        html += `<div style="color:${color}; margin-bottom:8px; font-size:14px;">${prefix}${l.content}</div>`;
+    });
     
-    // 情况 B: 最后一条是 User 发的 (说明上次请求彻底失败了，连记录都没留下)
-    // -> 不需要删任何东西，直接让 AI 再试一次就行
-
-    // 情况 C: 如果删完 AI 消息后，发现上一条不是 User (比如是系统提示)，那也没法接话
-    // 稍微检查一下现在的“最后一条”
-    const newLast = logs[logs.length - 1];
-    if (!newLast || newLast.role === 'system') {
-        // 虽然通常不会发生，但也防一手
-        // 如果你想让它强行续写系统提示，也可以去掉这个 return
-        return alert("找不到上一条用户发言，无法重刷。");
-    }
-
-    // 3. 重新召唤 AI
-    const script = allScripts.find(s => s.id === theaterState.currentScriptId);
-    if (script) {
-        const char = contacts.find(c => c.id === script.charId);
-        if (char) {
-            await triggerTheaterAI(char);
-        }
-    }
+    html += `</div>`;
+    container.innerHTML = html;
 }
         // ==========================================
 // --- 🖼️ 相册系统 (Gallery) 核心逻辑 ---
@@ -17475,6 +15828,7 @@ function updateUserAvatarFromUrl() {
     </script>
 </body>
 </html>
+
 
 
 
