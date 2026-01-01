@@ -2299,10 +2299,19 @@ select.x-input option {
     100% { transform: scale(1); opacity: 0.1; }
 }
 
-/* 闲置极暗模式 (保护屏幕) */
+/* --- 修复版：闲置极暗模式 --- */
+/* 核心逻辑：容器本身保持纯黑不透明，只让里面的内容变暗 */
 .sleep-dimmed {
-    opacity: 0.1 !important; /* 整体变暗 */
-    pointer-events: none; /* 防止误触 */
+    background-color: #000 !important; /* 确保背景死黑 */
+    cursor: none; /* 隐藏鼠标指针 */
+}
+
+/* 让所有子元素（头像、文字、按钮）变暗 */
+.sleep-dimmed > * {
+    opacity: 0.05; /* 极低亮度，模拟息屏显示 */
+    filter: grayscale(100%); /* 去色，减少光污染 */
+    transition: all 1s ease; /* 缓慢变暗 */
+    pointer-events: none; /* 变暗时防误触 */
 }
 /* 点击屏幕任意位置恢复亮度，需要JS配合 */
 
@@ -2412,7 +2421,7 @@ select.x-input option {
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-pomodoro'); initPomoPage();">
                             <div class="app-icon" id="app-icon-pomo" style="background: linear-gradient(to bottom, #ff6b6b, #ee5253);">🍅</div>
-                            <div class="app-name">番茄钟</div>
+                            <div class="app-name">陪伴系统</div>
                         </div>
                         <div class="app-icon-container" onclick="navigateTo('page-calendar'); initCalendarPage();">
                             <div class="app-icon" id="app-icon-cal" style="background: #fff; color: #333;">📅</div>
@@ -6886,39 +6895,91 @@ function toggleSleepPause() {
     }
 }
 
-// 戳一戳 (带时间判断)
-function pokeSleepChar() {
+// 戳一戳 (AI 实时生成版)
+async function pokeSleepChar() {
     if(sleepState.isPaused) return;
     sleepState.pokes++;
     
-    // 视觉反馈
+    // 1. 视觉反馈：头像缩放
     const img = document.getElementById('sleep-avatar');
     img.style.transform = "scale(0.9)";
     setTimeout(() => img.style.transform = "scale(1)", 200);
 
-    // AI 反馈 (不调 API，省流，用本地文案库模拟，或者你也可以接 API)
-    // 这里为了响应速度，用本地逻辑
-    const hour = new Date().getHours();
-    let text = "";
-    
-    if (hour >= 23 || hour < 3) {
-        // 深夜
-        const lateTexts = ["嘘...快睡", "把手机放下", "乖，闭眼", "我在呢，睡吧"];
-        text = lateTexts[Math.floor(Math.random() * lateTexts.length)];
-    } else if (hour >= 3 && hour < 6) {
-        // 凌晨
-        text = "做噩梦了吗？别怕...";
-    } else {
-        // 白天/傍晚 (午睡)
-        text = "好好休息...";
-    }
-    
-    const bubble = document.getElementById('sleep-ai-bubble');
-    bubble.innerText = text;
-    bubble.style.opacity = 1;
-    setTimeout(() => bubble.style.opacity = 0, 3000);
-}
+    // 2. 重置变暗计时器 (你动了，屏幕就亮起来)
+    document.getElementById('sleep-running').classList.remove('sleep-dimmed');
+    resetDimTimer();
 
+    // 获取当前角色
+    const char = contacts.find(c => c.id === sleepState.charId);
+    const bubble = document.getElementById('sleep-ai-bubble');
+
+    // --- 如果没有 API Key，还是用本地文案兜底，防止没反应 ---
+    if (!globalConfig.apiKey && globalConfig.provider !== 'google') {
+        bubble.innerText = "呼...呼... (请配置Key以激活AI回复)";
+        bubble.style.opacity = 1;
+        setTimeout(() => bubble.style.opacity = 0, 3000);
+        return;
+    }
+
+    // 3. UI 显示“正在思考/迷糊中”
+    bubble.innerText = "💬 (迷糊中...)";
+    bubble.style.opacity = 1;
+
+    // 4. 准备数据传给 AI
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    const durationMin = Math.floor(sleepState.elapsed / 1000 / 60); // 已经睡了多少分钟
+
+    const prompt = `
+    [情景模式：睡眠陪伴]
+    当前时间：${timeStr}。
+    用户正在进行安睡模式，已经记录睡眠时长：${durationMin} 分钟。
+    但用户现在【戳了你一下】（这是第 ${sleepState.pokes} 次骚扰你）。
+
+    你的角色：${char.name}。
+    你的核心人设：${char.systemPrompt}。
+
+    请根据当前时间做出反应：
+    - 如果是深夜/凌晨（23:00-05:00）：表现出迷迷糊糊被吵醒、梦呓、或者温柔哄睡。
+    - 如果是白天/傍晚：询问是不是睡不着，或者让他专心休息。
+    - 如果戳的次数很多（>5次）：可以稍微带点小情绪或调侃。
+    
+    【要求】：
+    1. 语气必须极其口语化，像睡在枕边的人。
+    2. 字数极简（15字以内），不要长篇大论，因为是气泡显示。
+    3. 不要带书名号或复杂的标点。
+    `;
+
+    try {
+        // 5. 调用 API
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: [
+                { role: "system", content: "你正在陪用户睡觉，请用极短的、半梦半醒的口语回复。" },
+                { role: "user", content: prompt }
+            ],
+            temperature: 0.9 // 稍微高一点，让梦话更有趣
+        });
+
+        const data = await res.json();
+        let reply = data.choices[0].message.content;
+        
+        // 清洗一下回复（去掉引号等）
+        reply = reply.replace(/["“”（）]/g, "").trim();
+
+        // 6. 显示回复
+        bubble.innerText = reply;
+        
+        // 4秒后消失
+        setTimeout(() => bubble.style.opacity = 0, 4000);
+
+    } catch (e) {
+        console.error(e);
+        // 如果断网了，回滚到简单的本地回复
+        bubble.innerText = "唔...快睡..."; 
+        setTimeout(() => bubble.style.opacity = 0, 3000);
+    }
+}
 // --- 长按起床逻辑 ---
 let wakeHoldStart = 0;
 function startHoldWake(e) {
@@ -16347,6 +16408,7 @@ function updateUserAvatarFromUrl() {
     </script>
 </body>
 </html>
+
 
 
 
