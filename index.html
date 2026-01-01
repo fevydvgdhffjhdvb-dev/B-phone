@@ -2280,6 +2280,53 @@ select.x-input option {
 .sticker-tab:last-child { border-right: none; }
 .sticker-tab:active { background: #eee; }
 .sticker-tab.danger { color: #ff3b30; }
+        /* --- 🌙 睡眠模式专属样式 --- */
+
+/* 呼吸灯动画 */
+.sleep-avatar-container {
+    position: relative;
+    display: flex; justify-content: center; align-items: center;
+}
+.sleep-breath-circle {
+    position: absolute; width: 100px; height: 100px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.1);
+    animation: breath 4s infinite ease-in-out;
+    pointer-events: none;
+}
+@keyframes breath {
+    0% { transform: scale(1); opacity: 0.1; }
+    50% { transform: scale(1.3); opacity: 0.3; }
+    100% { transform: scale(1); opacity: 0.1; }
+}
+
+/* 闲置极暗模式 (保护屏幕) */
+.sleep-dimmed {
+    opacity: 0.1 !important; /* 整体变暗 */
+    pointer-events: none; /* 防止误触 */
+}
+/* 点击屏幕任意位置恢复亮度，需要JS配合 */
+
+/* 长按起床按钮 */
+.hold-btn-container {
+    position: relative; width: 100px; height: 100px;
+    display: flex; justify-content: center; align-items: center;
+}
+.btn-hold-wake {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: #111; border: 1px solid #333; color: #555;
+    font-size: 14px; cursor: pointer; z-index: 2;
+    user-select: none; -webkit-user-select: none;
+}
+.wake-progress {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    border-radius: 50%;
+    border: 4px solid #007AFF;
+    clip-path: circle(0% at 50% 50%); /* 初始裁剪为0 */
+    transition: clip-path 0.1s; /* 动画由JS控制 */
+    pointer-events: none; z-index: 1;
+    background: rgba(0, 122, 255, 0.2);
+}
+.btn-hold-wake:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -2801,72 +2848,127 @@ select.x-input option {
                 <div id="diaryListContainer"></div>
             </div>
         </div>
-        <!-- ============ 8. 番茄钟 (Pomodoro) ============ -->
-        <div class="page" id="page-pomodoro">
-            <div class="app-header">
-                <button class="btn-icon-text" onclick="quitPomo()">‹ 结束</button>
-                <span class="app-title">专注模式</span>
-                <span style="width:50px;"></span>
-            </div>
-            
-            <!-- 设置界面 -->
-            <div id="pomo-setup" class="content-scroll">
-                <div class="ios-group-title" style="margin-top:20px;">陪伴对象</div>
-                <div class="ios-list">
-                    <div class="ios-item">
-                        <span class="ios-label">选择角色</span>
-                        <select id="pomoCharSelect" class="ios-input" style="direction: rtl;"></select>
-                    </div>
-                </div>
-
-                <div class="ios-group-title">专注设置</div>
-                <div class="ios-list">
-                    <div class="ios-item">
-                        <span class="ios-label">时长 (分钟)</span>
-                        <input type="number" id="pomoDuration" class="ios-input" value="25">
-                    </div>
-                    <div class="ios-item">
-                        <span class="ios-label">专注内容</span>
-                        <input type="text" id="pomoTask" class="ios-input" placeholder="例如: 背单词、写代码">
-                    </div>
-                </div>
-
-                <div class="ios-group-title">AI 互动频率</div>
-                <div class="ios-list">
-                    <div class="ios-item">
-                        <span class="ios-label">主动发言间隔 (分钟)</span>
-                        <input type="number" id="pomoInterval" class="ios-input" value="5" placeholder="0为不主动">
-                    </div>
-                </div>
-                <div style="padding:20px; font-size:12px; color:#999; text-align:center;">
-                    开始后，点击角色头像可以“戳一戳”，Ta会根据剩余时间回应你。
-                </div>
-                <div style="padding:0 20px;">
-                    <button class="ios-btn" style="background:#ff3b30; color:#fff; border-radius:12px; font-weight:bold;" onclick="startPomoTimer()">开始专注</button>
-                </div>
-            </div>
-
-            <!-- 运行时界面 (默认隐藏) -->
-            <div id="pomo-running" style="display:none; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:20px; padding-bottom:100px;">
-                
-                <!-- 倒计时大字 -->
-                <div id="pomo-timer-display" style="font-size:64px; font-weight:200; font-variant-numeric: tabular-nums;">25:00</div>
-                <div id="pomo-task-display" style="font-size:18px; color:#666; margin-bottom:40px;">正在进行: ...</div>
-
-                <!-- 角色互动区 -->
-                <div style="position:relative;">
-                    <img id="pomo-avatar" src="" style="width:120px; height:120px; border-radius:50%; border:4px solid #fff; box-shadow:0 10px 30px rgba(0,0,0,0.1); cursor:pointer; transition:transform 0.1s;" onclick="pokePomoChar()">
-                    <!-- 戳一戳特效容器 -->
-                    <div id="poke-effect" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); pointer-events:none; opacity:0; font-size:40px;">👈🏻</div>
-                </div>
-
-                <!-- AI 气泡 -->
-                <div class="pomo-bubble" id="pomo-ai-bubble">
-                    点击头像戳一戳我，我会监督你哦！
-                </div>
-
+        <!-- ============ 8. 陪伴中心 (原番茄钟升级版) ============ -->
+<div class="page" id="page-pomodoro" style="background: #f2f2f7;">
+    <!-- 1. 顶部栏 -->
+    <div class="app-header">
+        <button class="btn-icon-text" onclick="quitCompanion()">‹ 退出</button>
+        <span class="app-title">陪伴模式</span>
+        <span style="width:50px;"></span>
+    </div>
+    
+    <!-- 2. 模式选择首页 (默认显示) -->
+    <div id="companion-home" class="content-scroll" style="padding:20px;">
+        <div class="ios-group-title" style="margin-top:10px;">选择陪伴对象</div>
+        <div class="ios-list">
+            <div class="ios-item">
+                <span class="ios-label">角色</span>
+                <select id="companionCharSelect" class="ios-input" style="direction: rtl; font-weight:bold; color:#007AFF;"></select>
             </div>
         </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:30px;">
+            <!-- 专注卡片 -->
+            <div onclick="switchCompanionMode('focus')" style="background:#fff; padding:20px; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.05); text-align:center; cursor:pointer;">
+                <div style="font-size:40px; margin-bottom:10px;">🍅</div>
+                <div style="font-weight:bold; font-size:18px;">专注模式</div>
+                <div style="font-size:12px; color:#999; margin-top:5px;">倒计时 · 任务</div>
+            </div>
+            <!-- 睡觉卡片 -->
+            <div onclick="switchCompanionMode('sleep')" style="background:#fff; padding:20px; border-radius:20px; box-shadow:0 4px 10px rgba(0,0,0,0.05); text-align:center; cursor:pointer;">
+                <div style="font-size:40px; margin-bottom:10px;">🌙</div>
+                <div style="font-weight:bold; font-size:18px;">安睡模式</div>
+                <div style="font-size:12px; color:#999; margin-top:5px;">正计时 · 哄睡</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 专注模式设置页 (原番茄钟设置) -->
+    <div id="pomo-setup" class="content-scroll" style="display:none;">
+        <div class="ios-group-title">专注设置</div>
+        <div class="ios-list">
+            <div class="ios-item">
+                <span class="ios-label">时长 (分钟)</span>
+                <input type="number" id="pomoDuration" class="ios-input" value="25">
+            </div>
+            <div class="ios-item">
+                <span class="ios-label">专注内容</span>
+                <input type="text" id="pomoTask" class="ios-input" placeholder="例如: 背单词">
+            </div>
+            <div class="ios-item">
+                <span class="ios-label">互动频率 (分)</span>
+                <input type="number" id="pomoInterval" class="ios-input" value="5" placeholder="0为不主动">
+            </div>
+        </div>
+        <div style="padding:20px;">
+            <button class="ios-btn" style="background:#ff3b30; color:#fff; border-radius:12px;" onclick="startPomoTimer()">开始专注</button>
+        </div>
+    </div>
+
+    <!-- 4. 专注运行页 (原番茄钟运行) -->
+    <div id="pomo-running" style="display:none; flex-direction:column; align-items:center; justify-content:center; height:100%; padding-bottom:100px;">
+        <div id="pomo-timer-display" style="font-size:64px; font-weight:200;">25:00</div>
+        <div id="pomo-task-display" style="font-size:18px; color:#666; margin-bottom:40px;">...</div>
+        <img id="pomo-avatar" src="" style="width:120px; height:120px; border-radius:50%; border:4px solid #fff; box-shadow:0 10px 30px rgba(0,0,0,0.1);" onclick="pokePomoChar()">
+        <div id="poke-effect" style="position:absolute; opacity:0; font-size:40px;">👈🏻</div>
+        <div class="pomo-bubble" id="pomo-ai-bubble">点击头像戳一戳...</div>
+    </div>
+
+    <!-- 5. 🌙 安睡运行页 (全黑 UI) -->
+    <div id="sleep-running" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:2000; flex-direction:column; align-items:center; justify-content:center; color:#444; transition: opacity 1s;">
+        
+        <!-- 呼吸灯头像 -->
+        <div class="sleep-avatar-container" onclick="pokeSleepChar()">
+            <img id="sleep-avatar" src="" style="width:100px; height:100px; border-radius:50%; object-fit:cover; opacity:0.6; filter: brightness(0.7);">
+            <div class="sleep-breath-circle"></div>
+        </div>
+
+        <!-- 正计时 -->
+        <div id="sleep-timer-display" style="font-size:48px; font-weight:200; font-family:monospace; margin:30px 0; color:#333;">00:00:00</div>
+        
+        <!-- 气泡 (默认隐藏) -->
+        <div id="sleep-ai-bubble" style="color:#555; font-size:14px; max-width:80%; text-align:center; min-height:20px; opacity:0; transition:opacity 0.5s;">
+            ...
+        </div>
+
+        <!-- 底部控制栏 -->
+        <div style="position:absolute; bottom:50px; display:flex; gap:30px; align-items:center;">
+            <!-- 暂停按钮 -->
+            <button id="btn-sleep-pause" onclick="toggleSleepPause()" style="width:50px; height:50px; border-radius:50%; border:1px solid #333; background:none; color:#333; font-size:12px;">
+                暂停
+            </button>
+            
+            <!-- 长按起床按钮 -->
+            <div class="hold-btn-container">
+                <button id="btn-sleep-wake" class="btn-hold-wake" 
+                    ontouchstart="startHoldWake(event)" ontouchend="endHoldWake(event)" 
+                    onmousedown="startHoldWake(event)" onmouseup="endHoldWake(event)"
+                    onmouseleave="endHoldWake(event)">
+                    长按起床
+                </button>
+                <div id="wake-progress-bar" class="wake-progress"></div>
+            </div>
+        </div>
+
+        <div style="position:absolute; bottom:10px; font-size:10px; color:#222;">
+            保持屏幕常亮以准确记录
+        </div>
+    </div>
+</div>
+
+<!-- 梦境记录弹窗 -->
+<div class="modal-overlay" id="modal-dream-record">
+    <div class="modal-box" style="height:auto;">
+        <div class="modal-header">早安！☀️</div>
+        <div class="modal-body" style="padding:20px;">
+            <div style="font-size:14px; color:#333; margin-bottom:10px;">昨晚睡得好吗？有没有做梦？</div>
+            <textarea id="dream-input" class="ios-input" style="height:100px; border:1px solid #eee; border-radius:8px; padding:10px;" placeholder="记录梦境 (可选)..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="submitSleepReport()">生成睡眠报告</button>
+        </div>
+    </div>
+</div>
         <!-- ============ 9. 日历 (Calendar) ============ -->
         <div class="page" id="page-calendar">
             <div class="app-header">
@@ -6684,6 +6786,179 @@ let pomoState = {
     lastSpeakTime: 0,  // 上次AI说话的剩余时间点
     lastReply: ""
 };
+        let sleepState = {
+    timerId: null,
+    dimTimer: null, // 闲置变暗定时器
+    startTime: 0,
+    elapsed: 0,     // 已经过去的时间(毫秒)
+    isPaused: false,
+    pauseStartTime: 0,
+    pauses: [],     // [{start, end, duration}]
+    pokes: 0,
+    charId: null,
+    holdTimer: null // 长按定时器
+};
+
+// 开始睡眠模式
+function startSleepMode() {
+    const charId = document.getElementById('companionCharSelect').value;
+    if(!charId) return alert("请先选择角色");
+    
+    // 初始化状态
+    sleepState = {
+        timerId: null, dimTimer: null, holdTimer: null,
+        startTime: Date.now(), elapsed: 0,
+        isPaused: false, pauseStartTime: 0, pauses: [],
+        pokes: 0, charId: charId
+    };
+
+    // UI 切换
+    const ui = document.getElementById('sleep-running');
+    ui.style.display = 'flex';
+    
+    const char = contacts.find(c => c.id === charId);
+    document.getElementById('sleep-avatar').src = char.avatar;
+    document.getElementById('sleep-timer-display').innerText = "00:00:00";
+    document.getElementById('sleep-ai-bubble').style.opacity = 0;
+    
+    // 开启屏幕常亮 & 启动计时 & 闲置监测
+    setScreenKeepOn(true);
+    sleepState.timerId = setInterval(sleepTick, 1000);
+    resetDimTimer();
+    
+    // 绑定触摸监听以重置变暗
+    ui.addEventListener('click', () => {
+        ui.classList.remove('sleep-dimmed');
+        resetDimTimer();
+    });
+    ui.addEventListener('mousemove', resetDimTimer);
+}
+
+// 计时器心跳
+function sleepTick() {
+    if (sleepState.isPaused) return;
+
+    sleepState.elapsed += 1000;
+    
+    // 格式化 HH:MM:SS
+    const totalSec = Math.floor(sleepState.elapsed / 1000);
+    const h = Math.floor(totalSec / 3600).toString().padStart(2, '0');
+    const m = Math.floor((totalSec % 3600) / 60).toString().padStart(2, '0');
+    const s = (totalSec % 60).toString().padStart(2, '0');
+    
+    document.getElementById('sleep-timer-display').innerText = `${h}:${m}:${s}`;
+}
+
+// 闲置 10秒 后变暗
+function resetDimTimer() {
+    if(sleepState.dimTimer) clearTimeout(sleepState.dimTimer);
+    sleepState.dimTimer = setTimeout(() => {
+        document.getElementById('sleep-running').classList.add('sleep-dimmed');
+    }, 10000); // 10秒无操作变暗
+}
+
+// 暂停/继续
+function toggleSleepPause() {
+    const btn = document.getElementById('btn-sleep-pause');
+    if (sleepState.isPaused) {
+        // 继续
+        sleepState.isPaused = false;
+        const pauseEnd = Date.now();
+        sleepState.pauses.push({
+            start: sleepState.pauseStartTime,
+            end: pauseEnd,
+            duration: pauseEnd - sleepState.pauseStartTime
+        });
+        btn.innerText = "暂停";
+        btn.style.color = "#333";
+        btn.style.borderColor = "#333";
+    } else {
+        // 暂停
+        sleepState.isPaused = true;
+        sleepState.pauseStartTime = Date.now();
+        btn.innerText = "继续";
+        btn.style.color = "#007AFF";
+        btn.style.borderColor = "#007AFF";
+        
+        // 暂停时解除变暗，方便操作
+        document.getElementById('sleep-running').classList.remove('sleep-dimmed');
+        clearTimeout(sleepState.dimTimer);
+    }
+}
+
+// 戳一戳 (带时间判断)
+function pokeSleepChar() {
+    if(sleepState.isPaused) return;
+    sleepState.pokes++;
+    
+    // 视觉反馈
+    const img = document.getElementById('sleep-avatar');
+    img.style.transform = "scale(0.9)";
+    setTimeout(() => img.style.transform = "scale(1)", 200);
+
+    // AI 反馈 (不调 API，省流，用本地文案库模拟，或者你也可以接 API)
+    // 这里为了响应速度，用本地逻辑
+    const hour = new Date().getHours();
+    let text = "";
+    
+    if (hour >= 23 || hour < 3) {
+        // 深夜
+        const lateTexts = ["嘘...快睡", "把手机放下", "乖，闭眼", "我在呢，睡吧"];
+        text = lateTexts[Math.floor(Math.random() * lateTexts.length)];
+    } else if (hour >= 3 && hour < 6) {
+        // 凌晨
+        text = "做噩梦了吗？别怕...";
+    } else {
+        // 白天/傍晚 (午睡)
+        text = "好好休息...";
+    }
+    
+    const bubble = document.getElementById('sleep-ai-bubble');
+    bubble.innerText = text;
+    bubble.style.opacity = 1;
+    setTimeout(() => bubble.style.opacity = 0, 3000);
+}
+
+// --- 长按起床逻辑 ---
+let wakeHoldStart = 0;
+function startHoldWake(e) {
+    e.preventDefault();
+    if(sleepState.isPaused) return; // 暂停时不许结束？或者可以结束，看你逻辑。
+    
+    wakeHoldStart = Date.now();
+    const circle = document.getElementById('wake-progress-bar');
+    
+    // 1.5秒长按
+    circle.style.transition = "clip-path 1.5s linear";
+    circle.style.clipPath = "circle(100% at 50% 50%)"; // 填满动画
+    
+    sleepState.holdTimer = setTimeout(() => {
+        // 长按成功
+        finishSleepSession();
+    }, 1500);
+}
+
+function endHoldWake(e) {
+    if(sleepState.holdTimer) clearTimeout(sleepState.holdTimer);
+    
+    // 动画回退
+    const circle = document.getElementById('wake-progress-bar');
+    circle.style.transition = "clip-path 0.2s"; // 快速回退
+    circle.style.clipPath = "circle(0% at 50% 50%)";
+}
+
+// 结束流程
+function finishSleepSession() {
+    clearInterval(sleepState.timerId);
+    clearTimeout(sleepState.dimTimer);
+    setScreenKeepOn(false);
+    
+    // 隐藏运行页
+    document.getElementById('sleep-running').style.display = 'none';
+    
+    // 打开梦境弹窗
+    openModal('modal-dream-record');
+}
         // --- 屏幕常亮控制 (新增) ---
 let wakeLock = null;
 
@@ -6714,8 +6989,9 @@ document.addEventListener('visibilitychange', async () => {
 });
 
 // 1. 初始化页面：加载角色列表
+// 1. 初始化陪伴页 (替换原 initPomoPage)
 function initPomoPage() {
-    const select = document.getElementById('pomoCharSelect');
+    const select = document.getElementById('companionCharSelect');
     select.innerHTML = '';
     contacts.forEach(c => {
         const opt = document.createElement('option');
@@ -6723,8 +6999,39 @@ function initPomoPage() {
         opt.innerText = c.name;
         select.appendChild(opt);
     });
-    // 如果之前有记录，恢复默认值
     if(activeContactId) select.value = activeContactId;
+
+    // 重置显示
+    document.getElementById('companion-home').style.display = 'block';
+    document.getElementById('pomo-setup').style.display = 'none';
+    document.getElementById('pomo-running').style.display = 'none';
+    document.getElementById('sleep-running').style.display = 'none';
+    setScreenKeepOn(false);
+}
+
+// 2. 模式切换
+function switchCompanionMode(mode) {
+    if(mode === 'focus') {
+        document.getElementById('companion-home').style.display = 'none';
+        document.getElementById('pomo-setup').style.display = 'block';
+    } else {
+        // 进入睡眠模式准备
+        document.getElementById('companion-home').style.display = 'none';
+        startSleepMode();
+    }
+}
+
+// 退出功能
+function quitCompanion() {
+    if(pomoState.timerId || sleepState.timerId) {
+        if(!confirm("计时进行中，确定要退出吗？数据将不保存。")) return;
+        // 清理定时器
+        clearInterval(pomoState.timerId); pomoState.timerId = null;
+        clearInterval(sleepState.timerId); sleepState.timerId = null;
+        clearTimeout(sleepState.dimTimer);
+        setScreenKeepOn(false);
+    }
+    goHome();
 }
 
 // 2. 开始专注
@@ -6875,6 +7182,94 @@ function savePomoToChat(isSuccess) {
     });
     
     saveData(); 
+}
+        async function submitSleepReport() {
+    const dream = document.getElementById('dream-input').value.trim();
+    closeModal('modal-dream-record');
+    
+    const char = contacts.find(c => c.id === sleepState.charId);
+    if(!char) return;
+
+    // 1. 整理数据
+    const startTimeStr = new Date(sleepState.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const endTimeStr = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    
+    const totalMin = Math.floor(sleepState.elapsed / 1000 / 60);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    const durationStr = `${h}小时${m}分`;
+
+    // 整理暂停记录
+    let pauseDesc = "全程无暂停";
+    if (sleepState.pauses.length > 0) {
+        pauseDesc = sleepState.pauses.map(p => {
+            const pTime = new Date(p.start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            const pDur = Math.ceil(p.duration / 1000 / 60);
+            return `${pTime} 醒了 ${pDur} 分钟`;
+        }).join("，");
+    }
+
+    // 早安问候的时间判定
+    const nowHour = new Date().getHours();
+    let timeGreeting = "早安";
+    if (nowHour >= 12 && nowHour < 18) timeGreeting = "午安";
+    else if (nowHour >= 18) timeGreeting = "晚上好";
+
+    // 2. 构造 Prompt
+    const prompt = `
+    [系统通知：用户刚刚结束了睡眠陪伴模式]
+    
+    【睡眠数据单】
+    📅 入睡：${startTimeStr}
+    ⏰ 起床：${endTimeStr}
+    ⏳ 总时长：${durationStr}
+    ⏸️ 中途醒来：${pauseDesc}
+    👈 睡梦中戳了你：${sleepState.pokes} 次
+    💭 梦境记录：${dream || "（没做梦/没记录）"}
+    
+    【你的任务】
+    请以 "${char.name}" 的身份（人设：${char.systemPrompt}）看完这份报告，给用户发一条起床问候。
+    
+    要求：
+    1. **问候**：根据当前时间（现在是${timeGreeting}）和天气（如果是雨天记得提醒），给予温暖问候。
+    2. **评价睡眠**：睡得久就夸，睡得短就关心，中途醒来多就问候。
+    3. **回应戳一戳**：如果戳了很多次，调侃一下他睡觉不老实。
+    4. **解梦**：如果用户写了梦境，简单两句话回应一下梦的内容（安慰或有趣解读）。
+    `;
+
+    // 3. UI 提示
+    alert("正在生成睡眠报告并同步给 " + char.name + "...");
+    
+    // 4. 发送给 AI
+    try {
+        // 先在用户界面显示一条系统报告卡片
+        const reportCard = `
+🌙【睡眠报告】
+----------------
+💤 时长：${durationStr}
+📅 ${startTimeStr} ~ ${endTimeStr}
+🚧 中途醒来：${sleepState.pauses.length} 次
+💭 梦境：${dream || "无"}
+----------------
+(数据已同步)
+        `.trim();
+        
+        char.messages.push({
+            role: 'user',
+            content: reportCard,
+            hiddenContext: prompt, // AI 读这个
+            timestamp: Date.now()
+        });
+        saveData();
+        
+        // 跳转回聊天
+        activeContactId = char.id;
+        navigateTo('page-chat');
+        triggerAI(); // 触发 AI 回复
+
+    } catch (e) {
+        alert("同步失败: " + e.message);
+    }
 }
 
 // 7. 核心：番茄钟专用的 AI 触发逻辑
@@ -15952,6 +16347,7 @@ function updateUserAvatarFromUrl() {
     </script>
 </body>
 </html>
+
 
 
 
