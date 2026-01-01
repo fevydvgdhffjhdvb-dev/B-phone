@@ -3655,12 +3655,19 @@ select.x-input option {
         <!-- ============ 19. 剧场模式 (Theater Mode) ============ -->
 <div class="page" id="page-theater" style="background-color: #1a1a1a; color: #d0d0d0;">
     <!-- 顶部 -->
-    <div class="theater-header">
-        <button class="btn-icon-only" onclick="exitTheater()" style="color:#fff;">‹ 退出</button>
-        <span class="theater-title" id="play-script-title" style="color:#fff;">剧本进行中</span>
-        <button class="btn-icon-only" onclick="rerollTheaterReply()" style="color:#fff; font-size:20px;">🔄</button>
+    <!-- 修改 page-theater 的顶部栏 -->
+<div class="theater-header">
+    <button class="btn-icon-only" onclick="exitTheater()" style="color:#fff;">‹ 退出</button>
+    <span class="theater-title" id="play-script-title" style="color:#fff;">剧本进行中</span>
+    
+    <!-- 右侧按钮组 -->
+    <div style="display:flex; gap:15px;">
+        <!-- 新增：手动同步按钮 -->
+        <button class="btn-icon-only" onclick="manualSyncStory()" title="同步进度给角色" style="color:#34c759; font-size:20px;">💾</button>
+        <!-- 原有的重刷按钮 -->
+        <button class="btn-icon-only" onclick="rerollTheaterReply()" title="重刷上一句" style="color:#fff; font-size:20px;">🔄</button>
     </div>
-
+</div>
     <!-- 舞台区 -->
     <div class="theater-stage" id="theater-stage" style="padding-bottom: 120px;">
         <!-- 动态生成 -->
@@ -12503,6 +12510,98 @@ async function rerollTheaterReply() {
     const aiChar = contacts.find(c => c.id === save.actors.aiCharId);
     await triggerTheaterRoleplay(script, save, aiChar);
 }
+        // =======================
+// ✨ 新增：手动同步剧情进度 (中途存档)
+// =======================
+
+async function manualSyncStory() {
+    // 1. 获取当前状态
+    const scriptId = currentPlayScriptId;
+    const save = theaterSaves[scriptId];
+    if (!save) return;
+
+    const script = theaterScripts.find(s => s.id === scriptId);
+    const aiChar = contacts.find(c => c.id === save.actors.aiCharId);
+
+    // 2. 确认
+    if (!confirm(`要将目前的剧情进展整理并发给 "${aiChar.name}" 吗？\n\n(这将生成一条记忆卡片存入你们的聊天记录，让 Ta 记住刚才发生的事，但剧本【不会】结束，你可以继续玩。)`)) {
+        return;
+    }
+
+    const btn = document.querySelector('.theater-header button[onclick="manualSyncStory()"]');
+    const oldIcon = btn.innerText;
+    btn.innerText = "🧠"; // 变脑子图标表示思考中
+    btn.disabled = true;
+
+    try {
+        // 3. 整理原始文本
+        const rawStory = save.logs.map(l => {
+            if(l.role === 'narrator') return `(旁白): ${l.content}`;
+            if(l.role === 'ai') return `(${aiChar.name}饰人物1): ${l.content}`;
+            return `(用户饰人物2): ${l.content}`;
+        }).join('\n');
+
+        // 4. 构建 Prompt (侧重于“进展”)
+        const prompt = `
+        你是一个剧情记录员。请阅读以下正在进行中的【剧本扮演日志】，并生成一份【阶段性剧情回顾】。
+        
+        【剧本信息】：
+        剧名：《${script.title}》
+        背景：${script.background}
+        
+        【原始日志】：
+        ${rawStory.substring(0, 25000)}
+        
+        【任务】：
+        请总结截止目前的剧情发展，字数 200-400 字。
+        1. **当前状况**：两人目前身处何地？正在做什么？
+        2. **关键进展**：发生了什么重要转折？
+        3. **未完待续**：目前的危机或目标解决了吗？
+        
+        格式要求：请用第三人称叙述，例如“目前，XX和YY正在...”。
+        `;
+
+        // 5. 调用 API
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.5
+        });
+        
+        const data = await res.json();
+        const summary = data.choices[0].message.content;
+
+        // 6. 构造记忆卡片
+        const memoryCard = `
+🎭【剧场模式·剧情进度同步】
+------------------
+📂 剧本：《${script.title}》
+⏱️ 状态：进行中 (未完待续)
+📝 目前进展：
+${summary}
+------------------
+[系统指令]: 这是你与用户正在经历的故事的最新进展。请记住这些发生过的事，并在接下来的聊天或剧本扮演中保持连贯。
+        `.trim();
+
+        // 7. 写入聊天记录
+        aiChar.messages.push({
+            role: 'user', // 伪装成用户发的系统通知
+            content: memoryCard,
+            timestamp: Date.now()
+        });
+        
+        saveData(); // 保存全局数据
+        
+        alert("✅ 同步成功！\n剧情进度已发送到聊天框，AI 已经记住了目前发生的一切。");
+
+    } catch (e) {
+        console.error(e);
+        alert("同步失败: " + e.message);
+    } finally {
+        btn.innerText = oldIcon;
+        btn.disabled = false;
+    }
+}
 
 // =======================
 // 4. 结局与同步
@@ -15853,6 +15952,7 @@ function updateUserAvatarFromUrl() {
     </script>
 </body>
 </html>
+
 
 
 
