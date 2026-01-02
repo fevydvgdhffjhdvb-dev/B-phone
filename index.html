@@ -16536,19 +16536,52 @@ async function handleKbUpload(e) {
         console.log("清洗后的前100字预览:", text.substring(0, 100)); // 方便你在控制台检查
         // ===============================================
 
-        // --- 切片算法 (保持不变) ---
-        const chunkSize = 300;
-        const overlap = 50;
-        let chunks = [];
+        // ===============================================
+        // 🔥【优化版】智能切片算法：按段落切，不切断句子 🔥
+        // ===============================================
         
-        for (let i = 0; i < text.length; i += (chunkSize - overlap)) {
-            let chunk = text.substring(i, i + chunkSize).trim();
-            if (chunk.length > 10) { 
-                chunks.push(chunk);
+        // 1. 先按换行符把文本拆成一行行
+        const lines = text.split('\n');
+        let chunks = [];
+        let currentChunk = "";
+        
+        // 设定每个碎片的目标长度 (建议 600-800，能包含完整的对话回合)
+        const TARGET_SIZE = 800; 
+        // 设定重叠行数 (保持上下文连贯)
+        const OVERLAP_LINES = 5; 
+        
+        let tempLines = []; // 临时存当前块的行
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if(!line) continue; // 跳过空行
+
+            // 把这一行加入临时数组
+            tempLines.push(line);
+            
+            // 计算当前积累的字数
+            const currentLength = tempLines.join('\n').length;
+
+            // 如果字数够了，或者已经是最后一行了
+            if (currentLength >= TARGET_SIZE || i === lines.length - 1) {
+                // 生成碎片
+                const chunkContent = tempLines.join('\n');
+                chunks.push(chunkContent);
+
+                // --- 核心：制造重叠 (Overlap) ---
+                // 保留最后几行作为下一个碎片的开头，这样记忆不会断片
+                if (tempLines.length > OVERLAP_LINES) {
+                    tempLines = tempLines.slice(-OVERLAP_LINES); 
+                } else {
+                    // 如果本来就没几行，全保留也行，或者清空(防止死循环，这里清空比较安全)
+                    tempLines = []; 
+                }
             }
         }
 
-        if (chunks.length === 0) throw new Error("文件内容太少");
+        if (chunks.length === 0) throw new Error("文件内容太少或格式无法识别");
+        
+        // ===============================================
 
         // --- 存入 IndexedDB ---
         const db = await openDB();
@@ -16740,6 +16773,7 @@ ${styleChunks.map(c => `"${c.content}"`).join('\n---\n')}
     </script>
 </body>
 </html>
+
 
 
 
