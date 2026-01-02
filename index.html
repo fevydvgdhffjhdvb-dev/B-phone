@@ -4416,6 +4416,36 @@ select.x-input option {
         </div>
     </div>
 </div>
+        <!-- ============ 🧠 知识库管理弹窗 ============ -->
+<div class="modal-overlay" id="modal-knowledge">
+    <div class="modal-box" style="height: 70%;">
+        <div class="modal-header">
+            角色知识库 (RAG)
+            <button onclick="closeModal('modal-knowledge')" style="float:right; border:none; background:none;">×</button>
+        </div>
+        <div class="modal-body" style="padding: 15px;">
+            <div style="font-size:12px; color:#666; margin-bottom:15px; background:#f2f2f7; padding:10px; border-radius:8px;">
+                上传 TXT 资料（如小说原文、设定集、聊天记录）。<br>
+                AI 会自动学习其中的<b>语气、事实和回忆</b>。<br>
+                * 数据存放在本地 IndexedDB，不占用云端空间。
+            </div>
+
+            <!-- 上传区 -->
+            <div class="ios-list">
+                <div class="ios-item" onclick="document.getElementById('kb-file-upload').click()">
+                    <span class="ios-label" style="color:#007AFF; font-weight:bold;">+ 上传新资料</span>
+                    <input type="file" id="kb-file-upload" accept=".txt,.md" hidden onchange="handleKbUpload(event)">
+                </div>
+            </div>
+
+            <!-- 列表区 -->
+            <div class="ios-group-title">已收录的资料</div>
+            <div id="kb-file-list" style="display:flex; flex-direction:column; gap:10px;">
+                <!-- 动态生成 -->
+            </div>
+        </div>
+    </div>
+</div>
 
         <!-- ============ 弹窗组件 ============ -->
 
@@ -4487,6 +4517,13 @@ select.x-input option {
                             <textarea id="set-char-prompt" class="ios-input" style="text-align:left; width:100%; height:80px; border:1px solid #eee; padding:5px; border-radius:5px;" onchange="saveCurrentCharSettings()"></textarea>
                         </div>
                     </div>
+                    <div class="ios-group-title">大脑增强</div>
+<div class="ios-list">
+    <div class="ios-item" onclick="openKbModal()">
+        <span class="ios-label">知识库</span>
+        <span style="color:#999; font-size:12px;"> > </span>
+    </div>
+</div>
 
                     <div class="ios-group-title">我的资料 (在此聊天中)</div>
                     <div class="ios-list">
@@ -5141,6 +5178,39 @@ function saveData() {
 
     // --- 1. 构建 System Prompt (基础设定) ---
     let systemPromptFull = char.systemPrompt + `\n[当前时间: ${new Date().toLocaleString()}]\n[用户名称: ${char.userName}]`;
+            // 🔥🔥🔥【插入点】RAG 检索 🔥🔥🔥
+    // 获取用户最新的一条消息内容
+    let lastUserMsg = "";
+    // 倒序找第一条 role 为 user 的
+    for(let i=char.messages.length-1; i>=0; i--){
+        if(char.messages[i].role === 'user') {
+            lastUserMsg = char.messages[i].content;
+            break;
+        }
+    }
+    
+    if (lastUserMsg) {
+        // UI 上显示一下正在查资料 (可选)
+        const btn = document.getElementById('btn-ai');
+        const oldText = btn.innerHTML; // 保存原按钮状态
+        btn.innerHTML = "🧠"; // 变成脑子图标，表示正在检索
+        
+        try {
+            // 调用检索函数
+            const knowledgeContext = await retrieveKnowledge(char.id, lastUserMsg);
+            
+            // 如果查到了东西，加到 System Prompt 里
+            if (knowledgeContext) {
+                console.log("RAG Hit!", knowledgeContext); // 方便你在控制台看查到了啥
+                systemPromptFull += knowledgeContext;
+            }
+        } catch(e) {
+            console.error("RAG Error", e);
+        } finally {
+            btn.innerHTML = oldText; // 恢复按钮，因为后面还要用来显示打字机
+        }
+    }
+    // 🔥🔥🔥【插入结束】🔥🔥🔥
     if (char.userPersona) systemPromptFull += `\n[用户设定: ${char.userPersona}]`;
             if (char.languageMode === 'en') {
         systemPromptFull += `
@@ -9192,7 +9262,7 @@ const galleryStoreName = "gallery";
 function openDB() {
     return new Promise((resolve, reject) => {
         // ✨ 修改点：把这里的数字改成 10 (或者比你之前用过的任何数字都大)
-        const request = indexedDB.open(dbName, 12);
+        const request = indexedDB.open(dbName, 13);
 
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
@@ -9224,6 +9294,13 @@ function openDB() {
                 // 索引：seriesId 用于快速查找某部剧的所有集
                 const epStore = db.createObjectStore("cinema_episodes", { keyPath: "id" });
                 epStore.createIndex("seriesId", "seriesId", { unique: false });
+            }
+            if (!db.objectStoreNames.contains("knowledge_base")) {
+                // charId: 归属哪个角色
+                // content: 切片内容
+                // keywords: 关键词数组 (用于简单搜索)
+                const kbStore = db.createObjectStore("knowledge_base", { keyPath: "id" });
+                kbStore.createIndex("charId", "charId", { unique: false });
             }
         };
 
@@ -16404,10 +16481,258 @@ function updateUserAvatarFromUrl() {
         renderChat(activeContactId);
     }
 }
+        // ==========================================
+// --- 🧠 知识库 (Knowledge Base) 系统 ---
+// ==========================================
+
+let currentKbCharId = null;
+
+// 1. 打开弹窗
+function openKbModal() {
+    const char = getActiveChar();
+    if (!char) return;
+    currentKbCharId = char.id;
+    
+    // 关闭设置层，打开知识库层
+    closeModal('modal-chat-settings'); 
+    openModal('modal-knowledge');
+    
+    loadKbList();
+}
+
+// 2. 处理上传与切片 (带 ChatGPT 格式清洗版)
+async function handleKbUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // 获取当前角色的名字，用于替换 "ChatGPT"
+    const char = getActiveChar();
+    if (!char) return alert("请先选择角色！");
+    const charName = char.name;
+
+    const btn = e.target.parentElement;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="ios-label" style="color:#999;">正在清洗并学习...</span>';
+
+    try {
+        let text = await file.text();
+        
+        // ===============================================
+        // 🔥【新增】数据清洗逻辑：把 ChatGPT 变成角色名 🔥
+        // ===============================================
+        
+        // 1. 替换 "ChatGPT" 为 角色名
+        // 正则解释：匹配行首或换行符后的 "ChatGPT"，忽略大小写
+        text = text.replace(/(^|\n)\s*ChatGPT\s*(?=\n)/gi, `$1${charName}`);
+        
+        // 2. 替换 "User" 为 "用户" (可选，为了统一格式)
+        text = text.replace(/(^|\n)\s*User\s*(?=\n)/gi, '$1[用户]');
+
+        // 3. (可选) 这是一个高级清洗，去掉 GPT 常见的废话
+        // 比如 "As an AI...", "作为人工智能..."
+        // 如果你的导出记录里有这些，建议加上下面这行：
+        // text = text.replace(/作为人工智能语言模型.*?。/g, ""); 
+
+        console.log("清洗后的前100字预览:", text.substring(0, 100)); // 方便你在控制台检查
+        // ===============================================
+
+        // --- 切片算法 (保持不变) ---
+        const chunkSize = 300;
+        const overlap = 50;
+        let chunks = [];
+        
+        for (let i = 0; i < text.length; i += (chunkSize - overlap)) {
+            let chunk = text.substring(i, i + chunkSize).trim();
+            if (chunk.length > 10) { 
+                chunks.push(chunk);
+            }
+        }
+
+        if (chunks.length === 0) throw new Error("文件内容太少");
+
+        // --- 存入 IndexedDB ---
+        const db = await openDB();
+        const tx = db.transaction("knowledge_base", "readwrite");
+        const store = tx.objectStore("knowledge_base");
+        const timestamp = Date.now();
+        
+        chunks.forEach((content, index) => {
+            store.put({
+                id: `${currentKbCharId}_${timestamp}_${index}`,
+                charId: currentKbCharId,
+                fileName: file.name,
+                content: content
+            });
+        });
+
+        await new Promise(resolve => tx.oncomplete = resolve);
+        
+        alert(`学习完成！\n已自动将文档中的 "ChatGPT" 替换为 "${charName}"。\n共生成 ${chunks.length} 个记忆碎片。`);
+        loadKbList();
+
+    } catch (err) {
+        alert("学习失败: " + err.message);
+        console.error(err);
+    } finally {
+        btn.innerHTML = originalText;
+        e.target.value = '';
+    }
+}
+
+// 3. 加载已学文件列表
+async function loadKbList() {
+    const list = document.getElementById('kb-file-list');
+    list.innerHTML = '<div style="color:#999;text-align:center;">加载中...</div>';
+
+    const db = await openDB();
+    const tx = db.transaction("knowledge_base", "readonly");
+    const store = tx.objectStore("knowledge_base");
+    const index = store.index("charId");
+    
+    const req = index.getAll(currentKbCharId);
+    
+    req.onsuccess = () => {
+        const allChunks = req.result;
+        
+        // 统计文件 (去重)
+        const fileMap = {}; // { "文件名": chunkCount }
+        allChunks.forEach(c => {
+            if (!fileMap[c.fileName]) fileMap[c.fileName] = 0;
+            fileMap[c.fileName]++;
+        });
+
+        list.innerHTML = '';
+        const files = Object.keys(fileMap);
+
+        if (files.length === 0) {
+            list.innerHTML = '<div style="color:#ccc;text-align:center;padding:20px;">暂无资料</div>';
+            return;
+        }
+
+        files.forEach(fname => {
+            const count = fileMap[fname];
+            const div = document.createElement('div');
+            div.className = 'ios-item';
+            div.innerHTML = `
+                <div style="flex:1;">
+                    <div style="font-weight:bold;">${fname}</div>
+                    <div style="font-size:10px; color:#999;">${count} 个记忆碎片</div>
+                </div>
+                <button onclick="deleteKbFile('${fname}')" style="color:#ff3b30; border:none; background:none;">删除</button>
+            `;
+            list.appendChild(div);
+        });
+    };
+}
+
+// 4. 删除某个文件的所有切片
+async function deleteKbFile(fileName) {
+    if (!confirm(`确定要遗忘《${fileName}》的所有内容吗？`)) return;
+
+    const db = await openDB();
+    const tx = db.transaction("knowledge_base", "readwrite");
+    const store = tx.objectStore("knowledge_base");
+    const index = store.index("charId");
+
+    // 获取该角色的所有切片
+    const req = index.getAll(currentKbCharId);
+    
+    req.onsuccess = () => {
+        const all = req.result;
+        // 筛选出属于该文件的切片ID
+        const toDelete = all.filter(c => c.fileName === fileName);
+        
+        toDelete.forEach(c => {
+            store.delete(c.id);
+        });
+        
+        tx.oncomplete = () => {
+            loadKbList(); // 刷新
+        };
+    };
+}
+        // 5. 核心：从知识库检索相关内容 (人设搬家·语气模仿专用版)
+async function retrieveKnowledge(charId, userQuery) {
+    const db = await openDB();
+    const tx = db.transaction("knowledge_base", "readonly");
+    const store = tx.objectStore("knowledge_base");
+    const index = store.index("charId");
+
+    // 1. 获取该角色的所有碎片
+    const chunks = await new Promise(resolve => {
+        index.getAll(charId).onsuccess = (e) => resolve(e.target.result);
+    });
+
+    if (!chunks || chunks.length === 0) return "";
+
+    // --- 逻辑 A: 关键词检索 (为了回答事实) ---
+    // 比如你问“你那天去哪了”，它得去知识库里找那天的记录
+    const keywords = userQuery.split(/[\s,，.。？?！!]+/).filter(k => k.length > 0);
+    for(let i=0; i<userQuery.length-1; i++) keywords.push(userQuery.substr(i, 2));
+
+    const scoredChunks = chunks.map(chunk => {
+        let score = 0;
+        keywords.forEach(kw => {
+            if (chunk.content.includes(kw)) score += kw.length;
+        });
+        return { ...chunk, score };
+    });
+
+    // 取相关度最高的 2 段（如果没有相关的，这里就是空）
+    const factChunks = scoredChunks
+        .filter(c => c.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 2);
+
+    // --- 逻辑 B: 随机语气采样 (为了模仿风格) ---
+    // 🔥 这是人设搬家的核心：无论用户问什么，我们都随机抽 1-2 段这个角色的原话
+    // 就像演员上场前看一眼剧本找感觉一样
+    let styleChunks = [];
+    
+    // 如果没有查到事实，我们就多抽几段风格参考 (比如抽 3 段)
+    // 如果查到了事实，就少抽一点 (比如抽 1 段)，防止 token 超标
+    const randomCount = factChunks.length > 0 ? 1 : 3;
+    
+    for (let i = 0; i < randomCount; i++) {
+        const randomIdx = Math.floor(Math.random() * chunks.length);
+        styleChunks.push(chunks[randomIdx]);
+    }
+
+    // --- 组装最终提示词 ---
+    let contextText = "";
+
+    // 1. 事实部分
+    if (factChunks.length > 0) {
+        contextText += `
+[🔍 相关回忆/事实]:
+${factChunks.map(c => `"${c.content}"`).join('\n')}
+(请根据以上事实回答用户)
+`;
+    }
+
+    // 2. 语气部分 (Style Transfer)
+    if (styleChunks.length > 0) {
+        contextText += `
+[🎭 语气与说话风格参考 (Style Sample)]:
+以下是你过去说过的原话（可能与当前话题无关，仅供模仿语气、用词习惯和思维逻辑）：
+-------------------
+${styleChunks.map(c => `"${c.content}"`).join('\n---\n')}
+-------------------
+🔴 指令：请仔细观察上面的[语气参考]，学习其中的：
+1. 说话的长短句习惯。
+2. 特殊的口癖、感叹词或表情使用。
+3. 对待事物的态度（是冷漠、傲娇还是温柔）。
+4. 在回复用户时，必须保持这种 Style。
+`;
+    }
+
+    return contextText;
+}
         
     </script>
 </body>
 </html>
+
 
 
 
