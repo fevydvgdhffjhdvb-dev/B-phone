@@ -16579,7 +16579,7 @@ async function handleKbUpload(e) {
     }
 }
 
-// 3. 加载已学文件列表
+// 3. 加载已学文件列表 (修复黑色背景下文字看不见的问题)
 async function loadKbList() {
     const list = document.getElementById('kb-file-list');
     list.innerHTML = '<div style="color:#999;text-align:center;">加载中...</div>';
@@ -16594,8 +16594,8 @@ async function loadKbList() {
     req.onsuccess = () => {
         const allChunks = req.result;
         
-        // 统计文件 (去重)
-        const fileMap = {}; // { "文件名": chunkCount }
+        // 统计文件
+        const fileMap = {}; 
         allChunks.forEach(c => {
             if (!fileMap[c.fileName]) fileMap[c.fileName] = 0;
             fileMap[c.fileName]++;
@@ -16605,7 +16605,7 @@ async function loadKbList() {
         const files = Object.keys(fileMap);
 
         if (files.length === 0) {
-            list.innerHTML = '<div style="color:#ccc;text-align:center;padding:20px;">暂无资料</div>';
+            list.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">暂无资料</div>';
             return;
         }
 
@@ -16613,12 +16613,19 @@ async function loadKbList() {
             const count = fileMap[fname];
             const div = document.createElement('div');
             div.className = 'ios-item';
+            
+            // 🔥 核心修复：
+            // 1. 加了 background: rgba(255,255,255,0.15) -> 给条目加个半透明灰色底，防撞色
+            // 2. border-radius: 10px -> 圆角好看
+            div.style.cssText = "background: rgba(255,255,255,0.15); border-radius: 10px; border-bottom: none; margin-bottom: 8px; padding: 12px;";
+            
             div.innerHTML = `
                 <div style="flex:1;">
-                    <div style="font-weight:bold;">${fname}</div>
-                    <div style="font-size:10px; color:#999;">${count} 个记忆碎片</div>
+                    <!-- 🔥 核心修复：color: #fff 强制白色文字 -->
+                    <div style="font-weight:bold; color: #fff; font-size: 15px;">${fname}</div>
+                    <div style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:2px;">${count} 个记忆碎片</div>
                 </div>
-                <button onclick="deleteKbFile('${fname}')" style="color:#ff3b30; border:none; background:none;">删除</button>
+                <button onclick="deleteKbFile('${fname}')" style="color:#ff3b30; border:none; background:none; font-weight:bold;">删除</button>
             `;
             list.appendChild(div);
         });
@@ -16732,6 +16739,7 @@ ${styleChunks.map(c => `"${c.content}"`).join('\n---\n')}
     </script>
 </body>
 </html>
+
 
 
 
