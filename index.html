@@ -12700,55 +12700,93 @@ function deleteScriptDef(id) {
     }
 }
 
-// AI 润色/填充
+// AI 润色/填充 (增强版：基于用户输入进行扩写)
 async function aiAutoFillScript() {
     if(!globalConfig.apiKey) return alert("请先在设置页配置 API Key");
     
-    const title = document.getElementById('ipt-script-title').value;
-    const bg = document.getElementById('ipt-script-bg').value;
+    // 1. 获取用户当前填写的“草稿碎片”
+    const currentData = {
+        title: document.getElementById('ipt-script-title').value.trim(),
+        bg: document.getElementById('ipt-script-bg').value.trim(),
+        goal: document.getElementById('ipt-script-goal').value.trim(),
+        opening: document.getElementById('ipt-script-opening').value.trim(),
+        char1: document.getElementById('ipt-script-char1').value.trim(),
+        char2: document.getElementById('ipt-script-char2').value.trim()
+    };
+
+    // 如果几乎没填，给个提示，或者让AI完全自由发挥
+    const hasData = Object.values(currentData).some(v => v.length > 0);
     
     const btn = event.target;
     const oldText = btn.innerText;
-    btn.innerText = "生成中..."; btn.disabled = true;
+    btn.innerText = "正在扩写设定..."; 
+    btn.disabled = true;
 
+    // 2. 构建增强型 Prompt
     const prompt = `
-    你是一个专业剧本策划。用户正在填写一个 Roleplay 剧本，请根据已有的信息（如果有），补充或润色其余空白部分。
+    你是一位金牌剧本策划师。用户正在构思一个 Roleplay (语C) 剧本，但他只写了一些粗略的设定或关键词。
     
-    【已有信息】：
-    剧名：${title || "未定"}
-    背景：${bg || "未定"}
+    【任务目标】：
+    请**基于用户提供的草稿信息**，进行**大幅度的润色、扩写和细节补充**。
+    不要完全推翻用户的设定，而是要让它变得更丰满、更有逻辑、更有张力。
     
-    请生成一个 JSON，包含以下字段的内容（创意要精彩、有戏剧张力）：
+    【用户的草稿】：
+    - 剧名：${currentData.title || "(未定，请结合剧情起一个有吸引力的名字)"}
+    - 故事背景：${currentData.bg || "(未定)"}
+    - 故事目标：${currentData.goal || "(未定)"}
+    - 人物1 (AI) 身份：${currentData.char1 || "(未定)"}
+    - 人物2 (用户) 身份：${currentData.char2 || "(未定)"}
+    - 开场白：${currentData.opening || "(未定)"}
+    
+    【扩写要求 (非常重要)】：
+    1. **发挥想象力**：如果用户只写了“ABO世界”，你必须自动补全设定（例如：补充信息素的味道、发情期的设定、社会的阶级冲突等）。如果写了“末世”，要补充丧尸类型或生存法则。
+    2. **丰富人设**：如果用户只写了“Alpha”，你必须补充他的性格（如：独占欲强、高冷）、外貌特征、以及由于Alpha身份带来的特殊经历。
+    3. **增加戏剧性**：在背景和目标中加入具体的冲突点。
+    4. **保持连贯**：所有生成的设定必须逻辑自洽。
+    
+    【输出格式】：
+    必须返回纯 JSON 格式，不要包含 Markdown 标记：
     {
-        "title": "剧本名称",
-        "background": "详细的故事背景，包含时代、地点、核心冲突",
-        "goal": "故事达成的目标（胜利条件）",
-        "opening": "第一段开场旁白，用于引入场景",
-        "char1": "人物1(AI扮演)的身份、性格、秘密",
-        "char2": "人物2(用户扮演)的身份、与人物1的关系"
+        "title": "润色后的剧名",
+        "background": "扩写后的详细背景...",
+        "goal": "更具体的达成目标...",
+        "opening": "一段引人入胜的开场旁白...",
+        "char1": "人物1的详细人设（包含性格、外貌、隐藏秘密）",
+        "char2": "人物2的详细人设（包含性格、外貌、与人物1的关系）"
     }
     `;
 
     try {
         const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             model: globalConfig.model,
-            messages: [{ role: "user", content: prompt }]
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.9 // 高创造力
         });
+        
         const data = await res.json();
+        
+        if (data.error) throw new Error(data.error.message);
+        
         const jsonStr = data.choices[0].message.content.replace(/```json|```/g, '').trim();
         const result = JSON.parse(jsonStr);
 
-        if(!title) document.getElementById('ipt-script-title').value = result.title;
-        if(!bg) document.getElementById('ipt-script-bg').value = result.background;
+        // 3. 填回输入框
+        document.getElementById('ipt-script-title').value = result.title;
+        document.getElementById('ipt-script-bg').value = result.background;
         document.getElementById('ipt-script-goal').value = result.goal;
         document.getElementById('ipt-script-opening').value = result.opening;
         document.getElementById('ipt-script-char1').value = result.char1;
         document.getElementById('ipt-script-char2').value = result.char2;
+        
+        // 视觉反馈：闪烁一下提示成功
+        if(navigator.vibrate) navigator.vibrate(50);
 
     } catch(e) {
-        alert("生成失败: " + e.message);
+        alert("润色失败: " + e.message + "\n可能是返回格式有误，请重试。");
+        console.error(e);
     } finally {
-        btn.innerText = oldText; btn.disabled = false;
+        btn.innerText = oldText; 
+        btn.disabled = false;
     }
 }
 
@@ -16773,6 +16811,7 @@ ${styleChunks.map(c => `"${c.content}"`).join('\n---\n')}
     </script>
 </body>
 </html>
+
 
 
 
