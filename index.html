@@ -12700,11 +12700,10 @@ function deleteScriptDef(id) {
     }
 }
 
-// AI 润色/填充 (增强版：基于用户输入进行扩写)
+// AI 润色/填充 (修复版：自动提取 JSON，防止报错)
 async function aiAutoFillScript() {
     if(!globalConfig.apiKey) return alert("请先在设置页配置 API Key");
     
-    // 1. 获取用户当前填写的“草稿碎片”
     const currentData = {
         title: document.getElementById('ipt-script-title').value.trim(),
         bg: document.getElementById('ipt-script-bg').value.trim(),
@@ -12713,16 +12712,13 @@ async function aiAutoFillScript() {
         char1: document.getElementById('ipt-script-char1').value.trim(),
         char2: document.getElementById('ipt-script-char2').value.trim()
     };
-
-    // 如果几乎没填，给个提示，或者让AI完全自由发挥
-    const hasData = Object.values(currentData).some(v => v.length > 0);
     
     const btn = event.target;
     const oldText = btn.innerText;
     btn.innerText = "正在扩写设定..."; 
     btn.disabled = true;
 
-    // 2. 构建增强型 Prompt
+    // Prompt 保持不变，还是强调 JSON
     const prompt = `
     你是一位金牌剧本策划师。用户正在构思一个 Roleplay (语C) 剧本，但他只写了一些粗略的设定或关键词。
     
@@ -12731,28 +12727,27 @@ async function aiAutoFillScript() {
     不要完全推翻用户的设定，而是要让它变得更丰满、更有逻辑、更有张力。
     
     【用户的草稿】：
-    - 剧名：${currentData.title || "(未定，请结合剧情起一个有吸引力的名字)"}
+    - 剧名：${currentData.title || "(未定)"}
     - 故事背景：${currentData.bg || "(未定)"}
     - 故事目标：${currentData.goal || "(未定)"}
     - 人物1 (AI) 身份：${currentData.char1 || "(未定)"}
     - 人物2 (用户) 身份：${currentData.char2 || "(未定)"}
     - 开场白：${currentData.opening || "(未定)"}
     
-    【扩写要求 (非常重要)】：
-    1. **发挥想象力**：如果用户只写了“ABO世界”，你必须自动补全设定（例如：补充信息素的味道、发情期的设定、社会的阶级冲突等）。如果写了“末世”，要补充丧尸类型或生存法则。
-    2. **丰富人设**：如果用户只写了“Alpha”，你必须补充他的性格（如：独占欲强、高冷）、外貌特征、以及由于Alpha身份带来的特殊经历。
+    【扩写要求】：
+    1. **发挥想象力**：如果用户只写了“ABO”，必须补全设定（信息素、社会规则等）。如果写了“末世”，要补充丧尸类型或生存法则。
+    2. **丰富人设**：基于现有身份扩写性格、外貌、隐藏秘密。
     3. **增加戏剧性**：在背景和目标中加入具体的冲突点。
-    4. **保持连贯**：所有生成的设定必须逻辑自洽。
     
     【输出格式】：
-    必须返回纯 JSON 格式，不要包含 Markdown 标记：
+    必须返回纯 JSON 格式：
     {
-        "title": "润色后的剧名",
-        "background": "扩写后的详细背景...",
-        "goal": "更具体的达成目标...",
-        "opening": "一段引人入胜的开场旁白...",
-        "char1": "人物1的详细人设（包含性格、外貌、隐藏秘密）",
-        "char2": "人物2的详细人设（包含性格、外貌、与人物1的关系）"
+        "title": "...",
+        "background": "...",
+        "goal": "...",
+        "opening": "...",
+        "char1": "...",
+        "char2": "..."
     }
     `;
 
@@ -12760,29 +12755,46 @@ async function aiAutoFillScript() {
         const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
             model: globalConfig.model,
             messages: [{ role: "user", content: prompt }],
-            temperature: 0.9 // 高创造力
+            temperature: 0.9 
         });
         
         const data = await res.json();
-        
         if (data.error) throw new Error(data.error.message);
         
-        const jsonStr = data.choices[0].message.content.replace(/```json|```/g, '').trim();
-        const result = JSON.parse(jsonStr);
+        let rawContent = data.choices[0].message.content;
 
-        // 3. 填回输入框
-        document.getElementById('ipt-script-title').value = result.title;
-        document.getElementById('ipt-script-bg').value = result.background;
-        document.getElementById('ipt-script-goal').value = result.goal;
-        document.getElementById('ipt-script-opening').value = result.opening;
-        document.getElementById('ipt-script-char1').value = result.char1;
-        document.getElementById('ipt-script-char2').value = result.char2;
-        
-        // 视觉反馈：闪烁一下提示成功
-        if(navigator.vibrate) navigator.vibrate(50);
+        // 🔥🔥🔥 核心修复逻辑开始 🔥🔥🔥
+        // 不直接 parse，而是先寻找第一个 '{' 和最后一个 '}'
+        const firstOpen = rawContent.indexOf('{');
+        const lastClose = rawContent.lastIndexOf('}');
+
+        if (firstOpen !== -1 && lastClose !== -1) {
+            // 提取纯净的 JSON 字符串
+            const jsonCandidate = rawContent.substring(firstOpen, lastClose + 1);
+            try {
+                const result = JSON.parse(jsonCandidate);
+
+                // 填回输入框
+                document.getElementById('ipt-script-title').value = result.title;
+                document.getElementById('ipt-script-bg').value = result.background;
+                document.getElementById('ipt-script-goal').value = result.goal;
+                document.getElementById('ipt-script-opening').value = result.opening;
+                document.getElementById('ipt-script-char1').value = result.char1;
+                document.getElementById('ipt-script-char2').value = result.char2;
+                
+                if(navigator.vibrate) navigator.vibrate(50);
+
+            } catch (parseErr) {
+                console.error("JSON Parse Error:", parseErr, jsonCandidate);
+                throw new Error("AI 返回的数据格式有误，无法解析。");
+            }
+        } else {
+            throw new Error("AI 没有返回有效的 JSON 对象 (找不到花括号)。");
+        }
+        // 🔥🔥🔥 核心修复逻辑结束 🔥🔥🔥
 
     } catch(e) {
-        alert("润色失败: " + e.message + "\n可能是返回格式有误，请重试。");
+        alert("润色失败: " + e.message);
         console.error(e);
     } finally {
         btn.innerText = oldText; 
@@ -16811,6 +16823,7 @@ ${styleChunks.map(c => `"${c.content}"`).join('\n---\n')}
     </script>
 </body>
 </html>
+
 
 
 
