@@ -75,69 +75,53 @@ body {
         }
         /* --- 📱 iOS 全屏修复补丁 (替换原有的 media query) --- */
 @media (max-width: 768px) {
-    /* 1. 强制 html 和 body 撑满视口高度，使用苹果专用属性 */
-    html, body {
-        width: 100vw !important;
-        height: 100% !important;
-        /* 核心修复：-webkit-fill-available 能解决 Safari 底部栏计算错误 */
-        height: -webkit-fill-available !important; 
-        margin: 0 !important;
+    /* 1. 强制 body 撑满，不留余地 */
+    body {
+        display: block !important;
+        background: #000;
         padding: 0 !important;
-        overflow: hidden !important;
-        background-color: #000; /* 兜底背景色 */
+        margin: 0 !important;
+        width: 100vw;
+        height: 100dvh;
+        overflow: hidden;
     }
 
-    /* 2. 手机外壳强制铺满，无视边界 */
+    /* 2. 手机外壳强制铺满，层级提高 */
     .phone-frame {
-        position: fixed !important;
+        position: fixed !important; /* 强制固定 */
         top: 0 !important;
         left: 0 !important;
         right: 0 !important;
         bottom: 0 !important;
         width: 100vw !important;
-        
-        /* 核心修复：强制高度撑满，覆盖底部黑条 */
-        height: 100vh !important; 
-        height: 100dvh !important; 
-        height: -webkit-fill-available !important;
-        
+        height: 100dvh !important; /* 忽略浏览器栏高度 */
         border-radius: 0 !important;
         box-shadow: none !important;
         border: none !important;
         z-index: 10;
-        background: transparent !important;
+        background: transparent !important; /* 透明，让里面的页面显示 */
     }
 
-    /* 3. 页面内容修复：让背景图延伸到最底部 */
+    /* 3. 核心修复：让页面内容钻到刘海下面 */
     .page {
         position: absolute !important;
-        top: 0 !important;
+        top: 0 !important; /* 强制顶格 */
         left: 0 !important;
         width: 100% !important;
         height: 100% !important;
         border-radius: 0 !important;
-        /* 关键：去掉底部的默认边距，让壁纸沉到底 */
-        padding-bottom: 0 !important; 
-        /* 重新定义盒模型，确保 padding 不会把页面顶出去 */
-        box-sizing: border-box !important;
+        /* 关键：让背景图延伸到最顶端 */
+        padding-top: env(safe-area-inset-top); 
     }
 
-    /* 4. 特别修复：首页背景图 (让壁纸无死角覆盖) */
+    /* 4. 特别修复：首页背景图 */
     #page-home {
+        /* 让背景图覆盖整个屏幕，包括刘海 */
         background-position: center center !important;
         background-size: cover !important;
         background-repeat: no-repeat !important;
-        background-attachment: fixed !important; /* 防止滚动时背景露底 */
-        /* 确保背景延伸到安全区域之外 */
-        padding-bottom: env(safe-area-inset-bottom); 
-    }
-    
-    /* 5. 修复底部 Home Indicator 触控条的位置 */
-    .home-indicator {
-        /* 让它浮在页面最下方，稍微往上提一点点 */
-        bottom: 8px !important; 
-        /* 确保它在安全区域内，不会贴底太紧 */
-        margin-bottom: env(safe-area-inset-bottom) !important;
+        /* 这一行可能导致黑条，去掉它，或者设为0 */
+        margin-top: 0 !important; 
     }
 }
 
@@ -16789,6 +16773,7 @@ ${styleChunks.map(c => `"${c.content}"`).join('\n---\n')}
     </script>
 </body>
 </html>
+
 
 
 
