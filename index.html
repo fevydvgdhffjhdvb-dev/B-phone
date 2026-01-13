@@ -5356,9 +5356,6 @@ function saveData() {
                             aiUiSpan.innerHTML = formatText(fullText);
                             scrollToBottom();
                         }
-                        fullText += delta;
-                        aiUiSpan.innerHTML = formatText(fullText);
-                        scrollToBottom();
                     } catch (e) { }
                 }
             }
@@ -16842,6 +16839,7 @@ ${styleChunks.map(c => `"${c.content}"`).join('\n---\n')}
     </script>
 </body>
 </html>
+
 
 
 
