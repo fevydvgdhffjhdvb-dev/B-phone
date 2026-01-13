@@ -5326,6 +5326,7 @@ function saveData() {
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
+        let isThinking = false;
 
         while (true) {
             const { done, value } = await reader.read();
@@ -5337,6 +5338,26 @@ function saveData() {
                     try {
                         const json = JSON.parse(line.replace('data: ', ''));
                         const delta = json.choices[0].delta.content || "";
+                        let cleanDelta = delta;
+
+                        if (cleanDelta.includes('<think>')) {
+                            isThinking = true;
+                            cleanDelta = cleanDelta.replace('<think>', ''); // 删掉标签
+                        }
+                        
+                        if (cleanDelta.includes('</think>')) {
+                            isThinking = false;
+                            cleanDelta = cleanDelta.replace('</think>', ''); // 删掉尾标签
+                            continue; // 这一块通常紧接着正文，跳过本次循环防止粘连
+                        }
+
+                        // 如果正在思考模式，就不拼接到 fullText 里（即不显示）
+                        if (!isThinking) {
+                            fullText += cleanDelta;
+                            // 实时更新 UI
+                            aiUiSpan.innerHTML = formatText(fullText);
+                            scrollToBottom();
+                        }
                         fullText += delta;
                         aiUiSpan.innerHTML = formatText(fullText);
                         scrollToBottom();
@@ -16823,6 +16844,7 @@ ${styleChunks.map(c => `"${c.content}"`).join('\n---\n')}
     </script>
 </body>
 </html>
+
 
 
 
