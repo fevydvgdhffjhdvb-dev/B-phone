@@ -44,8 +44,6 @@
         /* 添加 html 样式，强制 iOS 填满 */
         html {
             height: 100%;
-            height: -webkit-fill-available;
-            /* 专门针对 iOS 的修复 */
             width: 100%;
             overflow: hidden;
         }
@@ -92,35 +90,19 @@
                 background: #000;
                 padding: 0 !important;
                 margin: 0 !important;
-                width: 100vw !important;
                 width: 100% !important;
-                height: 100vh !important;
-                height: 100dvh !important;
-                /* dvh 会覆盖 vh，解决 iOS Safari 动态工具栏问题 */
-                min-height: 100vh !important;
-                min-height: 100dvh !important;
-                max-height: 100vh !important;
-                max-height: 100dvh !important;
+                height: 100% !important;
                 overflow: hidden !important;
-                /* 处理底部安全区域 */
-                padding-bottom: env(safe-area-inset-bottom, 0) !important;
             }
 
             /* 2. 手机外壳强制铺满，层级提高 */
             .phone-frame {
-                position: fixed !important;
+                position: absolute !important;
                 top: 0 !important;
                 left: 0 !important;
-                right: 0 !important;
-                bottom: 0 !important;
-                width: 100vw !important;
                 width: 100% !important;
-                height: 100vh !important;
-                height: 100dvh !important;
-                min-height: 100vh !important;
-                min-height: 100dvh !important;
+                height: 100% !important;
                 max-height: none !important;
-                /* ⭐ 关键：移除最大高度限制 */
                 border-radius: 0 !important;
                 box-shadow: none !important;
                 border: none !important;
