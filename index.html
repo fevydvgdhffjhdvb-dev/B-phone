@@ -5325,12 +5325,19 @@ function saveData() {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let isThinking = false;
+        let buffer = ""; // ✨ 新增：缓冲区
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
+            
+            // ✨ 修复1：加上 { stream: true } 防止中文乱码
+            const chunk = decoder.decode(value, { stream: true });
+            buffer += chunk; // ✨ 修复2：拼接到缓冲区
+            
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // ✨ 修复3：把没传完的半截尾巴存回去，下次再处理
+
             for (const line of lines) {
                 if (line.startsWith('data: ') && line !== 'data: [DONE]') {
                     try {
@@ -5338,25 +5345,26 @@ function saveData() {
                         const delta = json.choices[0].delta.content || "";
                         let cleanDelta = delta;
 
+                        // 深度思考的处理逻辑 (DeepSeek 等)
                         if (cleanDelta.includes('<think>')) {
                             isThinking = true;
-                            cleanDelta = cleanDelta.replace('<think>', ''); // 删掉标签
+                            cleanDelta = cleanDelta.replace('<think>', ''); 
                         }
                         
                         if (cleanDelta.includes('</think>')) {
                             isThinking = false;
-                            cleanDelta = cleanDelta.replace('</think>', ''); // 删掉尾标签
-                            continue; // 这一块通常紧接着正文，跳过本次循环防止粘连
+                            cleanDelta = cleanDelta.replace('</think>', ''); 
                         }
 
-                        // 如果正在思考模式，就不拼接到 fullText 里（即不显示）
+                        // 如果不在思考模式，显示内容
                         if (!isThinking) {
                             fullText += cleanDelta;
-                            // 实时更新 UI
                             aiUiSpan.innerHTML = formatText(fullText);
                             scrollToBottom();
                         }
-                    } catch (e) { }
+                    } catch (e) { 
+                        // 如果这里报错，通常是因为网络包有问题，但有 buffer 机制后，吞字概率极低
+                    }
                 }
             }
         }
@@ -16839,3 +16847,4 @@ ${styleChunks.map(c => `"${c.content}"`).join('\n---\n')}
     </script>
 </body>
 </html>
+
