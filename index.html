@@ -5322,49 +5322,63 @@ function saveData() {
 
         if (!res.ok) throw new Error(res.statusText);
 
-        const reader = res.body.getReader();
+       const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let isThinking = false;
-        let buffer = ""; // ✨ 新增：缓冲区
+        let buffer = ""; // 缓冲区
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
             
-            // ✨ 修复1：加上 { stream: true } 防止中文乱码
-            const chunk = decoder.decode(value, { stream: true });
-            buffer += chunk; // ✨ 修复2：拼接到缓冲区
-            
-            const lines = buffer.split('\n');
-            buffer = lines.pop(); // ✨ 修复3：把没传完的半截尾巴存回去，下次再处理
+            // 解码数据并追加到缓冲区
+            buffer += decoder.decode(value, { stream: true });
 
-            for (const line of lines) {
-                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-                    try {
-                        const json = JSON.parse(line.replace('data: ', ''));
-                        const delta = json.choices[0].delta.content || "";
-                        let cleanDelta = delta;
+            // 🔥 核心修改：改为 while 循环扫描，处理 \r\n 问题
+            while (true) {
+                // 寻找第一个换行符的位置
+                const newlineIndex = buffer.indexOf('\n');
+                
+                // 如果找不到换行符，说明这一行还没收完，跳出内层循环，等待下一次数据包
+                if (newlineIndex === -1) break;
 
-                        // 深度思考的处理逻辑 (DeepSeek 等)
-                        if (cleanDelta.includes('<think>')) {
-                            isThinking = true;
-                            cleanDelta = cleanDelta.replace('<think>', ''); 
-                        }
-                        
-                        if (cleanDelta.includes('</think>')) {
-                            isThinking = false;
-                            cleanDelta = cleanDelta.replace('</think>', ''); 
-                        }
+                // ✂️ 提取出这一整行
+                // 使用 trim() 可以完美去掉末尾的 \r (回车符) 和多余空格
+                const line = buffer.slice(0, newlineIndex).trim();
+                
+                // ✂️ 将缓冲区推进，去掉已处理的这行 (包括换行符)
+                buffer = buffer.slice(newlineIndex + 1);
 
-                        // 如果不在思考模式，显示内容
-                        if (!isThinking) {
-                            fullText += cleanDelta;
-                            aiUiSpan.innerHTML = formatText(fullText);
-                            scrollToBottom();
-                        }
-                    } catch (e) { 
-                        // 如果这里报错，通常是因为网络包有问题，但有 buffer 机制后，吞字概率极低
+                // 过滤无效行
+                if (!line.startsWith('data: ')) continue;
+                if (line === 'data: [DONE]') continue;
+
+                try {
+                    // 解析 JSON
+                    const json = JSON.parse(line.replace('data: ', ''));
+                    const delta = json.choices[0].delta.content || "";
+                    let cleanDelta = delta;
+
+                    // 处理深度思考标签 (DeepSeek R1 等)
+                    if (cleanDelta.includes('<think>')) {
+                        isThinking = true;
+                        cleanDelta = cleanDelta.replace('<think>', ''); 
                     }
+                    if (cleanDelta.includes('</think>')) {
+                        isThinking = false;
+                        cleanDelta = cleanDelta.replace('</think>', ''); 
+                    }
+
+                    // 如果不在思考状态，拼接并显示
+                    if (!isThinking) {
+                        fullText += cleanDelta;
+                        aiUiSpan.innerHTML = formatText(fullText);
+                        scrollToBottom();
+                    }
+                } catch (e) { 
+                    // 🔴 调试专用：如果以后还吞字，按 F12 打开控制台，
+                    // 这里会告诉你到底是哪一行数据出了问题，不用再瞎猜了
+                    console.warn("⚠️ 解析失败，丢弃了一行数据:", line, e);
                 }
             }
         }
@@ -16847,4 +16861,5 @@ ${styleChunks.map(c => `"${c.content}"`).join('\n---\n')}
     </script>
 </body>
 </html>
+
 
