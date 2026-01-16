@@ -5356,9 +5356,15 @@ function saveData() {
                 try {
                     // 解析 JSON
                     const json = JSON.parse(line.replace('data: ', ''));
-                    const delta = json.choices[0].delta.content || "";
-                    let cleanDelta = delta;
+                    if (!json.choices || json.choices.length === 0) {
+        continue;
+    }
 
+    // 确保 delta 存在防止个别空包报错
+    const deltaObj = json.choices[0].delta;
+    const delta = deltaObj ? (deltaObj.content || "") : "";
+    
+    let cleanDelta = delta;
                     // 处理深度思考标签 (DeepSeek R1 等)
                     if (cleanDelta.includes('<think>')) {
                         isThinking = true;
@@ -16861,5 +16867,6 @@ ${styleChunks.map(c => `"${c.content}"`).join('\n---\n')}
     </script>
 </body>
 </html>
+
 
 
