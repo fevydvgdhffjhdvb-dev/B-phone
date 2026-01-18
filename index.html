@@ -6553,13 +6553,12 @@ function renderUserDiaryList() {
     container.innerHTML = headerHtml + listHtml;
 }
 
-// 渲染“角色日记”列表 (查看AI写的)
+// 渲染“角色日记”列表 (查看AI写的) - 修复编号报错版
 function renderAiDiaryList(charId) {
     const char = contacts.find(c => c.id === charId);
     if (!char) return;
 
     // === 🛠️ 数据自动升级逻辑 🛠️ ===
-    // 如果发现日记是纯字符串，把它变成对象 { content:String, isStarred:Boolean }
     if (char.diaries && char.diaries.length > 0) {
         let needSave = false;
         char.diaries = char.diaries.map(d => {
@@ -6569,11 +6568,13 @@ function renderAiDiaryList(charId) {
             }
             return d;
         });
-        if (needSave) saveData(); // 保存升级后的数据结构
+        if (needSave) saveData();
     }
     // ============================
 
     const container = document.getElementById('diaryListContainer');
+    
+    // 头部：包含返回按钮 + 标题 + 右侧精炼按钮(✨)
     const headerHtml = `
         <div style="padding:10px 15px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between;">
             <div style="display:flex; align-items:center;">
@@ -6591,16 +6592,21 @@ function renderAiDiaryList(charId) {
     } else {
         // 倒序显示
         [...char.diaries].reverse().forEach((item, index) => {
-            // 计算原始索引
+            // 计算原始索引 (用于删除和收藏操作)
             const originalIndex = char.diaries.length - 1 - index;
+            
+            // 🔥 关键修复：在这里定义 displayNum，防止报错
+            const displayNum = originalIndex + 1; 
             
             // 判断是否收藏
             const starClass = item.isStarred ? 'diary-star active' : 'diary-star';
-            const starIcon = item.isStarred ? '★' : '☆'; // 实心星/空心星
+            const starIcon = item.isStarred ? '★' : '☆'; 
 
             listHtml += `
                 <div class="memory-card" style="border-left: 4px solid #ff2d55; position:relative;">
-                <div style="font-size:10px; color:#999; margin-bottom:4px; font-weight:bold;">#${displayNum}</div>
+                    <!-- 显示编号 #1, #2 -->
+                    <div style="font-size:10px; color:#999; margin-bottom:4px; font-weight:bold;">#${displayNum}</div>
+                    
                     <div style="line-height:1.6; color:#333; padding-right:20px;">${item.content.replace(/\n/g, '<br>')}</div>
                     
                     <!-- 星星按钮 -->
@@ -17006,6 +17012,7 @@ async function confirmDiaryRefine() {
     </script>
 </body>
 </html>
+
 
 
 
