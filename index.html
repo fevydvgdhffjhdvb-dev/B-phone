@@ -4815,6 +4815,44 @@ select.x-input option {
         </div>
     </div>
 </div>
+    <!-- ============ 新增：日记精炼弹窗 ============ -->
+<div class="modal-overlay" id="modal-diary-refine">
+    <div class="modal-box" style="height:auto;">
+        <div class="modal-header">
+            日记智能精炼
+            <button onclick="closeModal('modal-diary-refine')" style="float:right; border:none; background:none;">×</button>
+        </div>
+        <div class="modal-body" style="padding:20px;">
+            <p style="font-size:12px; color:#666; margin-bottom:15px; background:#f0f8ff; padding:10px; border-radius:8px;">
+                💡 <b>功能说明：</b><br>
+                将多篇琐碎的日记合并成一条<b>“长期记忆”</b>存入记忆库。<br>
+                这能让 AI 记住过往经历，同时节省大量 Token。
+            </p>
+            
+            <!-- 隐藏域存储当前操作的角色ID -->
+            <input type="hidden" id="refine-target-char-id">
+
+            <div class="ios-list">
+                <div class="ios-item">
+                    <span class="ios-label">起始篇数 (#)</span>
+                    <input type="number" id="diary-refine-start" class="ios-input" value="1" placeholder="从第几篇开始">
+                </div>
+                <div class="ios-item">
+                    <span class="ios-label">结束篇数 (#)</span>
+                    <input type="number" id="diary-refine-end" class="ios-input" placeholder="到第几篇结束">
+                </div>
+            </div>
+            
+            <div style="text-align:center; font-size:12px; color:#999; margin-top:10px;">
+                当前共有 <span id="diary-total-count" style="color:#007AFF; font-weight:bold;">0</span> 篇日记
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn" onclick="closeModal('modal-diary-refine')">取消</button>
+            <button class="modal-btn" onclick="confirmDiaryRefine()" style="color:#5856d6; font-weight:bold;">✨ 开始精炼</button>
+        </div>
+    </div>
+</div>
 
     <script>
         // --- 核心数据结构 ---
@@ -5227,33 +5265,28 @@ function saveData() {
     systemPromptFull += getStatusContext(char);
     systemPromptFull += getMusicContext();
 
-    // --- 2. 喂入日记 (混合记忆版：收藏 + 最近) ---
+    // --- 2. 喂入日记 (纯净版：只读收藏) ---
+    // 修改说明：不再强制读取最近3篇，只读取打了星标(★)的重要日记。
+    // 普通日记请使用“智能精炼”功能压缩进长期记忆库。
     if (char.diaries && char.diaries.length > 0) {
         // 数据清洗
         const safeDiaries = char.diaries.map(d => typeof d === 'string' ? { content: d, isStarred: false } : d);
 
-        // 获取【短期记忆】：强制读取最近 3 篇
-        const recentDiaries = safeDiaries.slice(-3);
-
-        // 获取【核心记忆】：找出所有收藏的
+        // 仅筛选【加星收藏】的日记
         let starredDiaries = safeDiaries.filter(d => d.isStarred);
 
-        // 去重
-        starredDiaries = starredDiaries.filter(s => !recentDiaries.includes(s));
-
-        // 限制上限
-        if (starredDiaries.length > 8) {
-            starredDiaries = starredDiaries.slice(-8);
+        // 限制上限 (防止收藏太多爆 Token，比如只读最近收藏的 5 篇)
+        if (starredDiaries.length > 5) {
+            starredDiaries = starredDiaries.slice(-5);
         }
 
-        // 合并
-        const finalDiaries = [...starredDiaries, ...recentDiaries];
+        if (starredDiaries.length > 0) {
+            const diaryText = starredDiaries.map(d => {
+                return "★ [重要回忆]: " + d.content;
+            }).join('\n\n');
 
-        const diaryText = finalDiaries.map(d => {
-            return (d.isStarred ? "★ [重要回忆] " : "") + d.content;
-        }).join('\n\n---\n\n');
-
-        systemPromptFull += `\n\n[我的日记本 (包含核心回忆和最近日记)]:\n${diaryText}`;
+            systemPromptFull += `\n\n[我的日记本 (包含重要收藏)]:\n${diaryText}`;
+        }
     }
 
     // --- 3. 喂入长期记忆 ---
@@ -6542,9 +6575,12 @@ function renderAiDiaryList(charId) {
 
     const container = document.getElementById('diaryListContainer');
     const headerHtml = `
-        <div style="padding:10px 15px; border-bottom:1px solid #eee; display:flex; align-items:center;">
-            <button onclick="renderDiaries()" style="border:none;background:none;color:#007AFF;font-size:16px;">‹ 返回</button>
-            <span style="font-weight:bold; margin-left:15px; font-size:18px;">${char.name} 的日记</span>
+        <div style="padding:10px 15px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center;">
+                <button onclick="renderDiaries()" style="border:none;background:none;color:#007AFF;font-size:16px;">‹ 返回</button>
+                <span style="font-weight:bold; margin-left:15px; font-size:18px;">${char.name} 的日记</span>
+            </div>
+            <button onclick="openDiaryRefineModal('${charId}')" style="border:none; background:none; font-size:20px;" title="智能精炼">✨</button>
         </div>
     `;
 
@@ -6564,6 +6600,7 @@ function renderAiDiaryList(charId) {
 
             listHtml += `
                 <div class="memory-card" style="border-left: 4px solid #ff2d55; position:relative;">
+                <div style="font-size:10px; color:#999; margin-bottom:4px; font-weight:bold;">#${displayNum}</div>
                     <div style="line-height:1.6; color:#333; padding-right:20px;">${item.content.replace(/\n/g, '<br>')}</div>
                     
                     <!-- 星星按钮 -->
@@ -16863,10 +16900,113 @@ ${styleChunks.map(c => `"${c.content}"`).join('\n---\n')}
 
     return contextText;
 }
+        // ==========================================
+// --- ✨ 日记精炼系统 (Diary Refine) ---
+// ==========================================
+
+// 1. 打开精炼弹窗
+function openDiaryRefineModal(charId) {
+    const char = contacts.find(c => c.id === charId);
+    if (!char) return;
+
+    // 兼容旧数据
+    if (!char.diaries) char.diaries = [];
+
+    document.getElementById('refine-target-char-id').value = charId;
+    document.getElementById('diary-total-count').innerText = char.diaries.length;
+    
+    // 默认选中所有
+    document.getElementById('diary-refine-start').value = 1;
+    document.getElementById('diary-refine-end').value = char.diaries.length;
+
+    openModal('modal-diary-refine');
+}
+
+// 2. 执行精炼 (调用 AI)
+async function confirmDiaryRefine() {
+    if (!globalConfig.apiKey) return alert("请先配置 API Key");
+
+    const charId = document.getElementById('refine-target-char-id').value;
+    const char = contacts.find(c => c.id === charId);
+    if (!char) return;
+
+    const startVal = parseInt(document.getElementById('diary-refine-start').value);
+    const endVal = parseInt(document.getElementById('diary-refine-end').value);
+    
+    // 校验
+    if (isNaN(startVal) || isNaN(endVal) || startVal > endVal) return alert("范围无效");
+    if (startVal < 1 || endVal > char.diaries.length) return alert("超出范围");
+
+    // 提取日记内容 (数组索引 = 输入值 - 1)
+    // 注意：char.diaries 是按时间顺序存的（0是第一篇，最后是最新一篇）
+    const selectedDiaries = char.diaries.slice(startVal - 1, endVal);
+    
+    if (selectedDiaries.length === 0) return alert("选定范围内没有日记");
+
+    // 拼接文本供 AI 阅读
+    const diaryTextBlock = selectedDiaries.map((d, i) => {
+        const content = (typeof d === 'string') ? d : d.content; // 兼容旧格式
+        return `[日记 ${startVal + i}]: ${content}`;
+    }).join('\n\n');
+
+    // UI 变化
+    const btn = document.querySelector('#modal-diary-refine .modal-btn:last-child');
+    const oldText = btn.innerText;
+    btn.innerText = "🧠 提炼中...";
+    btn.disabled = true;
+
+    try {
+        const prompt = `
+        你是一个专业的记忆整理师。
+        请阅读以下 ${selectedDiaries.length} 篇日记，它们属于角色 "${char.name}"。
+        
+        【任务目标】：
+        请将这些日记的内容进行**深度精炼和概括**，生成一条客观、简洁的“长期记忆条目”。
+        
+        【要求】：
+        1. **去除**：废话、重复的情绪宣泄、无关紧要的天气描述。
+        2. **保留**：关键事件（发生了什么）、重要转折、角色对他人的核心看法变化。
+        3. **格式**：采用第三人称叙述，字数控制在 100-200 字以内。
+        4. 你的输出将直接存入记忆库，供日后回忆使用。
+        
+        【日记原文】：
+        ${diaryTextBlock}
+        `;
+
+        // 调用 API
+        const res = await fetchWithRetry(normalizeUrl(globalConfig.apiUrl) + '/chat/completions', {
+            model: globalConfig.model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.5 // 低温度，确保客观精准
+        });
+
+        const data = await res.json();
+        const summary = data.choices[0].message.content;
+
+        // 存入记忆库
+        if (!char.memories) char.memories = [];
+        // 加个标记方便识别
+        const memoryEntry = `[📅 日记精炼 (${startVal}-${endVal}篇)]: ${summary}`;
+        char.memories.push(memoryEntry);
+        
+        saveData();
+        
+        closeModal('modal-diary-refine');
+        alert(`✅ 精炼成功！\n已将 ${selectedDiaries.length} 篇日记浓缩为一条记忆，并存入“记忆库”。`);
+
+    } catch (e) {
+        alert("精炼失败: " + e.message);
+        console.error(e);
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
         
     </script>
 </body>
 </html>
+
 
 
 
